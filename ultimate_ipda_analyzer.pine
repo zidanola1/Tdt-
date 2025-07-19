@@ -170,7 +170,11 @@ var int display_count = 1
 var int td_count = 0
 
 // === MTF DATA ===
-[mtf_close, mtf_high, mtf_low, mtf_open, mtf_bar_index] = enable_mtf ? request.security(syminfo.tickerid, higher_tf, [close, high, low, open, bar_index]) : [close, high, low, open, bar_index]
+mtf_close = enable_mtf ? request.security(syminfo.tickerid, higher_tf, close) : close
+mtf_high = enable_mtf ? request.security(syminfo.tickerid, higher_tf, high) : high
+mtf_low = enable_mtf ? request.security(syminfo.tickerid, higher_tf, low) : low
+mtf_open = enable_mtf ? request.security(syminfo.tickerid, higher_tf, open) : open
+mtf_bar_index = enable_mtf ? request.security(syminfo.tickerid, higher_tf, bar_index) : bar_index
 
 // === SEQUENCE ARRAYS ===
 current_sequence_str = get_sequence(sequence_type)
