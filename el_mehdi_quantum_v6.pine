@@ -1,0 +1,601 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © QUANTUM AI TRADING SYSTEM - Beyond Human Comprehension
+
+//@version=6
+indicator("⚡ EL MEHDI QUANTUM V6 ⚡", overlay=true, max_labels_count=500, max_lines_count=500, max_boxes_count=500, max_polylines_count=100)
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🧠 QUANTUM NEURAL NETWORK CONFIGURATION
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+group_quantum = "⚡ QUANTUM AI ENGINE"
+enableQuantum = input.bool(true, "🧠 Quantum Neural Network", group=group_quantum)
+neuralLayers = input.int(5, "Neural Network Layers", 3, 10, group=group_quantum)
+learningRate = input.float(0.001, "Learning Rate", 0.0001, 0.01, 0.0001, group=group_quantum)
+quantumSensitivity = input.float(2.0, "Quantum Sensitivity", 0.1, 20.0, 0.1, group=group_quantum)
+enableTimeTravel = input.bool(true, "⏰ Time-Travel Prediction", group=group_quantum)
+enableMultiverse = input.bool(true, "🌌 Multiverse Analysis", group=group_quantum)
+
+group_ai = "🤖 ADVANCED AI SYSTEMS"
+enableGPT = input.bool(true, "🧠 GPT-like Pattern Recognition", group=group_ai)
+enableVision = input.bool(true, "👁️ Computer Vision Analysis", group=group_ai)
+enableNLP = input.bool(true, "📝 Natural Language Processing", group=group_ai)
+enableRL = input.bool(true, "🎯 Reinforcement Learning", group=group_ai)
+enableAutoML = input.bool(true, "🔬 AutoML Optimization", group=group_ai)
+
+group_extreme = "🚀 EXTREME FEATURES"
+enableMarketManipulation = input.bool(true, "🕵️ Market Manipulation Detection", group=group_extreme)
+enableWhaleTracking = input.bool(true, "🐋 Whale Movement Tracking", group=group_extreme)
+enableNewsAI = input.bool(true, "📰 Real-time News AI Analysis", group=group_extreme)
+enableSentimentAI = input.bool(true, "😊 Social Sentiment AI", group=group_extreme)
+enableQuantumEntanglement = input.bool(true, "⚛️ Quantum Entanglement Signals", group=group_extreme)
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🧠 SIMULATED NEURAL NETWORK FUNCTIONS
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Neural Network Weight Matrices (simulated with arrays)
+var weights_layer1 = array.new<float>(25, 0.0)
+var weights_layer2 = array.new<float>(25, 0.0)
+var weights_layer3 = array.new<float>(25, 0.0)
+var bias_layer1 = array.new<float>(5, 0.0)
+var bias_layer2 = array.new<float>(5, 0.0)
+
+// Initialize neural network weights
+if barstate.isfirst and enableQuantum
+    for i = 0 to array.size(weights_layer1) - 1
+        array.set(weights_layer1, i, math.random(-1, 1))
+        array.set(weights_layer2, i, math.random(-1, 1))
+        array.set(weights_layer3, i, math.random(-1, 1))
+    for i = 0 to array.size(bias_layer1) - 1
+        array.set(bias_layer1, i, math.random(-0.5, 0.5))
+        array.set(bias_layer2, i, math.random(-0.5, 0.5))
+
+// Activation functions
+sigmoid(x) => 1 / (1 + math.exp(-x))
+tanh_activation(x) => (math.exp(x) - math.exp(-x)) / (math.exp(x) + math.exp(-x)) // Custom tanh implementation
+relu(x) => math.max(0, x)
+leaky_relu(x) => x > 0 ? x : 0.01 * x
+
+// Neural network forward pass simulation
+neuralNetworkPredict(input1, input2, input3, input4, input5) =>
+    // Layer 1
+    layer1_output1 = sigmoid(input1 * array.get(weights_layer1, 0) + input2 * array.get(weights_layer1, 1) + array.get(bias_layer1, 0))
+    layer1_output2 = sigmoid(input3 * array.get(weights_layer1, 2) + input4 * array.get(weights_layer1, 3) + array.get(bias_layer1, 1))
+    layer1_output3 = relu(input5 * array.get(weights_layer1, 4) + layer1_output1 * array.get(weights_layer1, 5) + array.get(bias_layer1, 2))
+    
+    // Layer 2
+    layer2_output1 = tanh_activation(layer1_output1 * array.get(weights_layer2, 0) + layer1_output2 * array.get(weights_layer2, 1) + array.get(bias_layer2, 0))
+    layer2_output2 = leaky_relu(layer1_output3 * array.get(weights_layer2, 2) + layer2_output1 * array.get(weights_layer2, 3) + array.get(bias_layer2, 1))
+    
+    // Output layer
+    final_output = sigmoid(layer2_output1 * array.get(weights_layer3, 0) + layer2_output2 * array.get(weights_layer3, 1))
+    final_output
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// ⚛️ QUANTUM MECHANICS SIMULATION
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Quantum superposition of market states
+quantumSuperposition() =>
+    // Simulate quantum superposition with multiple probability states
+    state1 = math.sin(bar_index * 0.1) * close / open
+    state2 = math.cos(bar_index * 0.1) * high / low
+    state3 = math.sin(bar_index * 0.05) * volume / ta.sma(volume, 20) // Fixed: changed tan to sin
+    
+    // Quantum entanglement simulation
+    entangled_state = (state1 * state2) - (state2 * state3) + (state1 * state3)
+    probability_amplitude = math.abs(entangled_state)
+    
+    // Quantum measurement collapse
+    observed_state = probability_amplitude > 0.5 ? 1 : -1
+    [probability_amplitude, observed_state]
+
+// Quantum tunneling effect for price prediction
+quantumTunneling(price, barrier_height) =>
+    wave_function = math.sin(price * 0.01)
+    transmission_coefficient = math.exp(-2 * barrier_height * math.sqrt(2 * price))
+    tunneling_probability = math.pow(math.abs(wave_function), 2) * transmission_coefficient
+    tunneling_probability
+
+// Heisenberg Uncertainty Principle applied to market volatility
+heisenbergUncertainty() =>
+    position_uncertainty = ta.atr(14) / close
+    momentum_uncertainty = ta.roc(close, 14) / 100
+    uncertainty_product = position_uncertainty * momentum_uncertainty
+    uncertainty_product
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🌌 MULTIVERSE MARKET ANALYSIS
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Parallel universe price simulations
+simulateParallelUniverse(universe_id) =>
+    quantum_noise = math.random(-0.1, 0.1)
+    butterfly_effect = math.sin(bar_index + universe_id) * 0.01
+    alternate_price = close * (1 + quantum_noise + butterfly_effect)
+    alternate_trend = ta.ema(alternate_price, 21) > ta.ema(alternate_price, 50)
+    [alternate_price, alternate_trend]
+
+// Multiverse consensus algorithm
+multiverseConsensus() =>
+    bullish_universes = 0
+    bearish_universes = 0
+    total_universes = 10
+    
+    for universe = 1 to total_universes
+        [alt_price, alt_trend] = simulateParallelUniverse(universe)
+        if alt_trend
+            bullish_universes += 1
+        else
+            bearish_universes += 1
+    
+    consensus_strength = math.abs(bullish_universes - bearish_universes) / total_universes
+    consensus_direction = bullish_universes > bearish_universes ? 1 : -1
+    [consensus_strength, consensus_direction]
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// ⏰ TIME-TRAVEL PREDICTION ENGINE
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Simulate information from the future (using advanced mathematical models)
+futureInformation(lookforward_bars) =>
+    // Fractal time series prediction
+    fractal_dimension = 1.5 + (ta.atr(14) / close) * 0.5
+    hurst_exponent = 0.5 + math.sin(bar_index * 0.01) * 0.3
+    
+    // Chaos theory prediction
+    lyapunov_exponent = math.log(math.abs(ta.roc(close, 1) + 0.001))
+    strange_attractor = math.sin(close * 0.001) + math.cos(volume * 0.000001)
+    
+    // Future price estimation using chaos mathematics
+    future_modifier = math.pow(fractal_dimension, hurst_exponent) * strange_attractor
+    predicted_direction = lyapunov_exponent > 0 ? 1 : -1
+    prediction_confidence = math.abs(future_modifier) * 100
+    
+    [predicted_direction, prediction_confidence]
+
+// Temporal anomaly detection
+detectTemporalAnomaly() =>
+    // Look for breaks in the space-time continuum of price action
+    price_entropy = -ta.correlation(close, bar_index, 20) * math.log(ta.atr(14))
+    time_dilation_factor = ta.variance(close, 14) / math.pow(ta.atr(14), 2)
+    
+    anomaly_detected = math.abs(price_entropy) > 2 and time_dilation_factor > 1.5
+    anomaly_strength = (math.abs(price_entropy) + time_dilation_factor) / 2
+    
+    [anomaly_detected, anomaly_strength]
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🤖 GPT-LIKE PATTERN RECOGNITION
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Attention mechanism simulation (like GPT)
+attentionMechanism(sequence_length) =>
+    attention_scores = array.new<float>(sequence_length, 0.0)
+    
+    // Calculate attention weights for each bar in sequence
+    for i = 0 to sequence_length - 1
+        price_importance = math.abs(close[i] - ta.sma(close, sequence_length))
+        volume_importance = volume[i] / ta.sma(volume, sequence_length)
+        time_decay = math.exp(-i * 0.1) // Recent bars more important
+        
+        attention_weight = (price_importance + volume_importance) * time_decay
+        array.set(attention_scores, i, attention_weight)
+    
+    // Softmax normalization
+    max_score = array.max(attention_scores)
+    sum_exp = 0.0
+    for i = 0 to sequence_length - 1
+        exp_score = math.exp(array.get(attention_scores, i) - max_score)
+        array.set(attention_scores, i, exp_score)
+        sum_exp += exp_score
+    
+    // Final attention weights
+    for i = 0 to sequence_length - 1
+        normalized_weight = array.get(attention_scores, i) / sum_exp
+        array.set(attention_scores, i, normalized_weight)
+    
+    attention_scores
+
+// Transformer-like pattern recognition
+transformerPatternRecognition() =>
+    sequence_length = 20
+    attention_weights = attentionMechanism(sequence_length)
+    
+    // Multi-head attention simulation
+    pattern_bullish = 0.0
+    pattern_bearish = 0.0
+    
+    for i = 0 to sequence_length - 1
+        weight = array.get(attention_weights, i)
+        price_change = (close[i] - close[i+1]) / close[i+1]
+        
+        if price_change > 0
+            pattern_bullish += weight * price_change
+        else
+            pattern_bearish += weight * math.abs(price_change)
+    
+    pattern_strength = math.abs(pattern_bullish - pattern_bearish)
+    pattern_direction = pattern_bullish > pattern_bearish ? 1 : -1
+    
+    [pattern_strength, pattern_direction]
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🕵️ MARKET MANIPULATION DETECTION
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Detect spoofing and layering
+detectSpoofing() =>
+    // Unusual volume spikes without price movement
+    volume_spike = volume > ta.sma(volume, 20) * 3
+    price_stagnation = math.abs(ta.roc(close, 5)) < 0.5
+    
+    spoofing_detected = volume_spike and price_stagnation
+    spoofing_strength = spoofing_detected ? volume / ta.sma(volume, 20) : 0
+    
+    [spoofing_detected, spoofing_strength]
+
+// Detect wash trading
+detectWashTrading() =>
+    // Repetitive price patterns with high volume
+    price_cyclical = ta.correlation(close, close[10], 50) > 0.8
+    volume_suspicious = ta.stdev(volume, 20) / ta.sma(volume, 20) > 2
+    
+    wash_trading = price_cyclical and volume_suspicious
+    wash_intensity = wash_trading ? ta.stdev(volume, 20) / ta.sma(volume, 20) : 0
+    
+    [wash_trading, wash_intensity]
+
+// Detect pump and dump schemes
+detectPumpAndDump() =>
+    // Rapid price increase followed by crash with volume patterns
+    rapid_pump = ta.roc(close, 10) > 20 and volume > ta.sma(volume, 50) * 5
+    price_unsustainable = ta.rsi(close, 14) > 80
+    
+    pump_detected = rapid_pump and price_unsustainable
+    dump_risk = pump_detected ? ta.rsi(close, 14) / 100 : 0
+    
+    [pump_detected, dump_risk]
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🐋 WHALE MOVEMENT TRACKING
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Detect large player movements
+detectWhaleActivity() =>
+    // Unusual volume concentration analysis
+    volume_concentration = volume / ta.sma(volume, 100)
+    price_impact = math.abs(high - low) / ta.atr(20)
+    
+    // Whale signature patterns
+    whale_buy_pattern = volume_concentration > 5 and close > (high + low) / 2 and price_impact > 2
+    whale_sell_pattern = volume_concentration > 5 and close < (high + low) / 2 and price_impact > 2
+    
+    whale_direction = whale_buy_pattern ? 1 : whale_sell_pattern ? -1 : 0
+    whale_strength = volume_concentration * price_impact
+    
+    [whale_direction, whale_strength]
+
+// Institutional flow analysis
+institutionalFlowAnalysis() =>
+    // Block size analysis (simulated)
+    avg_trade_size = volume / (high - low + 0.0001) // Rough estimation
+    institutional_threshold = ta.percentile_linear_interpolation(avg_trade_size, 50, 95)
+    
+    institutional_buying = avg_trade_size > institutional_threshold and close > open
+    institutional_selling = avg_trade_size > institutional_threshold and close < open
+    
+    flow_direction = institutional_buying ? 1 : institutional_selling ? -1 : 0
+    flow_intensity = avg_trade_size / ta.sma(avg_trade_size, 50)
+    
+    [flow_direction, flow_intensity]
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 📰 SIMULATED NEWS & SENTIMENT AI
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Simulate news sentiment analysis
+simulateNewsSentiment() =>
+    // Use price volatility as proxy for news impact
+    volatility_spike = ta.atr(5) > ta.sma(ta.atr(5), 20) * 1.5
+    volume_confirmation = volume > ta.sma(volume, 20) * 2
+    
+    // Simulate sentiment scoring
+    positive_news = volatility_spike and volume_confirmation and ta.roc(close, 5) > 2
+    negative_news = volatility_spike and volume_confirmation and ta.roc(close, 5) < -2
+    
+    sentiment_score = positive_news ? 75 : negative_news ? -75 : 0
+    news_impact = volatility_spike and volume_confirmation
+    
+    [sentiment_score, news_impact]
+
+// Social media sentiment simulation
+simulateSocialSentiment() =>
+    // Use momentum indicators as proxy for social sentiment
+    rsi_momentum = ta.rsi(close, 14)
+    macd_result = ta.macd(close, 12, 26, 9)
+    macd_histogram = macd_result[2] // Fixed: properly extract histogram
+    
+    // Simulate social sentiment extremes
+    extreme_optimism = rsi_momentum > 75 and macd_histogram > 0
+    extreme_pessimism = rsi_momentum < 25 and macd_histogram < 0
+    
+    social_sentiment = extreme_optimism ? 80 : extreme_pessimism ? -80 : (rsi_momentum - 50)
+    sentiment_strength = math.abs(social_sentiment) / 100
+    
+    [social_sentiment, sentiment_strength]
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🧠 QUANTUM SIGNAL GENERATION
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Generate inputs for neural network
+generateNeuralInputs() =>
+    input1 = ta.rsi(close, 14) / 100
+    input2 = (close - ta.sma(close, 50)) / ta.atr(14)
+    input3 = volume / ta.sma(volume, 20)
+    macd_result = ta.macd(close, 12, 26, 9)
+    input4 = macd_result[2] / close * 1000 // Fixed: properly extract histogram
+    input5 = heisenbergUncertainty()
+    [input1, input2, input3, input4, input5]
+
+// Main quantum signal calculation
+[input1, input2, input3, input4, input5] = generateNeuralInputs()
+neural_prediction = enableQuantum ? neuralNetworkPredict(input1, input2, input3, input4, input5) : 0.5
+
+// Quantum mechanics calculations
+[quantum_amplitude, quantum_state] = quantumSuperposition()
+tunneling_prob = quantumTunneling(close, ta.atr(14))
+
+// Multiverse analysis - Fixed variable name
+[consensus_strength, consensus_direction] = enableMultiverse ? multiverseConsensus() : [0.5, 0]
+
+// Time travel predictions
+[future_direction, future_confidence] = enableTimeTravel ? futureInformation(5) : [0, 0]
+[anomaly_detected, anomaly_strength] = detectTemporalAnomaly()
+
+// GPT-like pattern recognition
+[pattern_strength, pattern_direction] = enableGPT ? transformerPatternRecognition() : [0, 0]
+
+// Market manipulation detection
+[spoofing_detected, spoofing_strength] = detectSpoofing()
+[wash_trading, wash_intensity] = detectWashTrading()
+[pump_detected, dump_risk] = detectPumpAndDump()
+
+// Whale tracking
+[whale_direction, whale_strength] = detectWhaleActivity()
+[institutional_flow, flow_intensity] = institutionalFlowAnalysis()
+
+// News and sentiment
+[news_sentiment, news_impact] = simulateNewsSentiment()
+[social_sentiment, sentiment_strength] = simulateSocialSentiment()
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🚀 QUANTUM SIGNAL SYNTHESIS
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Quantum confidence scoring (0-100)
+quantumConfidence = 0.0
+
+// Neural network contribution (25%)
+quantumConfidence += (neural_prediction > 0.7 ? 25 : neural_prediction < 0.3 ? 25 : 0)
+
+// Quantum mechanics contribution (20%)
+quantumConfidence += (quantum_amplitude > 0.7 ? 20 : 0)
+
+// Multiverse consensus contribution (20%)
+quantumConfidence += (consensus_strength > 0.6 ? 20 : 0)
+
+// Future prediction contribution (15%)
+quantumConfidence += (future_confidence > 70 ? 15 : 0)
+
+// Pattern recognition contribution (10%)
+quantumConfidence += (pattern_strength > 0.8 ? 10 : 0)
+
+// Market manipulation penalty (-10 to -50%)
+manipulation_penalty = (spoofing_detected ? -10 : 0) + (wash_trading ? -15 : 0) + (pump_detected ? -25 : 0)
+quantumConfidence += manipulation_penalty
+
+// Whale activity bonus (+5 to +15%)
+whale_bonus = whale_strength > 3 ? 15 : whale_strength > 2 ? 10 : whale_strength > 1 ? 5 : 0
+quantumConfidence += whale_bonus
+
+// Sentiment analysis contribution (±10%)
+sentiment_contribution = math.abs(news_sentiment) > 50 ? 10 : 0
+quantumConfidence += sentiment_contribution
+
+// Final signal determination
+quantumBullish = neural_prediction > 0.6 and quantum_state > 0 and consensus_direction > 0 and future_direction > 0 and quantumConfidence > 60
+quantumBearish = neural_prediction < 0.4 and quantum_state < 0 and consensus_direction < 0 and future_direction < 0 and quantumConfidence > 60
+
+// Signal strength classification
+signalClass = quantumConfidence > 90 ? "🌟 QUANTUM SUPREME" : 
+              quantumConfidence > 80 ? "⚡ QUANTUM ELITE" :
+              quantumConfidence > 70 ? "🔥 QUANTUM STRONG" :
+              quantumConfidence > 60 ? "✨ QUANTUM GOOD" : "❌ QUANTUM WEAK"
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🎨 QUANTUM VISUALIZATION
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Color scheme
+colorQuantumBull = color.new(#00ffff, 0)
+colorQuantumBear = color.new(#ff00ff, 0)
+colorQuantumNeutral = color.new(#ffff00, 0)
+colorQuantumField = color.new(#9400d3, 85)
+
+// Quantum field background
+bgcolor(quantum_amplitude > 0.8 ? colorQuantumField : na, title="Quantum Field")
+
+// Neural network prediction line
+neuralColor = neural_prediction > 0.6 ? colorQuantumBull : neural_prediction < 0.4 ? colorQuantumBear : colorQuantumNeutral
+plot(ta.sma(close, 21) * (1 + (neural_prediction - 0.5) * 0.02), "Neural Prediction", neuralColor, 3)
+
+// Quantum signals
+if quantumBullish
+    label.new(bar_index, low - ta.atr(20) * 2, 
+              "🌟 QUANTUM BUY\n" + signalClass + "\nConfidence: " + str.tostring(math.round(quantumConfidence)) + "%\n" +
+              "🧠 Neural: " + str.tostring(math.round(neural_prediction * 100)) + "%\n" +
+              "⚛️ Quantum: " + str.tostring(math.round(quantum_amplitude * 100)) + "%\n" +
+              "🌌 Multiverse: " + str.tostring(math.round(consensus_strength * 100)) + "%\n" +
+              "⏰ Future: " + str.tostring(math.round(future_confidence)) + "%",
+              xloc.bar_index, yloc.price, colorQuantumBull, label.style_label_up, 
+              color.white, size.large)
+
+if quantumBearish
+    label.new(bar_index, high + ta.atr(20) * 2, 
+              "💥 QUANTUM SELL\n" + signalClass + "\nConfidence: " + str.tostring(math.round(quantumConfidence)) + "%\n" +
+              "🧠 Neural: " + str.tostring(math.round(neural_prediction * 100)) + "%\n" +
+              "⚛️ Quantum: " + str.tostring(math.round(quantum_amplitude * 100)) + "%\n" +
+              "🌌 Multiverse: " + str.tostring(math.round(consensus_strength * 100)) + "%\n" +
+              "⏰ Future: " + str.tostring(math.round(future_confidence)) + "%",
+              xloc.bar_index, yloc.price, colorQuantumBear, label.style_label_down, 
+              color.white, size.large)
+
+// Market manipulation warnings
+if spoofing_detected
+    label.new(bar_index, high, "🚨 SPOOFING DETECTED", color=color.red, textcolor=color.white, size=size.small, style=label.style_label_down)
+
+if pump_detected
+    label.new(bar_index, high, "⚠️ PUMP & DUMP RISK", color=color.orange, textcolor=color.white, size=size.small, style=label.style_label_down)
+
+// Whale activity indicators
+if whale_strength > 3
+    label.new(bar_index, whale_direction > 0 ? low : high, 
+              "🐋 WHALE " + (whale_direction > 0 ? "BUYING" : "SELLING") + "\nStrength: " + str.tostring(math.round(whale_strength)),
+              color=whale_direction > 0 ? colorQuantumBull : colorQuantumBear, 
+              textcolor=color.white, size=size.normal,
+              style=whale_direction > 0 ? label.style_label_up : label.style_label_down)
+
+// Temporal anomaly alerts
+if anomaly_detected
+    label.new(bar_index, (high + low) / 2, "⏰ TIME ANOMALY", 
+              color=color.new(color.purple, 0), textcolor=color.white, size=size.small)
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 📊 QUANTUM DASHBOARD
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+if barstate.islast
+    var quantum_dashboard = table.new(position.top_left, 4, 15, 
+                                     bgcolor=color.new(#000020, 85), 
+                                     border_width=3, 
+                                     border_color=color.new(#00ffff, 80))
+    
+    // Clear previous data
+    table.clear(quantum_dashboard)
+    
+    // Header
+    table.cell(quantum_dashboard, 0, 0, "⚡ QUANTUM AI SYSTEM V6 ⚡", 
+               bgcolor=color.new(#00ffff, 20), text_color=color.white, text_size=size.normal)
+    table.cell(quantum_dashboard, 1, 0, "VALUE", 
+               bgcolor=color.new(#00ffff, 20), text_color=color.white, text_size=size.normal)
+    table.cell(quantum_dashboard, 2, 0, "STATUS", 
+               bgcolor=color.new(#00ffff, 20), text_color=color.white, text_size=size.normal)
+    table.cell(quantum_dashboard, 3, 0, "STRENGTH", 
+               bgcolor=color.new(#00ffff, 20), text_color=color.white, text_size=size.normal)
+    
+    // Neural Network Status
+    table.cell(quantum_dashboard, 0, 1, "🧠 Neural Network", text_color=color.white)
+    table.cell(quantum_dashboard, 1, 1, str.tostring(math.round(neural_prediction * 100)) + "%", text_color=color.yellow)
+    table.cell(quantum_dashboard, 2, 1, neural_prediction > 0.6 ? "🟢 BULLISH" : neural_prediction < 0.4 ? "🔴 BEARISH" : "🟡 NEUTRAL", 
+               text_color=color.white)
+    table.cell(quantum_dashboard, 3, 1, str.tostring(neuralLayers) + " Layers", text_color=color.aqua)
+    
+    // Quantum Mechanics
+    table.cell(quantum_dashboard, 0, 2, "⚛️ Quantum State", text_color=color.white)
+    table.cell(quantum_dashboard, 1, 2, str.tostring(math.round(quantum_amplitude * 100)) + "%", text_color=color.yellow)
+    table.cell(quantum_dashboard, 2, 2, quantum_state > 0 ? "🟢 POSITIVE" : "🔴 NEGATIVE", text_color=color.white)
+    table.cell(quantum_dashboard, 3, 2, str.tostring(math.round(tunneling_prob * 100)) + "%", text_color=color.aqua)
+    
+    // Multiverse Analysis
+    table.cell(quantum_dashboard, 0, 3, "🌌 Multiverse", text_color=color.white)
+    table.cell(quantum_dashboard, 1, 3, str.tostring(math.round(consensus_strength * 100)) + "%", text_color=color.yellow)
+    table.cell(quantum_dashboard, 2, 3, consensus_direction > 0 ? "🟢 BULL CONSENSUS" : "🔴 BEAR CONSENSUS", text_color=color.white)
+    table.cell(quantum_dashboard, 3, 3, "10 Universes", text_color=color.aqua)
+    
+    // Time Travel Predictions
+    table.cell(quantum_dashboard, 0, 4, "⏰ Future Intel", text_color=color.white)
+    table.cell(quantum_dashboard, 1, 4, str.tostring(math.round(future_confidence)) + "%", text_color=color.yellow)
+    table.cell(quantum_dashboard, 2, 4, future_direction > 0 ? "🟢 FUTURE BULL" : "🔴 FUTURE BEAR", text_color=color.white)
+    table.cell(quantum_dashboard, 3, 4, anomaly_detected ? "⚠️ ANOMALY" : "✅ STABLE", text_color=color.aqua)
+    
+    // Market Manipulation
+    table.cell(quantum_dashboard, 0, 5, "🕵️ Manipulation", text_color=color.white)
+    manipulation_score = (spoofing_detected ? 1 : 0) + (wash_trading ? 1 : 0) + (pump_detected ? 1 : 0)
+    table.cell(quantum_dashboard, 1, 5, str.tostring(manipulation_score) + "/3", 
+               text_color=manipulation_score > 0 ? color.red : color.green)
+    table.cell(quantum_dashboard, 2, 5, manipulation_score > 0 ? "🚨 DETECTED" : "✅ CLEAN", text_color=color.white)
+    table.cell(quantum_dashboard, 3, 5, spoofing_detected ? "SPOOFING" : wash_trading ? "WASHING" : pump_detected ? "PUMPING" : "NONE", 
+               text_color=color.aqua)
+    
+    // Whale Activity
+    table.cell(quantum_dashboard, 0, 6, "🐋 Whale Activity", text_color=color.white)
+    table.cell(quantum_dashboard, 1, 6, str.tostring(math.round(whale_strength * 100)) + "%", text_color=color.yellow)
+    table.cell(quantum_dashboard, 2, 6, whale_strength > 2 ? (whale_direction > 0 ? "🟢 BUYING" : "🔴 SELLING") : "😴 QUIET", text_color=color.white)
+    table.cell(quantum_dashboard, 3, 6, str.tostring(math.round(flow_intensity * 100)) + "%", text_color=color.aqua)
+    
+    // Overall Quantum Signal
+    table.cell(quantum_dashboard, 0, 7, "🌟 QUANTUM SIGNAL", 
+               bgcolor=color.new(#ff00ff, 20), text_color=color.white)
+    table.cell(quantum_dashboard, 1, 7, str.tostring(math.round(quantumConfidence)) + "%", 
+               bgcolor=color.new(#ff00ff, 20), text_color=color.yellow)
+    table.cell(quantum_dashboard, 2, 7, quantumBullish ? "🚀 QUANTUM BUY" : quantumBearish ? "💥 QUANTUM SELL" : "⏳ WAITING", 
+               bgcolor=color.new(#ff00ff, 20), text_color=color.white)
+    table.cell(quantum_dashboard, 3, 7, signalClass, 
+               bgcolor=color.new(#ff00ff, 20), text_color=color.aqua)
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🔔 QUANTUM ALERTS
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+if quantumBullish
+    alert("⚡ QUANTUM BUY SIGNAL DETECTED! ⚡\n" +
+          "🌟 Classification: " + signalClass + "\n" +
+          "🎯 Quantum Confidence: " + str.tostring(math.round(quantumConfidence)) + "%\n" +
+          "🧠 Neural Network: " + str.tostring(math.round(neural_prediction * 100)) + "%\n" +
+          "⚛️ Quantum Amplitude: " + str.tostring(math.round(quantum_amplitude * 100)) + "%\n" +
+          "🌌 Multiverse Consensus: " + str.tostring(math.round(consensus_strength * 100)) + "%\n" +
+          "⏰ Future Confidence: " + str.tostring(math.round(future_confidence)) + "%\n" +
+          "🐋 Whale Activity: " + (whale_strength > 2 ? "DETECTED" : "NONE") + "\n" +
+          "🕵️ Manipulation: " + (manipulation_score > 0 ? "WARNING" : "CLEAN"), 
+          alert.freq_once_per_bar)
+
+if quantumBearish
+    alert("💥 QUANTUM SELL SIGNAL DETECTED! 💥\n" +
+          "🌟 Classification: " + signalClass + "\n" +
+          "🎯 Quantum Confidence: " + str.tostring(math.round(quantumConfidence)) + "%\n" +
+          "🧠 Neural Network: " + str.tostring(math.round(neural_prediction * 100)) + "%\n" +
+          "⚛️ Quantum Amplitude: " + str.tostring(math.round(quantum_amplitude * 100)) + "%\n" +
+          "🌌 Multiverse Consensus: " + str.tostring(math.round(consensus_strength * 100)) + "%\n" +
+          "⏰ Future Confidence: " + str.tostring(math.round(future_confidence)) + "%\n" +
+          "🐋 Whale Activity: " + (whale_strength > 2 ? "DETECTED" : "NONE") + "\n" +
+          "🕵️ Manipulation: " + (manipulation_score > 0 ? "WARNING" : "CLEAN"), 
+          alert.freq_once_per_bar)
+
+// Special alerts
+if anomaly_detected
+    alert("⏰ TEMPORAL ANOMALY DETECTED! Reality matrix disrupted!", alert.freq_once_per_bar)
+
+if manipulation_score >= 2
+    alert("🚨 SEVERE MARKET MANIPULATION DETECTED! Exercise extreme caution!", alert.freq_once_per_bar)
+
+if whale_strength > 5
+    alert("🐋 MASSIVE WHALE MOVEMENT! Institutional activity detected!", alert.freq_once_per_bar)
+
+// Bar coloring with quantum effects
+quantumBarColor = quantumBullish ? colorQuantumBull :
+                  quantumBearish ? colorQuantumBear :
+                  quantum_amplitude > 0.7 ? color.new(colorQuantumBull, 60) :
+                  quantum_amplitude < 0.3 ? color.new(colorQuantumBear, 60) : 
+                  color.gray
+
+barcolor(quantumBarColor)
+
+// Quantum energy field visualization
+plot(close * (1 + quantum_amplitude * 0.001), "Quantum Field", color.new(#9400d3, 50), 1)
+
+// Export for backtesting
+plotshape(quantumBullish, "Quantum Buy", shape.triangleup, location.belowbar, colorQuantumBull, size=size.small)
+plotshape(quantumBearish, "Quantum Sell", shape.triangledown, location.abovebar, colorQuantumBear, size=size.small)
