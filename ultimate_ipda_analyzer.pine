@@ -1,0 +1,423 @@
+//@version=6
+indicator("Ultimate IPDA Analyzer", shorttitle="IPDA Pro", overlay=true, max_labels_count=500, max_lines_count=500)
+
+// === BASIC SETTINGS ===
+start_date = input.time(timestamp("2025-07-10 10:00"), "Start Date", group="Basic Settings")
+sequence_type = input.string("custom", "Sequence Type", options=["custom", "sequence_7", "sequence_13", "sequence_21", "sequence_5", "sequence_9", "sequence_11", "time_expansion_1", "time_expansion_2", "time_expansion_3", "time_contraction_1", "time_contraction_2", "time_contraction_3", "gann_cardinal", "gann_ordinal"], group="Basic Settings")
+custom_sequence = input.string("7,13,21,31,42", "Custom Sequence", group="Basic Settings")
+max_candles = input.int(100, "Number of Candles", minval=1, maxval=500, group="Basic Settings")
+
+// === IPDA TIME DISTORTION SETTINGS ===
+bodyThreshold = input.float(0.1, "Body % of Range Threshold", minval=0.01, maxval=1.0, group="IPDA Time Distortion")
+highlightTD = input.bool(true, "Highlight TD Candles", group="IPDA Time Distortion")
+labelTD = input.bool(true, "Label TD Candles", group="IPDA Time Distortion")
+freezeOnTD = input.bool(true, "Freeze Count on TD", group="IPDA Time Distortion")
+tdColor = input.color(#FF0000, "TD Candle Color", group="IPDA Time Distortion")
+inside_method = input.string("High/Low", "Inside Detection Method", options=["High/Low", "Open/Close"], group="IPDA Time Distortion")
+inside_comparison = input.string("<=", "Inside Comparison", options=["<=", "<"], group="IPDA Time Distortion")
+
+// === ADVANCED TD DETECTION ===
+enableAdvancedTD = input.bool(true, "Enhanced TD Detection", group="IPDA Time Distortion")
+rangeAnalysis = input.bool(true, "Include Range Analysis", group="IPDA Time Distortion")
+wickDominance = input.bool(true, "Wick Dominance Filter", group="IPDA Time Distortion")
+
+// === CUSTOM SEQUENCES ===
+use_custom_seq_1 = input.bool(false, "Use Custom Sequence 1", group="Custom Sequences")
+custom_sequence_1 = input.string("7,13,21,31,42", "Custom Sequence 1", group="Custom Sequences")
+use_custom_seq_2 = input.bool(false, "Use Custom Sequence 2", group="Custom Sequences") 
+custom_sequence_2 = input.string("5,9,11,17,25,37", "Custom Sequence 2", group="Custom Sequences")
+
+// === MULTI-TIMEFRAME ===
+enable_mtf = input.bool(false, "Enable Multi-Timeframe", group="Multi-Timeframe")
+higher_tf = input.timeframe("1H", "Higher Timeframe", group="Multi-Timeframe")
+show_mtf_confluence = input.bool(true, "Show MTF Confluence", group="Multi-Timeframe")
+
+// === ANCHORING ===
+use_manual_anchor = input.bool(false, "Use Manual Anchor", group="Anchoring")
+manual_anchor_bar = input.int(0, "Manual Anchor Bar Index", group="Anchoring")
+
+// === COUNTING DIRECTION ===
+enable_backward_count = input.bool(false, "Enable Backward Counting", group="Counting Direction")
+backward_sequence = input.string("7,13,21", "Backward Sequence", group="Counting Direction")
+enable_future_projections = input.bool(false, "Enable Future Projections", group="Future Projections")
+projection_sequence = input.string("7,13,21", "Future Projection Sequence", group="Future Projections")
+
+// === EMA OVERLAY ===
+show_ema = input.bool(false, "Show EMA 8/21", group="EMA Settings")
+ema_8_color = input.color(#0000FF, "EMA 8 Color", group="EMA Settings")
+ema_21_color = input.color(#FF0000, "EMA 21 Color", group="EMA Settings")
+
+// === DISPLAY SETTINGS ===
+display_position = input.string("above_candle", "Display Position", options=["above_candle", "below_candle"], group="Display Settings")
+vertical_shift = input.int(0, "Vertical Shift", group="Display Settings")
+normal_color = input.color(#808080, "Normal Number Color", group="Display Settings")
+sequence_color = input.color(#FF0000, "Sequence Number Color", group="Display Settings")
+backward_color = input.color(#800080, "Backward Count Color", group="Display Settings")
+future_color = input.color(#FFA500, "Future Projection Color", group="Display Settings")
+mtf_color = input.color(#00FFFF, "MTF Overlay Color", group="Display Settings")
+confluence_color = input.color(#FFFF00, "Confluence Marker Color", group="Display Settings")
+display_only_sequence = input.bool(true, "Display Only Sequence Numbers", group="Display Settings")
+label_size = input.string("normal", "Label Size", options=["tiny", "small", "normal", "large", "huge"], group="Display Settings")
+inputs_in_status = input.bool(true, "Show Status Line", group="Display Settings")
+
+// === ENHANCED SEQUENCES ===
+get_sequence(string seq_type) =>
+    switch seq_type
+        "sequence_7" => "7,13,21,31,42"
+        "sequence_13" => "13,21,25,31,42"
+        "sequence_21" => "21,31,42,63"
+        "sequence_5" => "5,9,11,17,25,37"
+        "sequence_9" => "9,11,17,25,37"
+        "sequence_11" => "11,17,25,37"
+        "time_expansion_1" => "4,7,9,15"
+        "time_expansion_2" => "7,11,15,19"
+        "time_expansion_3" => "1,6,9,11"
+        "time_contraction_1" => "3,4,7,8"
+        "time_contraction_2" => "4,5,8,9"
+        "time_contraction_3" => "2,3,6,7"
+        "gann_cardinal" => "1,2,4,8,16,32,64,128"
+        "gann_ordinal" => "3,6,12,24,48,96,192"
+        => custom_sequence
+
+// === SEQUENCE PARSING ===
+parse_sequence(string seq_str) =>
+    sequence = array.new<float>()
+    parts = str.split(seq_str, ",")
+    for part in parts
+        trimmed_part = str.trim(part)
+        if str.length(trimmed_part) > 0
+            num_value = str.tonumber(trimmed_part)
+            if not na(num_value)
+                array.push(sequence, num_value)
+    sequence
+
+// === ULTIMATE TD DETECTION (Combined Logic) ===
+is_ultimate_td_candle(int index) =>
+    if not enableAdvancedTD
+        false
+    else
+        // Get candle data
+        c_high = index == 0 ? high : high[index]
+        c_low = index == 0 ? low : low[index]
+        c_open = index == 0 ? open : open[index]
+        c_close = index == 0 ? close : close[index]
+        
+        prev_high = index == 0 ? (bar_index > 0 ? high[1] : high) : (index < bar_index ? high[index + 1] : high[index])
+        prev_low = index == 0 ? (bar_index > 0 ? low[1] : low) : (index < bar_index ? low[index + 1] : low[index])
+        prev_open = index == 0 ? (bar_index > 0 ? open[1] : open) : (index < bar_index ? open[index + 1] : open[index])
+        prev_close = index == 0 ? (bar_index > 0 ? close[1] : close) : (index < bar_index ? close[index + 1] : close[index])
+        
+        // Basic calculations
+        candleRange = c_high - c_low
+        bodySize = math.abs(c_close - c_open)
+        prevRange = prev_high - prev_low
+        
+        // 1. Small Body Detection (Doji-like)
+        isSmallBody = candleRange > 0 ? bodySize <= (bodyThreshold * candleRange) : false
+        
+        // 2. IPDA Inside Bar Detection
+        isInsideBar = if inside_method == "High/Low"
+            if inside_comparison == "<="
+                c_high <= prev_high and c_low >= prev_low
+            else
+                c_high < prev_high and c_low > prev_low
+        else
+            // Open/Close method
+            bodyMax = math.max(c_open, c_close)
+            bodyMin = math.min(c_open, c_close)
+            prevBodyMax = math.max(prev_open, prev_close)
+            prevBodyMin = math.min(prev_open, prev_close)
+            
+            if inside_comparison == "<="
+                bodyMax <= prevBodyMax and bodyMin >= prevBodyMin
+            else
+                bodyMax < prevBodyMax and bodyMin > prevBodyMin
+        
+        // 3. Range Analysis
+        isSmallRange = if rangeAnalysis and prevRange > 0
+            candleRange < (prevRange * 0.6)
+        else
+            false
+        
+        // 4. Wick Dominance (Fakeout detection)
+        hasWickDominance = if wickDominance and bodySize > 0
+            upperWick = c_high - math.max(c_open, c_close)
+            lowerWick = math.min(c_open, c_close) - c_low
+            (upperWick > bodySize) or (lowerWick > bodySize)
+        else
+            false
+        
+        // Combined TD Logic (IPDA Priority)
+        primaryTD = isInsideBar  // IPDA Primary
+        secondaryTD = isSmallBody or isSmallRange  // Secondary indicators
+        confirmationTD = hasWickDominance  // Confirmation
+        
+        // Final TD determination
+        primaryTD or (secondaryTD and confirmationTD)
+
+// === EMA CALCULATIONS ===
+ema_8 = ta.ema(close, 8)
+ema_21 = ta.ema(close, 21)
+plot(show_ema ? ema_8 : na, color=ema_8_color, linewidth=1, title="EMA 8")
+plot(show_ema ? ema_21 : na, color=ema_21_color, linewidth=2, title="EMA 21")
+
+// === PERSISTENT STORAGE ===
+var int anchor_bar_index = na
+var bool counting_started = false
+var array<label> all_labels = array.new<label>()
+var line anchor_line = na
+var int current_count_number = 1
+var bool in_time_distortion = false
+var int display_count = 1
+var int td_count = 0
+
+// === MTF DATA ===
+[mtf_close, mtf_high, mtf_low, mtf_open, mtf_bar_index] = enable_mtf ? 
+    request.security(syminfo.tickerid, higher_tf, [close, high, low, open, bar_index]) : 
+    [close, high, low, open, bar_index]
+
+// === SEQUENCE ARRAYS ===
+current_sequence_str = get_sequence(sequence_type)
+sequence_array = parse_sequence(current_sequence_str)
+custom_seq_1_array = use_custom_seq_1 ? parse_sequence(custom_sequence_1) : array.new<float>()
+custom_seq_2_array = use_custom_seq_2 ? parse_sequence(custom_sequence_2) : array.new<float>()
+backward_seq_array = enable_backward_count ? parse_sequence(backward_sequence) : array.new<float>()
+future_seq_array = enable_future_projections ? parse_sequence(projection_sequence) : array.new<float>()
+
+// === LABEL SIZE FUNCTION ===
+get_label_size() =>
+    switch label_size
+        "tiny" => size.tiny
+        "small" => size.small
+        "large" => size.large
+        "huge" => size.huge
+        => size.normal
+
+// === ANCHOR POINT LOGIC ===
+if use_manual_anchor and manual_anchor_bar >= 0
+    anchor_bar_index := bar_index - manual_anchor_bar
+    counting_started := true
+    current_count_number := 1
+    in_time_distortion := false
+    
+    if not na(anchor_line)
+        line.delete(anchor_line)
+    anchor_line := line.new(anchor_bar_index, low, anchor_bar_index, high, color=#0000FF, width=3, style=line.style_solid)
+
+else if time >= start_date and not counting_started
+    anchor_bar_index := bar_index
+    counting_started := true
+    current_count_number := 1
+    in_time_distortion := false
+    
+    anchor_line := line.new(bar_index, low, bar_index, high, color=#0000FF, width=3, style=line.style_solid)
+
+// === ULTIMATE TD DETECTION FOR CURRENT BAR ===
+current_is_td = is_ultimate_td_candle(0)
+
+// === TD VISUALIZATION ===
+bgcolor(highlightTD and current_is_td ? color.new(tdColor, 85) : na, title="TD Background")
+
+// === MAIN COUNTING LOGIC WITH TD FREEZE ===
+if counting_started and current_count_number <= max_candles and bar_index >= anchor_bar_index
+    
+    // Determine display count BEFORE updating
+    display_count := current_count_number
+    
+    // TD Freeze Logic
+    if current_is_td and freezeOnTD
+        // Mark as in TD state
+        in_time_distortion := true
+        td_count := td_count + 1
+        
+        // Show TD marker
+        if labelTD
+            td_y = display_position == "above_candle" ? high + (high - low) * 0.03 + vertical_shift : low - (high - low) * 0.03 - vertical_shift
+            td_text = "TD" + (td_count > 1 ? str.tostring(td_count) : "")
+            td_label = label.new(bar_index, td_y, td_text, color=color.new(#FFFFFF, 100), textcolor=color.new(tdColor, 0), size=size.tiny, style=label.style_circle)
+            array.push(all_labels, td_label)
+        
+        // DON'T increment count - keep frozen
+        
+    else
+        // Normal candle or TD freeze disabled
+        if in_time_distortion and freezeOnTD
+            // Exiting TD - advance count
+            current_count_number := current_count_number + 1
+            in_time_distortion := false
+            td_count := 0
+        else
+            // Normal progression
+            current_count_number := current_count_number + 1
+            td_count := 0
+        
+        display_count := current_count_number
+    
+    // === SEQUENCE DETECTION ===
+    is_main_sequence = array.includes(sequence_array, float(display_count))
+    is_custom_1 = use_custom_seq_1 and array.includes(custom_seq_1_array, float(display_count))
+    is_custom_2 = use_custom_seq_2 and array.includes(custom_seq_2_array, float(display_count))
+    
+    y_base = display_position == "above_candle" ? high + (high - low) * 0.1 + vertical_shift : low - (high - low) * 0.1 - vertical_shift
+    
+    // === MAIN SEQUENCE LABELS ===
+    if not display_only_sequence or is_main_sequence
+        label_text = if current_is_td and freezeOnTD
+            str.tostring(display_count) + "×"
+        else
+            str.tostring(display_count)
+        
+        main_color = if current_is_td and freezeOnTD
+            color.new(sequence_color, 50)
+        else
+            sequence_color
+        
+        if not display_only_sequence or is_main_sequence
+            main_label = label.new(bar_index, y_base, label_text, color=color.new(#FFFFFF, 100), textcolor=main_color, size=get_label_size(), style=label.style_none)
+            array.push(all_labels, main_label)
+    
+    // === CUSTOM SEQUENCE 1 ===
+    if use_custom_seq_1 and is_custom_1
+        custom1_text = if current_is_td and freezeOnTD
+            str.tostring(display_count) + "×"
+        else
+            str.tostring(display_count)
+        
+        custom1_color = if current_is_td and freezeOnTD
+            color.new(#00FF00, 50)
+        else
+            #00FF00
+        
+        custom1_y = y_base + (display_position == "above_candle" ? (high - low) * 0.05 : -(high - low) * 0.05)
+        custom1_label = label.new(bar_index, custom1_y, custom1_text + "₁", color=color.new(#FFFFFF, 100), textcolor=custom1_color, size=get_label_size(), style=label.style_none)
+        array.push(all_labels, custom1_label)
+    
+    // === CUSTOM SEQUENCE 2 ===
+    if use_custom_seq_2 and is_custom_2
+        custom2_text = if current_is_td and freezeOnTD
+            str.tostring(display_count) + "×"
+        else
+            str.tostring(display_count)
+        
+        custom2_color = if current_is_td and freezeOnTD
+            color.new(#800080, 50)
+        else
+            #800080
+        
+        custom2_y = y_base + (display_position == "above_candle" ? (high - low) * 0.08 : -(high - low) * 0.08)
+        custom2_label = label.new(bar_index, custom2_y, custom2_text + "₂", color=color.new(#FFFFFF, 100), textcolor=custom2_color, size=get_label_size(), style=label.style_none)
+        array.push(all_labels, custom2_label)
+
+// === BACKWARD COUNTING ===
+if enable_backward_count and counting_started and anchor_bar_index > 0
+    for i = 1 to 50
+        back_bar_index = anchor_bar_index - i
+        if back_bar_index >= 0
+            bars_back = bar_index - back_bar_index
+            is_back_td = freezeOnTD ? is_ultimate_td_candle(bars_back) : false
+            is_backward_sequence = array.includes(backward_seq_array, float(i))
+            
+            if is_backward_sequence
+                back_high = high[bars_back]
+                back_low = low[bars_back]
+                back_range = back_high - back_low
+                y_position = display_position == "above_candle" ? back_high + back_range * 0.1 : back_low - back_range * 0.1
+                
+                label_text = if is_back_td and freezeOnTD
+                    "-" + str.tostring(i) + "×"
+                else
+                    "-" + str.tostring(i)
+                
+                back_color = if is_back_td and freezeOnTD
+                    color.new(backward_color, 50)
+                else
+                    backward_color
+                
+                label_id = label.new(back_bar_index, y_position, label_text, color=color.new(#FFFFFF, 100), textcolor=back_color, size=get_label_size(), style=label.style_none)
+                array.push(all_labels, label_id)
+
+// === FUTURE PROJECTIONS ===
+if enable_future_projections and counting_started
+    for i = 1 to 21
+        future_count = current_count_number + i
+        is_future_sequence = array.includes(future_seq_array, float(future_count))
+        if is_future_sequence
+            future_bar_index = bar_index + i
+            y_position = display_position == "above_candle" ? high + (high - low) * 0.1 : low - (high - low) * 0.1
+            
+            label_text = if in_time_distortion
+                "+" + str.tostring(future_count) + "?"
+            else
+                "+" + str.tostring(future_count)
+            
+            future_final_color = if in_time_distortion
+                color.new(future_color, 60)
+            else
+                future_color
+            
+            label_id = label.new(future_bar_index, y_position, label_text, color=color.new(#FFFFFF, 100), textcolor=future_final_color, size=get_label_size(), style=label.style_none)
+            array.push(all_labels, label_id)
+
+// === MTF CONFLUENCE ===
+if enable_mtf and show_mtf_confluence and counting_started
+    current_bars = bar_index - anchor_bar_index + 1
+    mtf_count = math.floor(current_bars / 4)
+    mtf_sequence_array = parse_sequence("7,13,21")
+    
+    is_mtf_confluence = array.includes(mtf_sequence_array, float(current_count_number)) and array.includes(mtf_sequence_array, float(mtf_count))
+    if is_mtf_confluence
+        confluence_y = display_position == "above_candle" ? high + (high - low) * 0.2 : low - (high - low) * 0.2
+        confluence_label = label.new(bar_index, confluence_y, "◆", color=color.new(#FFFFFF, 100), textcolor=confluence_color, size=size.large, style=label.style_none)
+        array.push(all_labels, confluence_label)
+
+// === STATUS LINE ===
+if inputs_in_status and barstate.islast
+    status_parts = array.new<string>()
+    array.push(status_parts, "IPDA Pro: " + current_sequence_str)
+    
+    if counting_started
+        status_suffix = in_time_distortion ? " (TD)" : ""
+        array.push(status_parts, "Count: " + str.tostring(current_count_number) + status_suffix)
+    
+    if use_custom_seq_1
+        array.push(status_parts, "Seq1: " + custom_sequence_1)
+    if use_custom_seq_2
+        array.push(status_parts, "Seq2: " + custom_sequence_2)
+    if enable_backward_count
+        array.push(status_parts, "Back: ON")
+    if enable_future_projections
+        array.push(status_parts, "Future: ON")
+    if enable_mtf
+        array.push(status_parts, "MTF: " + higher_tf)
+    if enableAdvancedTD
+        td_method = inside_method == "High/Low" ? "H/L" : "O/C"
+        td_comparison = inside_comparison
+        td_status = freezeOnTD ? "FREEZE" : "SHOW"
+        array.push(status_parts, "TD: " + td_status + " (" + td_method + " " + td_comparison + ")")
+    
+    status_text = array.join(status_parts, " | ")
+    var table status_table = table.new(position.top_right, 1, 1, bgcolor=color.new(#FFFFFF, 80), border_width=1)
+    table.cell(status_table, 0, 0, status_text, text_color=#000000, text_size=size.tiny)
+
+// === ALERTS ===
+if counting_started and not in_time_distortion
+    current_count_float = float(current_count_number)
+    if array.includes(sequence_array, current_count_float)
+        alert("IPDA Sequence Number Reached: " + str.tostring(current_count_float), alert.freq_once_per_bar)
+    
+    if use_custom_seq_1 and array.includes(custom_seq_1_array, current_count_float)
+        alert("Custom Sequence 1 Hit: " + str.tostring(current_count_float), alert.freq_once_per_bar)
+    
+    if use_custom_seq_2 and array.includes(custom_seq_2_array, current_count_float)
+        alert("Custom Sequence 2 Hit: " + str.tostring(current_count_float), alert.freq_once_per_bar)
+
+// TD-specific alerts
+if enableAdvancedTD
+    if current_is_td and not current_is_td[1]
+        alert("Time Distortion Detected", alert.freq_once_per_bar)
+    
+    if not current_is_td and current_is_td[1] and in_time_distortion
+        alert("Time Distortion Ended - Count Resumed", alert.freq_once_per_bar)
+    
+    if td_count >= 3
+        alert("TD Cluster: 3+ Consecutive TD Candles", alert.freq_once_per_bar)
