@@ -228,9 +228,10 @@ if counting_started and current_count_number <= max_candles and bar_index >= anc
         
         // Show TD marker
         if labelTD
-            td_y = display_position == "above_candle" ? high + (high - low) * 0.03 + vertical_shift : low - (high - low) * 0.03 - vertical_shift
+            range_offset = (high - low) * 0.03
+            td_y = display_position == "above_candle" ? high + range_offset + vertical_shift : low - range_offset - vertical_shift
             td_text = "TD" + (td_count > 1 ? str.tostring(td_count) : "")
-            td_label = label.new(bar_index, td_y, td_text, color=color.new(#FFFFFF, 100), textcolor=color.new(tdColor, 0), size=size.tiny, style=label.style_circle)
+            td_label = label.new(bar_index, td_y, td_text, color=color.new(#FFFFFF, 100), textcolor=tdColor, size=size.tiny, style=label.style_circle)
             array.push(all_labels, td_label)
         
         // DON'T increment count - keep frozen
@@ -254,7 +255,8 @@ if counting_started and current_count_number <= max_candles and bar_index >= anc
     is_custom_1 = use_custom_seq_1 and array.includes(custom_seq_1_array, float(display_count))
     is_custom_2 = use_custom_seq_2 and array.includes(custom_seq_2_array, float(display_count))
     
-    y_base = display_position == "above_candle" ? high + (high - low) * 0.1 + vertical_shift : low - (high - low) * 0.1 - vertical_shift
+    range_mult = (high - low) * 0.1
+    y_base = display_position == "above_candle" ? high + range_mult + vertical_shift : low - range_mult - vertical_shift
     
     // === MAIN SEQUENCE LABELS ===
     if not display_only_sequence or is_main_sequence
@@ -284,7 +286,8 @@ if counting_started and current_count_number <= max_candles and bar_index >= anc
         else
             #00FF00
         
-        custom1_y = y_base + (display_position == "above_candle" ? (high - low) * 0.05 : -(high - low) * 0.05)
+        offset1 = (high - low) * 0.05
+        custom1_y = y_base + (display_position == "above_candle" ? offset1 : -offset1)
         custom1_label = label.new(bar_index, custom1_y, custom1_text + "₁", color=color.new(#FFFFFF, 100), textcolor=custom1_color, size=get_label_size(), style=label.style_none)
         array.push(all_labels, custom1_label)
     
@@ -300,7 +303,8 @@ if counting_started and current_count_number <= max_candles and bar_index >= anc
         else
             #800080
         
-        custom2_y = y_base + (display_position == "above_candle" ? (high - low) * 0.08 : -(high - low) * 0.08)
+        offset2 = (high - low) * 0.08
+        custom2_y = y_base + (display_position == "above_candle" ? offset2 : -offset2)
         custom2_label = label.new(bar_index, custom2_y, custom2_text + "₂", color=color.new(#FFFFFF, 100), textcolor=custom2_color, size=get_label_size(), style=label.style_none)
         array.push(all_labels, custom2_label)
 
@@ -317,7 +321,8 @@ if enable_backward_count and counting_started and anchor_bar_index > 0
                 back_high = high[bars_back]
                 back_low = low[bars_back]
                 back_range = back_high - back_low
-                y_position = display_position == "above_candle" ? back_high + back_range * 0.1 : back_low - back_range * 0.1
+                back_offset = back_range * 0.1
+                y_position = display_position == "above_candle" ? back_high + back_offset : back_low - back_offset
                 
                 label_text = if is_back_td and freezeOnTD
                     "-" + str.tostring(i) + "×"
@@ -339,7 +344,8 @@ if enable_future_projections and counting_started
         is_future_sequence = array.includes(future_seq_array, float(future_count))
         if is_future_sequence
             future_bar_index = bar_index + i
-            y_position = display_position == "above_candle" ? high + (high - low) * 0.1 : low - (high - low) * 0.1
+            future_offset = (high - low) * 0.1
+            y_position = display_position == "above_candle" ? high + future_offset : low - future_offset
             
             label_text = if in_time_distortion
                 "+" + str.tostring(future_count) + "?"
@@ -362,7 +368,8 @@ if enable_mtf and show_mtf_confluence and counting_started
     
     is_mtf_confluence = array.includes(mtf_sequence_array, float(current_count_number)) and array.includes(mtf_sequence_array, float(mtf_count))
     if is_mtf_confluence
-        confluence_y = display_position == "above_candle" ? high + (high - low) * 0.2 : low - (high - low) * 0.2
+        confluence_offset = (high - low) * 0.2
+        confluence_y = display_position == "above_candle" ? high + confluence_offset : low - confluence_offset
         confluence_label = label.new(bar_index, confluence_y, "◆", color=color.new(#FFFFFF, 100), textcolor=confluence_color, size=size.large, style=label.style_none)
         array.push(all_labels, confluence_label)
 
