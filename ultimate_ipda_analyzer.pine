@@ -3,10 +3,7 @@ indicator("Ultimate IPDA Analyzer", shorttitle="IPDA Pro", overlay=true, max_lab
 
 // === BASIC SETTINGS ===
 start_date = input.time(timestamp("2025-07-10 10:00"), "Start Date", group="Basic Settings")
-sequence_type = input.string("custom", "Sequence Type", options=
-     ["custom", "sequence_7", "sequence_13", "sequence_21", "sequence_5", "sequence_9", "sequence_11", 
-      "time_expansion_1", "time_expansion_2", "time_expansion_3", "time_contraction_1", 
-      "time_contraction_2", "time_contraction_3", "gann_cardinal", "gann_ordinal"], group="Basic Settings")
+sequence_type = input.string("custom", "Sequence Type", options=["custom", "sequence_7", "sequence_13", "sequence_21", "gann_cardinal"], group="Basic Settings")
 custom_sequence = input.string("7,13,21,31,42", "Custom Sequence", group="Basic Settings")
 max_candles = input.int(100, "Number of Candles", minval=1, maxval=500, group="Basic Settings")
 
@@ -64,22 +61,13 @@ label_size = input.string("normal", "Label Size", options=["tiny", "small", "nor
 inputs_in_status = input.bool(true, "Show Status Line", group="Display Settings")
 
 // === ENHANCED SEQUENCES ===
+// Note: Use custom_sequence input to enter any sequence like: 5,9,11,17,25,37
 get_sequence(string seq_type) =>
     switch seq_type
         "sequence_7" => "7,13,21,31,42"
         "sequence_13" => "13,21,25,31,42"
         "sequence_21" => "21,31,42,63"
-        "sequence_5" => "5,9,11,17,25,37"
-        "sequence_9" => "9,11,17,25,37"
-        "sequence_11" => "11,17,25,37"
-        "time_expansion_1" => "4,7,9,15"
-        "time_expansion_2" => "7,11,15,19"
-        "time_expansion_3" => "1,6,9,11"
-        "time_contraction_1" => "3,4,7,8"
-        "time_contraction_2" => "4,5,8,9"
-        "time_contraction_3" => "2,3,6,7"
         "gann_cardinal" => "1,2,4,8,16,32,64,128"
-        "gann_ordinal" => "3,6,12,24,48,96,192"
         => custom_sequence
 
 // === SEQUENCE PARSING ===
