@@ -1,0 +1,54 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Zidanola
+
+//@version=5
+// Telegram Join Us >> https://t.me/elmehdi
+//...................../´¯¯/)
+//...................,/¯.../
+//.................../..../
+//.............../´¯/'..'/´¯¯`·¸
+//.........../'/.../..../....../¨¯\
+//..........('(....´...´... ¯~/'..')
+//...........\..............'...../
+//............\....\.........._.·´
+//.............\..............(
+//..............\..............\
+//----
+//---------
+// Telegram Join Us >> https://t.me/elmehdi
+indicator("💎 EL MEHDI  💎", overlay = true)
+
+// Get user input
+// Dashboard
+showDashboard     = input(true, "Smart Panel", group = 'Dashboard Settings')
+locationDashboard = input.string("Bottom Right", "Location", ["Top Right", "Middle Right", "Bottom Right", "Top Center", "Middle Center", "Bottom Center", "Top Left", "Middle Left", "Bottom Left"], group = 'Dashboard Settings', inline = 'agfh1')
+sizeDashboard     = input.string("Small", "Size", ["Large", "Normal", "Small", "Tiny"], group = 'Dashboard Settings', inline = 'agfh1')
+
+// Signals
+nbuysell   = input.bool(true, 'Show Signals', inline = "BSNM",group='BUY AND SELL SIGNALS SETTINGS')
+nsensitivity = input.float(defval=2, title="Sensitivity", minval=1, maxval=20, group='BUY AND SELL SIGNALS SETTINGS')
+smartsignalsonly   = input.bool(false, 'Smart Signals Only',group='BUY AND SELL SIGNALS SETTINGS')
+barcoloringmode  = input.string("Trend", "Bar Coloring", ["Gradient", "Trend"], inline="levels", group = 'BUY AND SELL SIGNALS SETTINGS')
+
+ema200con = ta.ema(close,200)
+
+// Risk Management
+levels      = input.bool(false, "Take Profit/ Stop-Loss Areas" , group = "RISK MANAGEMENT SETTINGS" , inline = "MMDB2")
+lvlLines    = true
+linesStyle  = "DASHED"
+lvlDistance = input.int(20, "Distance", 1, inline="levels2", group = "RISK MANAGEMENT SETTINGS")
+lvlDecimals = input.int(2, "   Decimals", 1, 8, inline="levels2", group = "RISK MANAGEMENT SETTINGS")
+atrRisk     = input.int(1, "Risk % ", 1, group = "RISK MANAGEMENT SETTINGS" , inline="levels3")
+atrLen      = input.int(14, "  ATR Length", 1, group = "RISK MANAGEMENT SETTINGS" , inline="levels3")
+decimals  = lvlDecimals == 1 ? "#.#" : lvlDecimals == 2 ? "#.##" : lvlDecimals == 3 ? "#.###" : lvlDecimals == 4 ? "#.####" : lvlDecimals == 5 ? "#.#####" : lvlDecimals == 6 ? "#.######" : lvlDecimals == 7 ? "#.#######" : "#.########"
+
+// Trend Features
+LongTrendAverage  = input(false, 'Trend Cloud', group='INDICATOR OVERLAY', inline = '1')
+TrendFollower     = input(false, 'Trend Follower', group='INDICATOR OVERLAY', inline = '1')
+ShowComulus       = input(false, 'Comulus Cloud', group='INDICATOR OVERLAY', inline = '2')
+CirrusCloud       = input(false, 'Cirrus Cloud', group='INDICATOR OVERLAY', inline = '2')
+ShowSmartTrail = input(false,'Smart Trail', group='INDICATOR OVERLAY', inline = '3')
+Showtrendlines = input(false,'Trend Lines', group='INDICATOR OVERLAY', inline = '3')
+showsr = input(false, title="Support & Resistance", group = 'INDICATOR OVERLAY', inline = '4')
+
+// ... rest of the code continues with signal generation, dashboard, etc.
