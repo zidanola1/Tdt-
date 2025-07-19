@@ -439,10 +439,8 @@ generateUltimateInputs() =>
     input2 = (close - ta.sma(close, 50)) / ta.atr(14)
     input3 = volume / ta.sma(volume, 20)
     
-    // MACD components - FIXED: Use direct component access instead of array indexing
-    macd_line = ta.macd(close, 12, 26, 9)
-    signal_line = ta.ema(macd_line, 9)
-    macd_histogram = macd_line - signal_line
+    // MACD components - FIXED: Properly destructure MACD tuple
+    [macd_line, signal_line, macd_histogram] = ta.macd(close, 12, 26, 9)
     input4 = macd_histogram / close * 1000
     
     // Advanced inputs
@@ -459,17 +457,51 @@ neural_prediction = enableQuantum ? enhancedNeuralNetworkPredict(input1, input2,
 
 // Enhanced quantum mechanics
 [quantum_amplitude, quantum_state, quantum_confidence] = quantumSuperposition()
-[tunneling_prob, reflection_prob] = enableQuantumTunneling ? quantumTunneling(close, ta.atr(14)) : [0, 0]
+tunneling_prob = 0.0
+reflection_prob = 0.0
+if enableQuantumTunneling
+    [tunneling_prob, reflection_prob] = quantumTunneling(close, ta.atr(14))
 
-// Advanced pattern analysis
-[elliott_confidence, elliott_direction] = enableElliottWave ? detectElliottWave() : [0, 0]
-[harmonic_strength, harmonic_direction, harmonic_type] = enableHarmonicPatterns ? detectHarmonicPatterns() : [0, 0, "NONE"]
-[volume_bias, volume_strength, poc_significance, high_volume_node] = enableVolumeProfile ? analyzeVolumeProfile() : [0, 0, 0, false]
-[flow_direction, flow_strength, absorption_detected, iceberg_buy, iceberg_sell] = enableOrderFlow ? analyzeOrderFlow() : [0, 0, false, false, false]
-[liquidity_score, liquidity_grab, institutional_zone, fair_value_gap] = enableLiquidityMapping ? mapLiquidityPools() : [0, false, false, false]
+// Advanced pattern analysis - FIXED: Avoid conditional tuple assignments
+elliott_confidence = 0.0
+elliott_direction = 0.0
+if enableElliottWave
+    [elliott_confidence, elliott_direction] = detectElliottWave()
 
-// Enhanced multiverse analysis
-[consensus_strength, consensus_direction, consensus_certainty] = enableMultiverse ? multiverseConsensus() : [0.5, 0, 0.5]
+harmonic_strength = 0.0
+harmonic_direction = 0.0
+harmonic_type = "NONE"
+if enableHarmonicPatterns
+    [harmonic_strength, harmonic_direction, harmonic_type] = detectHarmonicPatterns()
+
+volume_bias = 0.0
+volume_strength = 0.0
+poc_significance = 0.0
+high_volume_node = false
+if enableVolumeProfile
+    [volume_bias, volume_strength, poc_significance, high_volume_node] = analyzeVolumeProfile()
+
+flow_direction = 0.0
+flow_strength = 0.0
+absorption_detected = false
+iceberg_buy = false
+iceberg_sell = false
+if enableOrderFlow
+    [flow_direction, flow_strength, absorption_detected, iceberg_buy, iceberg_sell] = analyzeOrderFlow()
+
+liquidity_score = 0.0
+liquidity_grab = false
+institutional_zone = false
+fair_value_gap = false
+if enableLiquidityMapping
+    [liquidity_score, liquidity_grab, institutional_zone, fair_value_gap] = mapLiquidityPools()
+
+// Enhanced multiverse analysis - FIXED: Avoid conditional tuple assignment
+consensus_strength = 0.5
+consensus_direction = 0.0
+consensus_certainty = 0.5
+if enableMultiverse
+    [consensus_strength, consensus_direction, consensus_certainty] = multiverseConsensus()
 
 // Fractal analysis
 fractal_dimension = enableFractalAnalysis ? calculateFractalDimension(30) : 1.5
