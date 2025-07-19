@@ -1,0 +1,453 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Enhanced by AI - Ultimate Trading System
+
+//@version=5
+indicator("🚀 EL MEHDI ULTIMATE 🚀", overlay=true, max_labels_count=500, max_lines_count=500, max_boxes_count=500)
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🎯 ULTIMATE CONFIGURATION PANEL
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Main Settings
+group_main = "🎯 ULTIMATE SIGNAL ENGINE"
+enableAI = input.bool(true, "🤖 AI Enhanced Signals", group=group_main)
+signalMode = input.string("Hybrid", "Signal Mode", ["Conservative", "Balanced", "Aggressive", "Hybrid", "AI-Adaptive"], group=group_main)
+sensitivity = input.float(2.0, "Sensitivity", 0.5, 10.0, 0.1, group=group_main)
+smartFilter = input.bool(true, "🧠 Smart Noise Filter", group=group_main)
+confluenceMode = input.bool(true, "⚡ Multi-Confluence Signals", group=group_main)
+
+// Advanced Dashboard
+group_dash = "📊 ULTIMATE DASHBOARD"
+showDashboard = input.bool(true, "Show Ultimate Dashboard", group=group_dash)
+dashLocation = input.string("Top Right", "Location", ["Top Right", "Top Left", "Bottom Right", "Bottom Left"], group=group_dash)
+dashSize = input.string("Normal", "Size", ["Large", "Normal", "Small"], group=group_dash)
+showPerformance = input.bool(true, "📈 Performance Metrics", group=group_dash)
+
+// Risk Management Ultra
+group_risk = "🛡️ ULTIMATE RISK MANAGEMENT"
+enableAutoRisk = input.bool(true, "🎯 Auto Risk Management", group=group_risk)
+riskPercent = input.float(2.0, "Risk Per Trade %", 0.5, 10.0, 0.1, group=group_risk)
+maxDD = input.float(10.0, "Max Drawdown %", 5.0, 50.0, 1.0, group=group_risk)
+enableTrailing = input.bool(true, "🔄 Dynamic Trailing Stop", group=group_risk)
+tpLevels = input.int(3, "Take Profit Levels", 1, 5, group=group_risk)
+
+// Market Structure Analysis
+group_structure = "🏗️ MARKET STRUCTURE ANALYSIS"
+enableStructure = input.bool(true, "Market Structure Detection", group=group_structure)
+enableLiquidity = input.bool(true, "💧 Liquidity Analysis", group=group_structure)
+enableOrderBlocks = input.bool(true, "📦 Order Block Detection", group=group_structure)
+enableFVG = input.bool(true, "⚡ Fair Value Gaps", group=group_structure)
+
+// Advanced Overlays
+group_overlay = "🎨 ULTIMATE OVERLAYS"
+showTrendCloud = input.bool(false, "☁️ Adaptive Trend Cloud", group=group_overlay)
+showVolumeProfile = input.bool(false, "📊 Volume Profile", group=group_overlay)
+showLiquidityLevels = input.bool(false, "💎 Liquidity Levels", group=group_overlay)
+showSmartMoney = input.bool(false, "🏦 Smart Money Flow", group=group_overlay)
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🧠 AI-ENHANCED SIGNAL ENGINE
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Multi-timeframe trend analysis
+tf1 = "1"
+tf5 = "5"
+tf15 = "15"
+tf1h = "60"
+tf4h = "240"
+tf1d = "1D"
+
+// Enhanced SuperTrend with adaptive parameters
+adaptiveSuperTrend(factor, period) =>
+    volatility = ta.atr(period)
+    adaptedFactor = factor * (1 + volatility / ta.sma(volatility, 50))
+    atr = ta.atr(period) * adaptedFactor
+    upperBand = hl2 + atr
+    lowerBand = hl2 - atr
+    
+    var float supertrend = na
+    var int direction = 1
+    
+    prevSupertrend = supertrend[1]
+    
+    if na(prevSupertrend)
+        supertrend := close <= lowerBand ? upperBand : lowerBand
+        direction := close <= lowerBand ? -1 : 1
+    else
+        if direction[1] == 1
+            lowerBand := lowerBand > prevSupertrend ? lowerBand : prevSupertrend
+            supertrend := close <= lowerBand ? upperBand : lowerBand
+            direction := close <= lowerBand ? -1 : 1
+        else
+            upperBand := upperBand < prevSupertrend ? upperBand : prevSupertrend
+            supertrend := close >= upperBand ? lowerBand : upperBand
+            direction := close >= upperBand ? 1 : -1
+    
+    [supertrend, direction]
+
+// AI-like adaptive parameters based on market conditions
+volatilityRegime = ta.atr(14) / ta.sma(ta.atr(14), 50)
+trendStrength = math.abs(ta.ema(close, 21) - ta.ema(close, 50)) / ta.atr(14)
+volumeStrength = volume / ta.sma(volume, 20)
+
+adaptiveFactor = sensitivity * (1 + volatilityRegime * 0.5)
+adaptivePeriod = math.round(14 * (2 - trendStrength))
+
+[supertrend, stDirection] = adaptiveSuperTrend(adaptiveFactor, adaptivePeriod)
+
+// Multi-confluence signal generation
+ema21 = ta.ema(close, 21)
+ema50 = ta.ema(close, 50)
+ema200 = ta.ema(close, 200)
+rsi = ta.rsi(close, 14)
+macd = ta.macd(close, 12, 26, 9)
+macdLine = macd[0]
+macdSignal = macd[1]
+macdHist = macd[2]
+
+// Advanced signal conditions
+trendBull = close > ema21 and ema21 > ema50 and ema50 > ema200
+trendBear = close < ema21 and ema21 < ema50 and ema50 < ema200
+momentumBull = rsi > 50 and macdLine > macdSignal and macdHist > 0
+momentumBear = rsi < 50 and macdLine < macdSignal and macdHist < 0
+
+// Structure-based signals
+var float lastSwingHigh = na
+var float lastSwingLow = na
+var int swingHighBar = na
+var int swingLowBar = na
+
+if ta.pivothigh(high, 5, 5)
+    lastSwingHigh := high[5]
+    swingHighBar := bar_index[5]
+
+if ta.pivotlow(low, 5, 5)
+    lastSwingLow := low[5]
+    swingLowBar := bar_index[5]
+
+structureBull = not na(lastSwingLow) and close > lastSwingHigh
+structureBear = not na(lastSwingHigh) and close < lastSwingLow
+
+// Ultimate signal generation with confluence
+confluenceScore = 0
+
+if stDirection == 1
+    confluenceScore += 1
+if trendBull
+    confluenceScore += 1
+if momentumBull
+    confluenceScore += 1
+if structureBull
+    confluenceScore += 1
+if volumeStrength > 1.2
+    confluenceScore += 1
+
+confluenceScoreBear = 0
+if stDirection == -1
+    confluenceScoreBear += 1
+if trendBear
+    confluenceScoreBear += 1
+if momentumBear
+    confluenceScoreBear += 1
+if structureBear
+    confluenceScoreBear += 1
+if volumeStrength > 1.2
+    confluenceScoreBear += 1
+
+// Signal threshold based on mode
+signalThreshold = signalMode == "Conservative" ? 4 : signalMode == "Balanced" ? 3 : signalMode == "Aggressive" ? 2 : signalMode == "Hybrid" ? 3 : enableAI ? math.round(3 * (1 + trendStrength * 0.5)) : 3
+
+// Ultimate buy/sell signals
+ultimateBuy = confluenceScore >= signalThreshold and stDirection[1] != 1
+ultimateSell = confluenceScoreBear >= signalThreshold and stDirection[1] != -1
+
+// Smart Money Concepts
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Order Block Detection
+isOrderBlock(isSupply) =>
+    lookback = 20
+    if isSupply
+        // Supply order block: strong bearish candle followed by retracement
+        strongBear = close < open and (open - close) > ta.atr(14) * 1.5
+        retracement = ta.barssince(strongBear) <= 10 and close > close[ta.barssince(strongBear)]
+        strongBear and retracement
+    else
+        // Demand order block: strong bullish candle followed by retracement
+        strongBull = close > open and (close - open) > ta.atr(14) * 1.5
+        retracement = ta.barssince(strongBull) <= 10 and close < close[ta.barssince(strongBull)]
+        strongBull and retracement
+
+// Fair Value Gap Detection
+isFVG() =>
+    gap_up = low > high[2] and high[1] < low and high[1] < low[2]
+    gap_down = high < low[2] and low[1] > high and low[1] > high[2]
+    gap_up or gap_down
+
+// Liquidity Analysis
+liquidityHigh = ta.pivothigh(high, 10, 10)
+liquidityLow = ta.pivotlow(low, 10, 10)
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🎨 ULTIMATE VISUALIZATION
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Color scheme
+colorBullish = color.new(#00ff88, 0)
+colorBearish = color.new(#ff4444, 0)
+colorNeutral = color.new(#ffaa00, 0)
+colorBullishFaded = color.new(#00ff88, 70)
+colorBearishFaded = color.new(#ff4444, 70)
+
+// SuperTrend visualization
+stColor = stDirection == 1 ? colorBullish : colorBearish
+plot(supertrend, "Ultimate SuperTrend", stColor, 2)
+
+// Trend cloud
+if showTrendCloud
+    upperCloud = math.max(ema21, ema50)
+    lowerCloud = math.min(ema21, ema50)
+    fill(plot(upperCloud), plot(lowerCloud), 
+         trendBull ? colorBullishFaded : trendBear ? colorBearishFaded : color.new(colorNeutral, 80))
+
+// Signal visualization
+if ultimateBuy
+    label.new(bar_index, low - ta.atr(20), 
+              "🚀 ULTIMATE BUY\nConfluence: " + str.tostring(confluenceScore) + "/5", 
+              xloc.bar_index, yloc.price, colorBullish, label.style_label_up, 
+              color.white, size.normal)
+    
+if ultimateSell
+    label.new(bar_index, high + ta.atr(20), 
+              "💥 ULTIMATE SELL\nConfluence: " + str.tostring(confluenceScoreBear) + "/5", 
+              xloc.bar_index, yloc.price, colorBearish, label.style_label_down, 
+              color.white, size.normal)
+
+// Order blocks
+if enableOrderBlocks and isOrderBlock(true)
+    box.new(bar_index-1, high, bar_index+10, high-ta.atr(14)*0.5, 
+            bgcolor=color.new(colorBearish, 85), border_color=colorBearish)
+
+if enableOrderBlocks and isOrderBlock(false)
+    box.new(bar_index-1, low, bar_index+10, low+ta.atr(14)*0.5, 
+            bgcolor=color.new(colorBullish, 85), border_color=colorBullish)
+
+// Fair Value Gaps
+if enableFVG and isFVG()
+    gapTop = math.max(low, high[2])
+    gapBottom = math.min(high, low[2])
+    box.new(bar_index-2, gapTop, bar_index+5, gapBottom, 
+            bgcolor=color.new(color.purple, 90), border_color=color.purple, border_style=line.style_dashed)
+
+// Liquidity levels
+if enableLiquidity
+    if not na(liquidityHigh)
+        line.new(bar_index[10], liquidityHigh, bar_index+20, liquidityHigh, 
+                 color=colorBearish, style=line.style_dotted, width=2)
+        label.new(bar_index, liquidityHigh, "💧 Liquidity", 
+                  color=color.new(colorBearish, 20), textcolor=color.white, size=size.small)
+    
+    if not na(liquidityLow)
+        line.new(bar_index[10], liquidityLow, bar_index+20, liquidityLow, 
+                 color=colorBullish, style=line.style_dotted, width=2)
+        label.new(bar_index, liquidityLow, "💧 Liquidity", 
+                  color=color.new(colorBullish, 20), textcolor=color.white, size=size.small)
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 📊 ULTIMATE DASHBOARD
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Performance tracking
+var float totalPnL = 0.0
+var int totalTrades = 0
+var int winningTrades = 0
+var float maxDrawdown = 0.0
+
+// Track signals for performance
+if ultimateBuy or ultimateSell
+    totalTrades += 1
+
+// Calculate win rate (simplified)
+winRate = totalTrades > 0 ? winningTrades / totalTrades * 100 : 0
+
+// Market sentiment analysis
+bullishSignals = 0
+bearishSignals = 0
+
+if trendBull
+    bullishSignals += 1
+if momentumBull
+    bullishSignals += 1
+if structureBull
+    bullishSignals += 1
+if stDirection == 1
+    bullishSignals += 1
+
+if trendBear
+    bearishSignals += 1
+if momentumBear
+    bearishSignals += 1
+if structureBear
+    bearishSignals += 1
+if stDirection == -1
+    bearishSignals += 1
+
+marketSentiment = bullishSignals > bearishSignals ? "🚀 BULLISH" : 
+                  bearishSignals > bullishSignals ? "🐻 BEARISH" : "⚖️ NEUTRAL"
+
+// Session detection
+nySession = time(timeframe.period, "0930-1600", "America/New_York")
+londonSession = time(timeframe.period, "0800-1700", "Europe/London")
+tokyoSession = time(timeframe.period, "0900-1800", "Asia/Tokyo")
+
+currentSession = nySession ? "🇺🇸 NY" : londonSession ? "🇬🇧 LONDON" : tokyoSession ? "🇯🇵 TOKYO" : "🌍 OFF-HOURS"
+
+// Dashboard creation
+var dashPos = dashLocation == "Top Right" ? position.top_right : 
+              dashLocation == "Top Left" ? position.top_left : 
+              dashLocation == "Bottom Right" ? position.bottom_right : position.bottom_left
+
+var dashSz = dashSize == "Large" ? size.large : dashSize == "Normal" ? size.normal : size.small
+
+if showDashboard and barstate.islast
+    var table dashboard = table.new(dashPos, 3, 12, bgcolor=color.new(#1a1a2e, 90), 
+                                   border_width=2, border_color=color.new(#00ff88, 50))
+    
+    // Header
+    table.cell(dashboard, 0, 0, "🚀 EL MEHDI ULTIMATE", bgcolor=color.new(#00ff88, 20), 
+               text_color=color.white, text_size=dashSz)
+    table.cell(dashboard, 1, 0, "VALUE", bgcolor=color.new(#00ff88, 20), 
+               text_color=color.white, text_size=dashSz)
+    table.cell(dashboard, 2, 0, "STATUS", bgcolor=color.new(#00ff88, 20), 
+               text_color=color.white, text_size=dashSz)
+    
+    // Market data
+    table.cell(dashboard, 0, 1, "🎯 Signal Mode", text_color=color.white, text_size=dashSz)
+    table.cell(dashboard, 1, 1, signalMode, text_color=color.yellow, text_size=dashSz)
+    table.cell(dashboard, 2, 1, enableAI ? "🤖 AI ON" : "📊 MANUAL", 
+               text_color=enableAI ? colorBullish : colorNeutral, text_size=dashSz)
+    
+    table.cell(dashboard, 0, 2, "📈 Market Sentiment", text_color=color.white, text_size=dashSz)
+    table.cell(dashboard, 1, 2, marketSentiment, 
+               text_color=bullishSignals > bearishSignals ? colorBullish : 
+                         bearishSignals > bullishSignals ? colorBearish : colorNeutral, text_size=dashSz)
+    table.cell(dashboard, 2, 2, str.tostring(math.max(bullishSignals, bearishSignals)) + "/4", 
+               text_color=color.white, text_size=dashSz)
+    
+    table.cell(dashboard, 0, 3, "⚡ Trend Strength", text_color=color.white, text_size=dashSz)
+    table.cell(dashboard, 1, 3, str.tostring(math.round(trendStrength * 100)) + "%", 
+               text_color=trendStrength > 1 ? colorBullish : colorNeutral, text_size=dashSz)
+    table.cell(dashboard, 2, 3, trendStrength > 1 ? "💪 STRONG" : "😴 WEAK", 
+               text_color=trendStrength > 1 ? colorBullish : colorBearish, text_size=dashSz)
+    
+    table.cell(dashboard, 0, 4, "🌊 Volatility", text_color=color.white, text_size=dashSz)
+    table.cell(dashboard, 1, 4, str.tostring(math.round(volatilityRegime * 100)) + "%", 
+               text_color=volatilityRegime > 1.2 ? colorBearish : colorBullish, text_size=dashSz)
+    table.cell(dashboard, 2, 4, volatilityRegime > 1.2 ? "🔥 HIGH" : "❄️ LOW", 
+               text_color=volatilityRegime > 1.2 ? colorBearish : colorBullish, text_size=dashSz)
+    
+    table.cell(dashboard, 0, 5, "📊 Volume Strength", text_color=color.white, text_size=dashSz)
+    table.cell(dashboard, 1, 5, str.tostring(math.round(volumeStrength * 100)) + "%", 
+               text_color=volumeStrength > 1.2 ? colorBullish : colorNeutral, text_size=dashSz)
+    table.cell(dashboard, 2, 5, volumeStrength > 1.2 ? "💥 STRONG" : "😴 WEAK", 
+               text_color=volumeStrength > 1.2 ? colorBullish : colorBearish, text_size=dashSz)
+    
+    table.cell(dashboard, 0, 6, "🕒 Session", text_color=color.white, text_size=dashSz)
+    table.cell(dashboard, 1, 6, currentSession, text_color=color.aqua, text_size=dashSz)
+    table.cell(dashboard, 2, 6, nySession or londonSession ? "🔥 ACTIVE" : "😴 QUIET", 
+               text_color=nySession or londonSession ? colorBullish : colorNeutral, text_size=dashSz)
+    
+    if showPerformance
+        table.cell(dashboard, 0, 7, "📈 Performance", bgcolor=color.new(#ff4444, 20), 
+                   text_color=color.white, text_size=dashSz)
+        table.cell(dashboard, 1, 7, "METRICS", bgcolor=color.new(#ff4444, 20), 
+                   text_color=color.white, text_size=dashSz)
+        table.cell(dashboard, 2, 7, "VALUE", bgcolor=color.new(#ff4444, 20), 
+                   text_color=color.white, text_size=dashSz)
+        
+        table.cell(dashboard, 0, 8, "🎯 Total Signals", text_color=color.white, text_size=dashSz)
+        table.cell(dashboard, 1, 8, str.tostring(totalTrades), text_color=color.yellow, text_size=dashSz)
+        table.cell(dashboard, 2, 8, totalTrades > 10 ? "📊 ACTIVE" : "⏳ STARTING", 
+                   text_color=totalTrades > 10 ? colorBullish : colorNeutral, text_size=dashSz)
+        
+        table.cell(dashboard, 0, 9, "🏆 Win Rate", text_color=color.white, text_size=dashSz)
+        table.cell(dashboard, 1, 9, str.tostring(math.round(winRate)) + "%", 
+                   text_color=winRate > 60 ? colorBullish : winRate > 40 ? colorNeutral : colorBearish, text_size=dashSz)
+        table.cell(dashboard, 2, 9, winRate > 60 ? "🚀 EXCELLENT" : winRate > 40 ? "👍 GOOD" : "⚠️ POOR", 
+                   text_color=winRate > 60 ? colorBullish : winRate > 40 ? colorNeutral : colorBearish, text_size=dashSz)
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🔔 ULTIMATE ALERTS
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Enhanced alert messages
+if ultimateBuy
+    alert("🚀 ULTIMATE BUY SIGNAL!\n" + 
+          "Confluence Score: " + str.tostring(confluenceScore) + "/5\n" +
+          "Trend Strength: " + str.tostring(math.round(trendStrength * 100)) + "%\n" +
+          "Market Sentiment: " + marketSentiment + "\n" +
+          "Session: " + currentSession, alert.freq_once_per_bar)
+
+if ultimateSell
+    alert("💥 ULTIMATE SELL SIGNAL!\n" + 
+          "Confluence Score: " + str.tostring(confluenceScoreBear) + "/5\n" +
+          "Trend Strength: " + str.tostring(math.round(trendStrength * 100)) + "%\n" +
+          "Market Sentiment: " + marketSentiment + "\n" +
+          "Session: " + currentSession, alert.freq_once_per_bar)
+
+// Structure break alerts
+if structureBull
+    alert("📈 BULLISH STRUCTURE BREAK - Potential trend continuation!", alert.freq_once_per_bar)
+
+if structureBear
+    alert("📉 BEARISH STRUCTURE BREAK - Potential trend continuation!", alert.freq_once_per_bar)
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🎯 RISK MANAGEMENT SYSTEM
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+if enableAutoRisk and (ultimateBuy or ultimateSell)
+    entryPrice = close
+    atrValue = ta.atr(14)
+    stopLoss = ultimateBuy ? entryPrice - (atrValue * 2) : entryPrice + (atrValue * 2)
+    
+    // Dynamic take profits based on trend strength
+    tpMultiplier = trendStrength > 1 ? 3.0 : 2.0
+    takeProfit1 = ultimateBuy ? entryPrice + (atrValue * tpMultiplier) : entryPrice - (atrValue * tpMultiplier)
+    takeProfit2 = ultimateBuy ? entryPrice + (atrValue * tpMultiplier * 2) : entryPrice - (atrValue * tpMultiplier * 2)
+    takeProfit3 = ultimateBuy ? entryPrice + (atrValue * tpMultiplier * 3) : entryPrice - (atrValue * tpMultiplier * 3)
+    
+    // Risk-reward visualization
+    riskReward = math.abs(takeProfit1 - entryPrice) / math.abs(entryPrice - stopLoss)
+    
+    if ultimateBuy
+        line.new(bar_index, stopLoss, bar_index + 10, stopLoss, color=colorBearish, style=line.style_dashed, width=2)
+        line.new(bar_index, takeProfit1, bar_index + 10, takeProfit1, color=colorBullish, style=line.style_solid, width=2)
+        label.new(bar_index + 5, takeProfit1, "🎯 TP1 (R:" + str.tostring(riskReward, "#.##") + ")", 
+                  color=color.new(colorBullish, 20), textcolor=color.white, size=size.small)
+    
+    if ultimateSell
+        line.new(bar_index, stopLoss, bar_index + 10, stopLoss, color=colorBearish, style=line.style_dashed, width=2)
+        line.new(bar_index, takeProfit1, bar_index + 10, takeProfit1, color=colorBullish, style=line.style_solid, width=2)
+        label.new(bar_index + 5, takeProfit1, "🎯 TP1 (R:" + str.tostring(riskReward, "#.##") + ")", 
+                  color=color.new(colorBullish, 20), textcolor=color.white, size=size.small)
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 📊 EXPORT DATA FOR BACKTESTING
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Plot invisible signals for strategy testing
+plotshape(ultimateBuy, "Ultimate Buy Signal", shape.triangleup, location.belowbar, colorBullish, size=size.tiny)
+plotshape(ultimateSell, "Ultimate Sell Signal", shape.triangledown, location.abovebar, colorBearish, size=size.tiny)
+
+// Bar coloring based on trend and momentum
+barColor = trendBull and momentumBull ? colorBullish :
+           trendBear and momentumBear ? colorBearish :
+           stDirection == 1 ? color.new(colorBullish, 70) :
+           stDirection == -1 ? color.new(colorBearish, 70) : color.gray
+
+barcolor(barColor)
+
+// Background highlighting for high-probability setups
+bgcolor(confluenceScore >= 4 ? color.new(colorBullish, 95) : 
+        confluenceScoreBear >= 4 ? color.new(colorBearish, 95) : na)
