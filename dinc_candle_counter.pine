@@ -351,13 +351,14 @@ if counting_started and current_count_number <= max_candles and bar_index >= anc
         custom2_label = label.new(bar_index, custom2_y, custom2_text + "₂", color=color.new(#FFFFFF, 100), textcolor=custom2_color, size=get_label_size(), style=label.style_none)
         array.push(all_labels, custom2_label)
 
-// Backward counting logic with TD freeze behavior
+// Backward counting logic with TD freeze behavior using same TD detection
 if enable_backward_count and counting_started and anchor_bar_index > 0
     for i = 1 to 50
         back_bar_index = anchor_bar_index - i
         if back_bar_index >= 0
-            // Check if this historical bar was a TD candle
-            is_back_td = enhanced_td_detection ? is_time_distortion_candle(bar_index - back_bar_index) : false
+            // Check if this historical bar was a TD candle using same logic as forward counting
+            bars_back = bar_index - back_bar_index
+            is_back_td = enhanced_td_detection and skip_time_distortion ? is_time_distortion_candle(bars_back) : false
             is_backward_sequence = array.includes(backward_seq_array, float(i))
             
             if is_backward_sequence
@@ -366,13 +367,13 @@ if enable_backward_count and counting_started and anchor_bar_index > 0
                 back_range = back_high - back_low
                 y_position = display_position == "above_candle" ? back_high + back_range * 0.1 : back_low - back_range * 0.1
                 
-                // Apply TD formatting to backward counts too
-                label_text = if is_back_td
-                    "-" + str.tostring(i) + "×"
+                // Apply same TD formatting as forward counting
+                label_text = if is_back_td and skip_time_distortion
+                    "-" + str.tostring(i) + "×"  // × shows TD detected
                 else
                     "-" + str.tostring(i)
                 
-                back_color = if is_back_td
+                back_color = if is_back_td and skip_time_distortion
                     color.new(backward_color, 50)  // Semi-transparent for TD
                 else
                     backward_color
@@ -437,7 +438,10 @@ if inputs_in_status and barstate.islast
     if enable_mtf
         array.push(status_parts, "MTF: " + higher_tf)
     if enhanced_td_detection
-        array.push(status_parts, "TD: ON")
+        td_method = inside_use_hl ? "H/L" : "O/C"
+        td_comparison = inside_comparison
+        td_skip = skip_time_distortion ? "SKIP" : "SHOW"
+        array.push(status_parts, "TD: " + td_skip + " (" + td_method + " " + td_comparison + ")")
     
     status_text = array.join(status_parts, " | ")
     var table status_table = table.new(position.top_right, 1, 1, bgcolor=color.new(#FFFFFF, 80), border_width=1)
