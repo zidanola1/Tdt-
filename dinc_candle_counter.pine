@@ -42,6 +42,10 @@ enhanced_td_detection = input.bool(true, "Enhanced Time Distortion (Doji) Detect
 doji_threshold = input.float(0.1, "Doji Body Threshold (% of range)", minval=0.01, maxval=0.5, step=0.01, group="Time Distortion")
 skip_time_distortion = input.bool(false, "Skip Time Distortion Candles", group="Time Distortion")
 
+// Inside Candle Settings
+inside_comparison = input.string("<=", "Inside Candle Comparison", options=["<", "<="], group="Time Distortion")
+inside_use_hl = input.bool(true, "Use High/Low vs Open/Close for Inside Detection", group="Time Distortion")
+
 // Display settings
 display_position = input.string("above_candle", "Display Numbers Above/Below", options=["above_candle", "below_candle"], group="Display Settings")
 vertical_shift = input.int(0, "Vertical Shift Above/Below", group="Display Settings")
@@ -94,37 +98,98 @@ is_doji_candle(int index) =>
     if index == 0
         candle_range = high - low
         body_size = math.abs(close - open)
+        // Doji: Body is very small relative to the total range
         candle_range > 0 ? body_size / candle_range <= doji_threshold : false
     else
         candle_range = high[index] - low[index]
         body_size = math.abs(close[index] - open[index])
         candle_range > 0 ? body_size / candle_range <= doji_threshold : false
 
-// Enhanced Time Distortion Detection (includes doji logic)
+// Inside Candle Detection (High/Low comparison)
+is_inside_candle_hl(int index) =>
+    if index == 0 and bar_index > 0
+        // Current candle compared to previous candle (High/Low)
+        current_high = high
+        current_low = low
+        prev_high = high[1]
+        prev_low = low[1]
+        
+        // Inside candle logic based on comparison setting
+        if inside_comparison == "<="
+            // Less than or equal: High <= prev_high AND Low >= prev_low
+            current_high <= prev_high and current_low >= prev_low
+        else
+            // Strictly less than: High < prev_high AND Low > prev_low
+            current_high < prev_high and current_low > prev_low
+        
+    else if index > 0
+        // Historical candles
+        current_high = high[index]
+        current_low = low[index] 
+        prev_high = high[index + 1]
+        prev_low = low[index + 1]
+        
+        if inside_comparison == "<="
+            current_high <= prev_high and current_low >= prev_low
+        else
+            current_high < prev_high and current_low > prev_low
+    else
+        false
+
+// Inside Candle Detection (Open/Close comparison)
+is_inside_candle_oc(int index) =>
+    if index == 0 and bar_index > 0
+        // Current candle compared to previous candle (Open/Close body)
+        current_max = math.max(open, close)
+        current_min = math.min(open, close)
+        prev_max = math.max(open[1], close[1])
+        prev_min = math.min(open[1], close[1])
+        
+        // Inside candle logic based on comparison setting
+        if inside_comparison == "<="
+            // Less than or equal: Body max <= prev body max AND Body min >= prev body min
+            current_max <= prev_max and current_min >= prev_min
+        else
+            // Strictly less than: Body max < prev body max AND Body min > prev body min
+            current_max < prev_max and current_min > prev_min
+        
+    else if index > 0
+        // Historical candles
+        current_max = math.max(open[index], close[index])
+        current_min = math.min(open[index], close[index])
+        prev_max = math.max(open[index + 1], close[index + 1])
+        prev_min = math.min(open[index + 1], close[index + 1])
+        
+        if inside_comparison == "<="
+            current_max <= prev_max and current_min >= prev_min
+        else
+            current_max < prev_max and current_min > prev_min
+    else
+        false
+
+// Enhanced Time Distortion Detection (Clear Logic)
 is_time_distortion_candle(int index) =>
     result = false
     if enhanced_td_detection
-        // Check for doji pattern (main TD indicator)
+        // 1. Doji Detection: Very small body relative to range
         is_doji = is_doji_candle(index)
         
-        if index == 0 and bar_index > 1
-            // Inside bar pattern
-            is_inside = high <= high[1] and low >= low[1]
-            
-            // Small range compared to average
+        // 2. Inside Candle Detection: Choose High/Low or Open/Close method
+        is_inside = inside_use_hl ? is_inside_candle_hl(index) : is_inside_candle_oc(index)
+        
+        // 3. Small Range Detection: Significantly smaller than previous candle
+        is_small_range = false
+        if index == 0 and bar_index > 0
             current_range = high - low
             prev_range = high[1] - low[1]
-            small_range = prev_range > 0 ? current_range < (prev_range * 0.6) : false
-            
-            result := is_doji or is_inside or small_range
-            
-        else if index > 1
-            is_inside = high[index] <= high[index + 1] and low[index] >= low[index + 1]
+            is_small_range := prev_range > 0 ? current_range < (prev_range * 0.6) : false
+        else if index > 0
             current_range = high[index] - low[index]
             prev_range = high[index + 1] - low[index + 1]
-            small_range = prev_range > 0 ? current_range < (prev_range * 0.6) : false
-            
-            result := is_doji or is_inside or small_range
+            is_small_range := prev_range > 0 ? current_range < (prev_range * 0.6) : false
+        
+        // Time Distortion = Doji OR Inside Candle OR Small Range
+        result := is_doji or is_inside or is_small_range
     result
 
 // EMA Calculations
