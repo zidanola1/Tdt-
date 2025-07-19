@@ -25,7 +25,7 @@ inputs_in_status = input.bool(true, "Inputs in Status Line", group="Display Sett
 
 // Predefined sequences
 get_sequence(seq_type) =>
-    switch seq_type
+    result = switch seq_type
         "time_expansion_1" => "4,7,9,15"
         "time_expansion_2" => "7,11,15,19"
         "time_expansion_3" => "1,6,9,11"
@@ -38,21 +38,22 @@ get_sequence(seq_type) =>
         "gann_cardinal" => "1,2,4,8,16,32,64,128"
         "gann_ordinal" => "3,6,12,24,48,96,192"
         => custom_sequence
+    result
 
 // Parse sequence string into array
 parse_sequence(seq_str) =>
     sequence = array.new<int>()
     parts = str.split(seq_str, ",")
     for part in parts
-        if str.length(str.trim(part)) > 0
-            array.push(sequence, str.tonumber(str.trim(part)))
+        trimmed_part = str.trim(part)
+        if str.length(trimmed_part) > 0
+            array.push(sequence, str.tonumber(trimmed_part))
     sequence
 
 // Check if candle is inside candle
 is_inside_candle(index) =>
-    if index == 0
-        false
-    else
+    result = false
+    if index > 0
         current_high = high[index]
         current_low = low[index]
         prev_high = high[index + 1]
@@ -60,35 +61,41 @@ is_inside_candle(index) =>
         
         if inside_use_hl
             if inside_comparison == "<="
-                current_high <= prev_high and current_low >= prev_low
+                result := current_high <= prev_high and current_low >= prev_low
             else
-                current_high < prev_high and current_low > prev_low
+                result := current_high < prev_high and current_low > prev_low
         else
             current_open = open[index]
             current_close = close[index]
             prev_open = open[index + 1]
             prev_close = close[index + 1]
             
+            current_max = math.max(current_open, current_close)
+            current_min = math.min(current_open, current_close)
+            prev_max = math.max(prev_open, prev_close)
+            prev_min = math.min(prev_open, prev_close)
+            
             if inside_comparison == "<="
-                math.max(current_open, current_close) <= math.max(prev_open, prev_close) and 
-                math.min(current_open, current_close) >= math.min(prev_open, prev_close)
+                result := current_max <= prev_max and current_min >= prev_min
             else
-                math.max(current_open, current_close) < math.max(prev_open, prev_close) and 
-                math.min(current_open, current_close) > math.min(prev_open, prev_close)
+                result := current_max < prev_max and current_min > prev_min
+    result
 
 // Get label size
 get_label_size() =>
-    switch label_size
+    result = switch label_size
         "tiny" => size.tiny
         "small" => size.small
         "large" => size.large
         "huge" => size.huge
         => size.normal
+    result
 
-// Main logic
+// Main logic variables
 var int candle_count = 0
 var bool counting_started = false
 var array<label> all_labels = array.new<label>()
+var line start_line = na
 
 // Get current sequence
 current_sequence_str = get_sequence(sequence_type)
@@ -100,14 +107,15 @@ if time >= start_date and not counting_started
     candle_count := 1
     
     // Draw starting line
-    line.new(bar_index, low, bar_index, high, color=color.blue, width=2, style=line.style_solid)
+    start_line := line.new(bar_index, low, bar_index, high, color=color.blue, width=2, style=line.style_solid)
     
     // Create first label
     label_text = "1"
-    label_color = array.includes(sequence_array, 1) ? sequence_color : normal_color
+    is_sequence_num = array.includes(sequence_array, 1)
+    label_color = is_sequence_num ? sequence_color : normal_color
     y_position = display_position == "above_candle" ? high + (high - low) * 0.1 + vertical_shift : low - (high - low) * 0.1 - vertical_shift
     
-    if not display_only_sequence or array.includes(sequence_array, 1)
+    if not display_only_sequence or is_sequence_num
         label_id = label.new(bar_index, y_position, label_text, color=color.new(color.white, 100), textcolor=label_color, size=get_label_size(), style=label.style_none)
         array.push(all_labels, label_id)
 
