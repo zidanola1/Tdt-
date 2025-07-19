@@ -1,0 +1,149 @@
+//@version=5
+indicator("DINC Candle Counter", shorttitle="DINC", overlay=true, max_labels_count=500, max_lines_count=500)
+
+// Input parameters
+start_date = input.time(timestamp("2025-07-10 10:00"), "Start Date", group="Basic Settings")
+sequence_type = input.string("custom", "Sequence Type", options=["custom", "time_expansion_1", "time_expansion_2", "time_expansion_3", "time_contraction_1", "time_contraction_2", "time_contraction_3", "time_distortion_1", "time_distortion_2", "time_distortion_3", "gann_cardinal", "gann_ordinal"], group="Basic Settings")
+custom_sequence = input.string("1,7,13,21,33", "Custom Sequence", group="Basic Settings")
+max_candles = input.int(100, "Number of Candles", minval=1, maxval=500, group="Basic Settings")
+skip_inside_candles = input.bool(false, "Skip Time Distortion Candles (Inside)", group="Basic Settings")
+count_outside_double = input.bool(false, "Count Outside Candles Double", group="Basic Settings")
+
+// Inside candle settings
+inside_comparison = input.string("<=", "Inside Candle Comparison", options=["<", "<="], group="Inside Candle Settings")
+inside_use_hl = input.bool(true, "Inside Candle Use High/Low vs Open/Close", group="Inside Candle Settings")
+multiple_inside_candles = input.bool(true, "Multiple Inside Candles (or just the last one)", group="Inside Candle Settings")
+
+// Display settings
+display_position = input.string("above_candle", "Display Numbers Above/Below", options=["above_candle", "below_candle"], group="Display Settings")
+vertical_shift = input.int(0, "Vertical Shift Above/Below", group="Display Settings")
+normal_color = input.color(color.gray, "Normal Number Color", group="Display Settings")
+sequence_color = input.color(color.red, "Sequence Number Color", group="Display Settings")
+display_only_sequence = input.bool(true, "Display Only Sequence Numbers", group="Display Settings")
+label_size = input.string("normal", "Label Size", options=["tiny", "small", "normal", "large", "huge"], group="Display Settings")
+inputs_in_status = input.bool(true, "Inputs in Status Line", group="Display Settings")
+
+// Predefined sequences
+get_sequence(seq_type) =>
+    switch seq_type
+        "time_expansion_1" => "4,7,9,15"
+        "time_expansion_2" => "7,11,15,19"
+        "time_expansion_3" => "1,6,9,11"
+        "time_contraction_1" => "3,4,7,8"
+        "time_contraction_2" => "4,5,8,9"
+        "time_contraction_3" => "2,3,6,7"
+        "time_distortion_1" => "7,9,12,14"
+        "time_distortion_2" => "8,11,13,15"
+        "time_distortion_3" => "3,4,5,7"
+        "gann_cardinal" => "1,2,4,8,16,32,64,128"
+        "gann_ordinal" => "3,6,12,24,48,96,192"
+        => custom_sequence
+
+// Parse sequence string into array
+parse_sequence(seq_str) =>
+    sequence = array.new<int>()
+    parts = str.split(seq_str, ",")
+    for part in parts
+        if str.length(str.trim(part)) > 0
+            array.push(sequence, str.tonumber(str.trim(part)))
+    sequence
+
+// Check if candle is inside candle
+is_inside_candle(index) =>
+    if index == 0
+        false
+    else
+        current_high = high[index]
+        current_low = low[index]
+        prev_high = high[index + 1]
+        prev_low = low[index + 1]
+        
+        if inside_use_hl
+            if inside_comparison == "<="
+                current_high <= prev_high and current_low >= prev_low
+            else
+                current_high < prev_high and current_low > prev_low
+        else
+            current_open = open[index]
+            current_close = close[index]
+            prev_open = open[index + 1]
+            prev_close = close[index + 1]
+            
+            if inside_comparison == "<="
+                math.max(current_open, current_close) <= math.max(prev_open, prev_close) and 
+                math.min(current_open, current_close) >= math.min(prev_open, prev_close)
+            else
+                math.max(current_open, current_close) < math.max(prev_open, prev_close) and 
+                math.min(current_open, current_close) > math.min(prev_open, prev_close)
+
+// Get label size
+get_label_size() =>
+    switch label_size
+        "tiny" => size.tiny
+        "small" => size.small
+        "large" => size.large
+        "huge" => size.huge
+        => size.normal
+
+// Main logic
+var int candle_count = 0
+var bool counting_started = false
+var array<label> all_labels = array.new<label>()
+
+// Get current sequence
+current_sequence_str = get_sequence(sequence_type)
+sequence_array = parse_sequence(current_sequence_str)
+
+// Check if we should start counting
+if time >= start_date and not counting_started
+    counting_started := true
+    candle_count := 1
+    
+    // Draw starting line
+    line.new(bar_index, low, bar_index, high, color=color.blue, width=2, style=line.style_solid)
+    
+    // Create first label
+    label_text = "1"
+    label_color = array.includes(sequence_array, 1) ? sequence_color : normal_color
+    y_position = display_position == "above_candle" ? high + (high - low) * 0.1 + vertical_shift : low - (high - low) * 0.1 - vertical_shift
+    
+    if not display_only_sequence or array.includes(sequence_array, 1)
+        label_id = label.new(bar_index, y_position, label_text, color=color.new(color.white, 100), textcolor=label_color, size=get_label_size(), style=label.style_none)
+        array.push(all_labels, label_id)
+
+// Continue counting if started and within max candles
+else if counting_started and candle_count < max_candles
+    is_inside = is_inside_candle(0)
+    should_count = true
+    count_increment = 1
+    
+    // Handle inside candles
+    if is_inside and skip_inside_candles
+        should_count := false
+    
+    // Handle outside candles double counting
+    if not is_inside and count_outside_double
+        count_increment := 2
+    
+    if should_count
+        candle_count := candle_count + count_increment
+        
+        // Create label for this candle
+        label_text = str.tostring(candle_count)
+        is_sequence_number = array.includes(sequence_array, candle_count)
+        label_color = is_sequence_number ? sequence_color : normal_color
+        y_position = display_position == "above_candle" ? high + (high - low) * 0.1 + vertical_shift : low - (high - low) * 0.1 - vertical_shift
+        
+        if not display_only_sequence or is_sequence_number
+            label_id = label.new(bar_index, y_position, label_text, color=color.new(color.white, 100), textcolor=label_color, size=get_label_size(), style=label.style_none)
+            array.push(all_labels, label_id)
+
+// Status line display
+if inputs_in_status and barstate.islast
+    status_text = "DINC: " + current_sequence_str + " | Count: " + str.tostring(candle_count) + " | Type: " + sequence_type
+    var table status_table = table.new(position.top_right, 1, 1, bgcolor=color.new(color.white, 80), border_width=1)
+    table.cell(status_table, 0, 0, status_text, text_color=color.black, text_size=size.small)
+
+// Alert conditions
+if counting_started and array.includes(sequence_array, candle_count)
+    alert("DINC Sequence Number Reached: " + str.tostring(candle_count), alert.freq_once_per_bar)
