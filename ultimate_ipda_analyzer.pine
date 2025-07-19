@@ -87,16 +87,16 @@ is_ultimate_td_candle(int index) =>
     if not enableAdvancedTD
         false
     else
-        // Get candle data
-        c_high = index == 0 ? high : high[index]
-        c_low = index == 0 ? low : low[index]
-        c_open = index == 0 ? open : open[index]
-        c_close = index == 0 ? close : close[index]
+        // Get candle data using proper historical referencing
+        c_high = high[index]
+        c_low = low[index]
+        c_open = open[index]
+        c_close = close[index]
         
-        prev_high = index == 0 ? (bar_index > 0 ? high[1] : high) : high[index + 1]
-        prev_low = index == 0 ? (bar_index > 0 ? low[1] : low) : low[index + 1]
-        prev_open = index == 0 ? (bar_index > 0 ? open[1] : open) : open[index + 1]
-        prev_close = index == 0 ? (bar_index > 0 ? close[1] : close) : close[index + 1]
+        prev_high = high[index + 1]
+        prev_low = low[index + 1]
+        prev_open = open[index + 1]
+        prev_close = close[index + 1]
         
         // Basic calculations
         candleRange = c_high - c_low
@@ -411,10 +411,11 @@ if counting_started and not in_time_distortion
 
 // TD-specific alerts
 if enableAdvancedTD
-    if current_is_td and not current_is_td[1]
+    prev_is_td = ta.valuewhen(bar_index > 0, current_is_td, 1)
+    if current_is_td and not prev_is_td
         alert("Time Distortion Detected", alert.freq_once_per_bar)
     
-    if not current_is_td and current_is_td[1] and in_time_distortion
+    if not current_is_td and prev_is_td and in_time_distortion
         alert("Time Distortion Ended - Count Resumed", alert.freq_once_per_bar)
     
     if td_count >= 3
