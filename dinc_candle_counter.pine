@@ -193,15 +193,16 @@ else if time >= start_date and not counting_started
     // Draw anchor line
     anchor_line := line.new(bar_index, low, bar_index, high, color=#0000FF, width=3, style=line.style_solid)
 
-// Forward counting logic with Time Distortion freeze behavior for ALL sequences
+// Forward counting logic with optional Time Distortion freeze behavior
 if counting_started and current_count_number <= max_candles and bar_index >= anchor_bar_index
-    is_td = enhanced_td_detection ? is_time_distortion_candle(0) : false
+    // Check if TD detection is enabled AND if current candle is TD
+    is_td = enhanced_td_detection and skip_time_distortion ? is_time_distortion_candle(0) : false
     
     // Determine display count BEFORE updating count
     display_count := current_count_number
     
-    // Time Distortion Logic: Freeze counting until normal candle
-    if is_td
+    // Time Distortion Logic: Only apply if skip_time_distortion is enabled
+    if is_td and skip_time_distortion
         // Mark as in time distortion state
         in_time_distortion := true
         
@@ -213,8 +214,12 @@ if counting_started and current_count_number <= max_candles and bar_index >= anc
         // DON'T increment count - keep showing same number (frozen)
         
     else
-        // Normal candle - advance count if we were in TD, or continue normal counting
-        if in_time_distortion
+        // Normal candle OR TD detection disabled - advance count normally
+        if in_time_distortion and not skip_time_distortion
+            // If TD was previously detected but now disabled, reset state
+            in_time_distortion := false
+        
+        if in_time_distortion and skip_time_distortion
             // Exiting time distortion - advance to next count
             current_count_number := current_count_number + 1
             in_time_distortion := false
@@ -235,12 +240,12 @@ if counting_started and current_count_number <= max_candles and bar_index >= anc
     
     // Main Sequence Label
     if not display_only_sequence or is_main_sequence
-        label_text = if is_td
+        label_text = if is_td and skip_time_distortion
             str.tostring(display_count) + "×"  // Add × to show it's frozen
         else
             str.tostring(display_count)
         
-        main_color = if is_td
+        main_color = if is_td and skip_time_distortion
             color.new(sequence_color, 50)  // Semi-transparent for TD
         else
             sequence_color
@@ -251,12 +256,12 @@ if counting_started and current_count_number <= max_candles and bar_index >= anc
     
     // Custom Sequence 1 Label (if enabled and hit)
     if use_custom_seq_1 and is_custom_1
-        custom1_text = if is_td
+        custom1_text = if is_td and skip_time_distortion
             str.tostring(display_count) + "×"
         else
             str.tostring(display_count)
         
-        custom1_color = if is_td
+        custom1_color = if is_td and skip_time_distortion
             color.new(#00FF00, 50)  // Semi-transparent green for TD
         else
             #00FF00  // Green
@@ -267,12 +272,12 @@ if counting_started and current_count_number <= max_candles and bar_index >= anc
     
     // Custom Sequence 2 Label (if enabled and hit)
     if use_custom_seq_2 and is_custom_2
-        custom2_text = if is_td
+        custom2_text = if is_td and skip_time_distortion
             str.tostring(display_count) + "×"
         else
             str.tostring(display_count)
         
-        custom2_color = if is_td
+        custom2_color = if is_td and skip_time_distortion
             color.new(#800080, 50)  // Semi-transparent purple for TD
         else
             #800080  // Purple
