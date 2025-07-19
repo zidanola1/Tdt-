@@ -196,8 +196,8 @@ else if time >= start_date and not counting_started
 if counting_started and current_count_number <= max_candles and bar_index >= anchor_bar_index
     is_td = enhanced_td_detection ? is_time_distortion_candle(0) : false
     
-    // Declare display_count variable
-    display_count = 0
+    // Determine display count BEFORE updating count
+    display_count = current_count_number
     
     // Time Distortion Logic: Freeze counting until normal candle
     if is_td
@@ -209,8 +209,7 @@ if counting_started and current_count_number <= max_candles and bar_index >= anc
         td_label = label.new(bar_index, td_y, "×", color=color.new(#FFFFFF, 100), textcolor=color.new(#FF0000, 70), size=size.tiny, style=label.style_circle)
         array.push(all_labels, td_label)
         
-        // Keep showing the SAME count number (frozen)
-        display_count := current_count_number
+        // DON'T increment count - keep showing same number (frozen)
         
     else
         // Normal candle - advance count if we were in TD, or continue normal counting
@@ -221,7 +220,8 @@ if counting_started and current_count_number <= max_candles and bar_index >= anc
         else
             // Normal progression
             current_count_number := current_count_number + 1
-            
+        
+        // Update display count to new value
         display_count := current_count_number
     
     // Check ALL sequences for the current count
