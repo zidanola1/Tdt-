@@ -1,38 +1,69 @@
 //@version=6
-indicator("DINC Candle Counter", shorttitle="DINC", overlay=true, max_labels_count=500, max_lines_count=500)
+indicator("DINC Candle Counter Pro", shorttitle="DINC Pro", overlay=true, max_labels_count=500, max_lines_count=500)
 
-// Input parameters
+// Input parameters - Basic Settings
 start_date = input.time(timestamp("2025-07-10 10:00"), "Start Date", group="Basic Settings")
-sequence_type = input.string("custom", "Sequence Type", options=["custom", "time_expansion_1", "time_expansion_2", "time_expansion_3", "time_contraction_1", "time_contraction_2", "time_contraction_3", "time_distortion_1", "time_distortion_2", "time_distortion_3", "gann_cardinal", "gann_ordinal"], group="Basic Settings")
+sequence_type = input.string("custom", "Sequence Type", options=["custom", "sequence_7", "sequence_13", "sequence_21", "sequence_5", "sequence_9", "sequence_11", "time_expansion_1", "time_expansion_2", "time_expansion_3", "time_contraction_1", "time_contraction_2", "time_contraction_3", "time_distortion_1", "time_distortion_2", "time_distortion_3", "gann_cardinal", "gann_ordinal"], group="Basic Settings")
 custom_sequence = input.string("1,7,13,21,33", "Custom Sequence", group="Basic Settings")
 max_candles = input.int(100, "Number of Candles", minval=1, maxval=500, group="Basic Settings")
-skip_inside_candles = input.bool(false, "Skip Time Distortion Candles (Inside)", group="Basic Settings")
-count_outside_double = input.bool(false, "Count Outside Candles Double", group="Basic Settings")
 
-// Time Pattern Detection Settings
-use_time_pattern_logic = input.bool(false, "Use Time Pattern Detection Logic", group="Time Pattern Settings")
-skip_time_distortion = input.bool(false, "Skip Time Distortion Candles (Auto-Detect)", group="Time Pattern Settings")
-skip_time_contraction = input.bool(false, "Skip Time Contraction Candles (Auto-Detect)", group="Time Pattern Settings")
-count_expansion_double = input.bool(false, "Count Time Expansion Candles Double", group="Time Pattern Settings")
-show_pattern_markers = input.bool(true, "Show Pattern Detection Markers", group="Time Pattern Settings")
+// Custom Sequences Toggle
+use_custom_seq_1 = input.bool(false, "Use Custom Sequence 1", group="Custom Sequences")
+custom_sequence_1 = input.string("7,13,21,31,42", "Custom Sequence 1", group="Custom Sequences")
+use_custom_seq_2 = input.bool(false, "Use Custom Sequence 2", group="Custom Sequences") 
+custom_sequence_2 = input.string("5,9,11,17,25,37", "Custom Sequence 2", group="Custom Sequences")
 
-// Inside candle settings
-inside_comparison = input.string("<=", "Inside Candle Comparison", options=["<", "<="], group="Inside Candle Settings")
-inside_use_hl = input.bool(true, "Inside Candle Use High/Low vs Open/Close", group="Inside Candle Settings")
-multiple_inside_candles = input.bool(true, "Multiple Inside Candles (or just the last one)", group="Inside Candle Settings")
+// Anchoring Settings
+use_manual_anchor = input.bool(false, "Use Manual Anchor Point", group="Anchoring")
+manual_anchor_bar = input.int(0, "Manual Anchor Bar Index (0=current)", group="Anchoring")
+save_anchor_points = input.bool(true, "Save Anchor Points (Persistent)", group="Anchoring")
+
+// Counting Direction
+enable_backward_count = input.bool(false, "Enable Backward Counting", group="Counting Direction")
+backward_sequence = input.string("7,13,21", "Backward Count Sequence", group="Counting Direction")
+
+// Future Projections
+enable_future_projections = input.bool(false, "Enable Future Projections", group="Future Projections")
+projection_sequence = input.string("7,13,21", "Future Projection Sequence", group="Future Projections")
+
+// Multi-Timeframe Settings
+enable_mtf = input.bool(false, "Enable Multi-Timeframe Overlay", group="Multi-Timeframe")
+higher_tf = input.timeframe("1H", "Higher Timeframe", group="Multi-Timeframe")
+mtf_sequence = input.string("7,13,21", "MTF Sequence", group="Multi-Timeframe")
+show_mtf_confluence = input.bool(true, "Show MTF Confluence Markers", group="Multi-Timeframe")
+
+// EMA Settings
+show_ema = input.bool(false, "Show EMA 8/21", group="EMA Settings")
+ema_8_color = input.color(color.blue, "EMA 8 Color", group="EMA Settings")
+ema_21_color = input.color(color.red, "EMA 21 Color", group="EMA Settings")
+
+// Time Distortion Enhanced
+enhanced_td_detection = input.bool(true, "Enhanced Time Distortion (Doji) Detection", group="Time Distortion")
+doji_threshold = input.float(0.1, "Doji Body Threshold (% of range)", minval=0.01, maxval=0.5, step=0.01, group="Time Distortion")
+skip_time_distortion = input.bool(false, "Skip Time Distortion Candles", group="Time Distortion")
 
 // Display settings
 display_position = input.string("above_candle", "Display Numbers Above/Below", options=["above_candle", "below_candle"], group="Display Settings")
 vertical_shift = input.int(0, "Vertical Shift Above/Below", group="Display Settings")
 normal_color = input.color(color.gray, "Normal Number Color", group="Display Settings")
 sequence_color = input.color(color.red, "Sequence Number Color", group="Display Settings")
+backward_color = input.color(color.purple, "Backward Count Color", group="Display Settings")
+future_color = input.color(color.orange, "Future Projection Color", group="Display Settings")
+mtf_color = input.color(color.cyan, "MTF Overlay Color", group="Display Settings")
+confluence_color = input.color(color.yellow, "Confluence Marker Color", group="Display Settings")
 display_only_sequence = input.bool(true, "Display Only Sequence Numbers", group="Display Settings")
 label_size = input.string("normal", "Label Size", options=["tiny", "small", "normal", "large", "huge"], group="Display Settings")
 inputs_in_status = input.bool(true, "Inputs in Status Line", group="Display Settings")
 
-// Predefined sequences
+// Enhanced sequences with proper counting starting from 1
 get_sequence(string seq_type) =>
     switch seq_type
+        "sequence_7" => "7,13,21,31,42"
+        "sequence_13" => "13,21,25,31,42"
+        "sequence_21" => "21,31,42,63"
+        "sequence_5" => "5,9,11,17,25,37"
+        "sequence_9" => "9,11,17,25,37"
+        "sequence_11" => "11,17,25,37"
         "time_expansion_1" => "4,7,9,15"
         "time_expansion_2" => "7,11,15,19"
         "time_expansion_3" => "1,6,9,11"
@@ -58,173 +89,72 @@ parse_sequence(string seq_str) =>
                 array.push(sequence, num_value)
     sequence
 
-// Time Distortion Detection Logic
+// Enhanced Doji Detection (Time Distortion)
+is_doji_candle(int index) =>
+    if index == 0
+        candle_range = high - low
+        body_size = math.abs(close - open)
+        candle_range > 0 ? body_size / candle_range <= doji_threshold : false
+    else
+        candle_range = high[index] - low[index]
+        body_size = math.abs(close[index] - open[index])
+        candle_range > 0 ? body_size / candle_range <= doji_threshold : false
+
+// Enhanced Time Distortion Detection (includes doji logic)
 is_time_distortion_candle(int index) =>
     result = false
-    if index == 0 and bar_index > 2
-        // Current bar analysis
-        current_range = high - low
-        prev_range = high[1] - low[1]
-        prev2_range = high[2] - low[2]
+    if enhanced_td_detection
+        // Check for doji pattern (main TD indicator)
+        is_doji = is_doji_candle(index)
         
-        // Average range of previous periods
-        avg_range = (prev_range + prev2_range) / 2
-        
-        // Time distortion conditions:
-        // 1. Significantly smaller range (contraction)
-        // 2. Overlapping with previous candle (inside pattern)
-        // 3. Unusual volume pattern (if available)
-        
-        range_contraction = current_range < (avg_range * 0.6) // 40% smaller than average
-        is_inside = high <= high[1] and low >= low[1]
-        
-        result := range_contraction or is_inside
-        
-    else if index > 2
-        // Historical bars
-        current_range = high[index] - low[index]
-        prev_range = high[index + 1] - low[index + 1]
-        prev2_range = high[index + 2] - low[index + 2]
-        
-        avg_range = (prev_range + prev2_range) / 2
-        range_contraction = current_range < (avg_range * 0.6)
-        is_inside = high[index] <= high[index + 1] and low[index] >= low[index + 1]
-        
-        result := range_contraction or is_inside
+        if index == 0 and bar_index > 1
+            // Inside bar pattern
+            is_inside = high <= high[1] and low >= low[1]
+            
+            // Small range compared to average
+            current_range = high - low
+            prev_range = high[1] - low[1]
+            small_range = prev_range > 0 ? current_range < (prev_range * 0.6) : false
+            
+            result := is_doji or is_inside or small_range
+            
+        else if index > 1
+            is_inside = high[index] <= high[index + 1] and low[index] >= low[index + 1]
+            current_range = high[index] - low[index]
+            prev_range = high[index + 1] - low[index + 1]
+            small_range = prev_range > 0 ? current_range < (prev_range * 0.6) : false
+            
+            result := is_doji or is_inside or small_range
     result
 
-// Time Contraction Detection Logic
-is_time_contraction_candle(int index) =>
-    result = false
-    if index == 0 and bar_index > 3
-        // Analyze last 4 bars including current
-        ranges = array.new<float>()
-        array.push(ranges, high - low)
-        array.push(ranges, high[1] - low[1])
-        array.push(ranges, high[2] - low[2])
-        array.push(ranges, high[3] - low[3])
-        
-        // Calculate if ranges are progressively getting smaller
-        current_range = high - low
-        prev_range = high[1] - low[1]
-        prev2_range = high[2] - low[2]
-        
-        // Contraction pattern: each candle smaller than previous
-        progressive_contraction = current_range < prev_range and prev_range < prev2_range
-        
-        // Alternative: current range significantly smaller than recent average
-        avg_range = (high[1] - low[1] + high[2] - low[2] + high[3] - low[3]) / 3
-        significant_contraction = current_range < (avg_range * 0.7)
-        
-        result := progressive_contraction or significant_contraction
-        
-    else if index > 3
-        // Historical analysis
-        current_range = high[index] - low[index]
-        prev_range = high[index + 1] - low[index + 1]
-        prev2_range = high[index + 2] - low[index + 2]
-        prev3_range = high[index + 3] - low[index + 3]
-        
-        progressive_contraction = current_range < prev_range and prev_range < prev2_range
-        avg_range = (prev_range + prev2_range + prev3_range) / 3
-        significant_contraction = current_range < (avg_range * 0.7)
-        
-        result := progressive_contraction or significant_contraction
-    result
+// EMA Calculations
+ema_8 = ta.ema(close, 8)
+ema_21 = ta.ema(close, 21)
 
-// Time Expansion Detection Logic  
-is_time_expansion_candle(int index) =>
-    result = false
-    if index == 0 and bar_index > 2
-        // Current bar analysis
-        current_range = high - low
-        prev_range = high[1] - low[1]
-        prev2_range = high[2] - low[2]
-        
-        avg_range = (prev_range + prev2_range) / 2
-        
-        // Expansion: significantly larger range
-        range_expansion = current_range > (avg_range * 1.5) // 50% larger
-        
-        // Strong directional move
-        body_size = math.abs(close - open)
-        strong_directional = body_size > (current_range * 0.7) // Large body relative to range
-        
-        result := range_expansion and strong_directional
-        
-    else if index > 2
-        // Historical bars
-        current_range = high[index] - low[index]
-        prev_range = high[index + 1] - low[index + 1]
-        prev2_range = high[index + 2] - low[index + 2]
-        
-        avg_range = (prev_range + prev2_range) / 2
-        range_expansion = current_range > (avg_range * 1.5)
-        
-        body_size = math.abs(close[index] - open[index])
-        strong_directional = body_size > (current_range * 0.7)
-        
-        result := range_expansion and strong_directional
-    result
+// Plot EMAs if enabled
+plot(show_ema ? ema_8 : na, color=ema_8_color, linewidth=1, title="EMA 8")
+plot(show_ema ? ema_21 : na, color=ema_21_color, linewidth=2, title="EMA 21")
 
-// Check if candle is inside candle
-is_inside_candle(int index) =>
-    result = false
-    if index == 0 and bar_index > 0
-        // Current bar compared to previous bar
-        current_high = high
-        current_low = low
-        prev_high = high[1]
-        prev_low = low[1]
-        
-        if inside_use_hl
-            if inside_comparison == "<="
-                result := current_high <= prev_high and current_low >= prev_low
-            else
-                result := current_high < prev_high and current_low > prev_low
-        else
-            current_open = open
-            current_close = close
-            prev_open = open[1]
-            prev_close = close[1]
-            
-            current_max = math.max(current_open, current_close)
-            current_min = math.min(current_open, current_close)
-            prev_max = math.max(prev_open, prev_close)
-            prev_min = math.min(prev_open, prev_close)
-            
-            if inside_comparison == "<="
-                result := current_max <= prev_max and current_min >= prev_min
-            else
-                result := current_max < prev_max and current_min > prev_min
-    else if index > 0
-        // Historical bars
-        current_high = high[index]
-        current_low = low[index]
-        prev_high = high[index + 1]
-        prev_low = low[index + 1]
-        
-        if inside_use_hl
-            if inside_comparison == "<="
-                result := current_high <= prev_high and current_low >= prev_low
-            else
-                result := current_high < prev_high and current_low > prev_low
-        else
-            current_open = open[index]
-            current_close = close[index]
-            prev_open = open[index + 1]
-            prev_close = close[index + 1]
-            
-            current_max = math.max(current_open, current_close)
-            current_min = math.min(current_open, current_close)
-            prev_max = math.max(prev_open, prev_close)
-            prev_min = math.min(prev_open, prev_close)
-            
-            if inside_comparison == "<="
-                result := current_max <= prev_max and current_min >= prev_min
-            else
-                result := current_max < prev_max and current_min > prev_min
-    result
+// Persistent storage variables
+var int anchor_bar_index = na
+var int forward_count = 0
+var int backward_count = 0
+var bool counting_started = false
+var array<label> all_labels = array.new<label>()
+var line anchor_line = na
+
+// Multi-timeframe data request
+mtf_data = request.security(syminfo.tickerid, higher_tf, [close, high, low, open, bar_index])
+
+// Get current sequences
+current_sequence_str = get_sequence(sequence_type)
+sequence_array = parse_sequence(current_sequence_str)
+
+// Custom sequences
+custom_seq_1_array = use_custom_seq_1 ? parse_sequence(custom_sequence_1) : array.new<float>()
+custom_seq_2_array = use_custom_seq_2 ? parse_sequence(custom_sequence_2) : array.new<float>()
+backward_seq_array = enable_backward_count ? parse_sequence(backward_sequence) : array.new<float>()
+future_seq_array = enable_future_projections ? parse_sequence(projection_sequence) : array.new<float>()
 
 // Get label size
 get_label_size() =>
@@ -235,114 +165,143 @@ get_label_size() =>
         "huge" => size.huge
         => size.normal
 
-// Main logic variables
-var int candle_count = 0
-var bool counting_started = false
-var array<label> all_labels = array.new<label>()
-var line start_line = na
-
-// Get current sequence
-current_sequence_str = get_sequence(sequence_type)
-sequence_array = parse_sequence(current_sequence_str)
-
-// Check if we should start counting
-if time >= start_date and not counting_started
+// Anchor point logic
+if use_manual_anchor and manual_anchor_bar >= 0
+    anchor_bar_index := bar_index - manual_anchor_bar
     counting_started := true
-    candle_count := 1
+    forward_count := 1
+    backward_count := 1
     
-    // Draw starting line
-    start_line := line.new(bar_index, low, bar_index, high, color=color.blue, width=2, style=line.style_solid)
-    
-    // Create first label
-    label_text = "1"
-    is_sequence_num = array.includes(sequence_array, 1.0)
-    label_color = is_sequence_num ? sequence_color : normal_color
-    y_position = display_position == "above_candle" ? high + (high - low) * 0.1 + vertical_shift : low - (high - low) * 0.1 - vertical_shift
-    
-    if not display_only_sequence or is_sequence_num
-        label_id = label.new(bar_index, y_position, label_text, color=color.new(color.white, 100), textcolor=label_color, size=get_label_size(), style=label.style_none)
-        array.push(all_labels, label_id)
+    // Draw anchor line
+    if not na(anchor_line)
+        line.delete(anchor_line)
+    anchor_line := line.new(anchor_bar_index, low, anchor_bar_index, high, color=color.blue, width=3, style=line.style_solid)
 
-// Continue counting if started and within max candles
-else if counting_started and candle_count < max_candles
-    is_inside = is_inside_candle(0)
+else if time >= start_date and not counting_started
+    anchor_bar_index := bar_index
+    counting_started := true
+    forward_count := 1
+    backward_count := 1
+    
+    // Draw anchor line
+    anchor_line := line.new(bar_index, low, bar_index, high, color=color.blue, width=3, style=line.style_solid)
+
+// Forward counting logic
+if counting_started and forward_count <= max_candles
+    is_td = enhanced_td_detection ? is_time_distortion_candle(0) : false
     should_count = true
-    count_increment = 1
     
-    // Time Pattern Detection Logic
-    if use_time_pattern_logic
-        is_distortion = is_time_distortion_candle(0)
-        is_contraction = is_time_contraction_candle(0)
-        is_expansion = is_time_expansion_candle(0)
+    // Skip time distortion candles if enabled
+    if is_td and skip_time_distortion
+        should_count := false
         
-        // Show pattern markers if enabled
-        if show_pattern_markers
-            if is_distortion
-                marker_y = display_position == "above_candle" ? high + (high - low) * 0.15 + vertical_shift : low - (high - low) * 0.15 - vertical_shift
-                marker_label = label.new(bar_index, marker_y, "D", color=color.new(color.red, 50), textcolor=color.white, size=size.tiny, style=label.style_circle)
-                array.push(all_labels, marker_label)
-            
-            if is_contraction
-                marker_y = display_position == "above_candle" ? high + (high - low) * 0.15 + vertical_shift : low - (high - low) * 0.15 - vertical_shift
-                marker_label = label.new(bar_index, marker_y, "C", color=color.new(color.orange, 50), textcolor=color.white, size=size.tiny, style=label.style_circle)
-                array.push(all_labels, marker_label)
-            
-            if is_expansion
-                marker_y = display_position == "above_candle" ? high + (high - low) * 0.15 + vertical_shift : low - (high - low) * 0.15 - vertical_shift
-                marker_label = label.new(bar_index, marker_y, "E", color=color.new(color.green, 50), textcolor=color.white, size=size.tiny, style=label.style_circle)
-                array.push(all_labels, marker_label)
-        
-        // Apply time pattern logic to counting
-        if is_distortion and skip_time_distortion
-            should_count := false
-        
-        if is_contraction and skip_time_contraction
-            should_count := false
-        
-        if is_expansion and count_expansion_double
-            count_increment := 2
+        // Show TD marker
+        if not display_only_sequence
+            td_y = display_position == "above_candle" ? high + (high - low) * 0.05 : low - (high - low) * 0.05
+            td_label = label.new(bar_index, td_y, "×", color=color.new(color.white, 100), textcolor=color.new(color.gray, 50), size=size.tiny, style=label.style_none)
+            array.push(all_labels, td_label)
     
-    // Original inside/outside candle logic (still available)
-    if not use_time_pattern_logic
-        // Handle inside candles (time distortion) - skip if enabled
-        if is_inside and skip_inside_candles
-            should_count := false
+    if should_count and bar_index >= anchor_bar_index
+        bars_from_anchor = bar_index - anchor_bar_index + 1
         
-        // Handle outside candles - count double if enabled
-        if not is_inside and count_outside_double
-            count_increment := 2
-    
-    // Only process if we should count this candle
-    if should_count
-        candle_count := candle_count + count_increment
+        // Main sequence counting
+        is_main_sequence = array.includes(sequence_array, float(bars_from_anchor))
+        is_custom_1 = use_custom_seq_1 and array.includes(custom_seq_1_array, float(bars_from_anchor))
+        is_custom_2 = use_custom_seq_2 and array.includes(custom_seq_2_array, float(bars_from_anchor))
         
-        // Create label for this candle
-        label_text = str.tostring(candle_count)
-        is_sequence_number = array.includes(sequence_array, float(candle_count))
-        label_color = is_sequence_number ? sequence_color : normal_color
         y_position = display_position == "above_candle" ? high + (high - low) * 0.1 + vertical_shift : low - (high - low) * 0.1 - vertical_shift
         
-        if not display_only_sequence or is_sequence_number
-            label_id = label.new(bar_index, y_position, label_text, color=color.new(color.white, 100), textcolor=label_color, size=get_label_size(), style=label.style_none)
-            array.push(all_labels, label_id)
-    else
-        // If inside candle is skipped, we can optionally show a marker
-        if is_inside and skip_inside_candles
-            // Optional: Add a small marker to show skipped inside candle
-            y_position = display_position == "above_candle" ? high + (high - low) * 0.05 + vertical_shift : low - (high - low) * 0.05 - vertical_shift
-            if not display_only_sequence
-                label_id = label.new(bar_index, y_position, "•", color=color.new(color.white, 100), textcolor=color.new(color.gray, 50), size=size.tiny, style=label.style_none)
+        // Create labels for sequences
+        if not display_only_sequence or is_main_sequence or is_custom_1 or is_custom_2
+            label_text = str.tostring(bars_from_anchor)
+            
+            if is_main_sequence
+                label_color = sequence_color
+            else if is_custom_1
+                label_color = color.green
+            else if is_custom_2
+                label_color = color.purple
+            else
+                label_color = normal_color
+            
+            if not display_only_sequence or is_main_sequence or is_custom_1 or is_custom_2
+                label_id = label.new(bar_index, y_position, label_text, color=color.new(color.white, 100), textcolor=label_color, size=get_label_size(), style=label.style_none)
                 array.push(all_labels, label_id)
+
+// Backward counting logic
+if enable_backward_count and counting_started and anchor_bar_index > 0
+    for i = 1 to 50
+        back_bar_index = anchor_bar_index - i
+        if back_bar_index >= 0
+            is_backward_sequence = array.includes(backward_seq_array, float(i))
+            if is_backward_sequence
+                y_position = display_position == "above_candle" ? high[bar_index - back_bar_index] + (high[bar_index - back_bar_index] - low[bar_index - back_bar_index]) * 0.1 : low[bar_index - back_bar_index] - (high[bar_index - back_bar_index] - low[bar_index - back_bar_index]) * 0.1
+                label_text = "-" + str.tostring(i)
+                label_id = label.new(back_bar_index, y_position, label_text, color=color.new(color.white, 100), textcolor=backward_color, size=get_label_size(), style=label.style_none)
+                array.push(all_labels, label_id)
+
+// Future projections
+if enable_future_projections and counting_started
+    current_bars_from_anchor = bar_index - anchor_bar_index + 1
+    for i = 1 to 21
+        future_count = current_bars_from_anchor + i
+        is_future_sequence = array.includes(future_seq_array, float(future_count))
+        if is_future_sequence
+            future_bar_index = bar_index + i
+            y_position = display_position == "above_candle" ? high + (high - low) * 0.1 : low - (high - low) * 0.1
+            label_text = "+" + str.tostring(future_count)
+            label_id = label.new(future_bar_index, y_position, label_text, color=color.new(color.white, 100), textcolor=future_color, size=get_label_size(), style=label.style_none)
+            array.push(all_labels, label_id)
+
+// Multi-timeframe confluence detection
+if enable_mtf and show_mtf_confluence and counting_started
+    mtf_close = array.get(mtf_data, 0)
+    current_bars = bar_index - anchor_bar_index + 1
+    
+    // Simple MTF count simulation (this would need more complex logic for real MTF)
+    mtf_count = math.floor(current_bars / 4) // Simplified for demonstration
+    mtf_sequence_array = parse_sequence(mtf_sequence)
+    
+    is_mtf_confluence = array.includes(mtf_sequence_array, float(current_bars)) and array.includes(mtf_sequence_array, float(mtf_count))
+    if is_mtf_confluence
+        confluence_y = display_position == "above_candle" ? high + (high - low) * 0.2 : low - (high - low) * 0.2
+        confluence_label = label.new(bar_index, confluence_y, "◆", color=color.new(color.white, 100), textcolor=confluence_color, size=size.large, style=label.style_none)
+        array.push(all_labels, confluence_label)
 
 // Status line display
 if inputs_in_status and barstate.islast
-    inside_status = skip_inside_candles ? " | Skip Inside: ON" : " | Skip Inside: OFF"
-    outside_status = count_outside_double ? " | Double Outside: ON" : " | Double Outside: OFF"
-    comparison_status = " | Inside Logic: " + inside_comparison
-    status_text = "DINC: " + current_sequence_str + " | Count: " + str.tostring(candle_count) + " | Type: " + sequence_type + inside_status + outside_status + comparison_status
+    status_parts = array.new<string>()
+    array.push(status_parts, "DINC Pro: " + current_sequence_str)
+    
+    if counting_started
+        current_count = bar_index - anchor_bar_index + 1
+        array.push(status_parts, "Count: " + str.tostring(current_count))
+    
+    if use_custom_seq_1
+        array.push(status_parts, "Seq1: " + custom_sequence_1)
+    if use_custom_seq_2
+        array.push(status_parts, "Seq2: " + custom_sequence_2)
+    if enable_backward_count
+        array.push(status_parts, "Back: ON")
+    if enable_future_projections
+        array.push(status_parts, "Future: ON")
+    if enable_mtf
+        array.push(status_parts, "MTF: " + higher_tf)
+    if enhanced_td_detection
+        array.push(status_parts, "TD: ON")
+    
+    status_text = array.join(status_parts, " | ")
     var table status_table = table.new(position.top_right, 1, 1, bgcolor=color.new(color.white, 80), border_width=1)
     table.cell(status_table, 0, 0, status_text, text_color=color.black, text_size=size.tiny)
 
 // Alert conditions
-if counting_started and array.includes(sequence_array, float(candle_count))
-    alert("DINC Sequence Number Reached: " + str.tostring(candle_count), alert.freq_once_per_bar)
+if counting_started
+    current_count_float = float(bar_index - anchor_bar_index + 1)
+    if array.includes(sequence_array, current_count_float)
+        alert("DINC Sequence Number Reached: " + str.tostring(current_count_float), alert.freq_once_per_bar)
+    
+    if use_custom_seq_1 and array.includes(custom_seq_1_array, current_count_float)
+        alert("Custom Sequence 1 Hit: " + str.tostring(current_count_float), alert.freq_once_per_bar)
+    
+    if use_custom_seq_2 and array.includes(custom_seq_2_array, current_count_float)
+        alert("Custom Sequence 2 Hit: " + str.tostring(current_count_float), alert.freq_once_per_bar)
