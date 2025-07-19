@@ -192,7 +192,7 @@ else if time >= start_date and not counting_started
     // Draw anchor line
     anchor_line := line.new(bar_index, low, bar_index, high, color=#0000FF, width=3, style=line.style_solid)
 
-// Forward counting logic with Time Distortion freeze behavior
+// Forward counting logic with Time Distortion freeze behavior for ALL sequences
 if counting_started and current_count_number <= max_candles and bar_index >= anchor_bar_index
     is_td = enhanced_td_detection ? is_time_distortion_candle(0) : false
     
@@ -221,66 +221,112 @@ if counting_started and current_count_number <= max_candles and bar_index >= anc
             
         display_count = current_count_number
     
-    // Main sequence counting
+    // Check ALL sequences for the current count
     is_main_sequence = array.includes(sequence_array, float(display_count))
     is_custom_1 = use_custom_seq_1 and array.includes(custom_seq_1_array, float(display_count))
     is_custom_2 = use_custom_seq_2 and array.includes(custom_seq_2_array, float(display_count))
     
-    y_position = display_position == "above_candle" ? high + (high - low) * 0.1 + vertical_shift : low - (high - low) * 0.1 - vertical_shift
+    // Show ALL sequence hits with different colors and positions
+    y_base = display_position == "above_candle" ? high + (high - low) * 0.1 + vertical_shift : low - (high - low) * 0.1 - vertical_shift
     
-    // Create labels for sequences
-    if not display_only_sequence or is_main_sequence or is_custom_1 or is_custom_2
-        // Show count with special formatting for TD state
+    // Main Sequence Label
+    if not display_only_sequence or is_main_sequence
         label_text = if is_td
             str.tostring(display_count) + "×"  // Add × to show it's frozen
         else
             str.tostring(display_count)
         
-        label_color = if is_main_sequence
+        main_color = if is_td
+            color.new(sequence_color, 50)  // Semi-transparent for TD
+        else
             sequence_color
-        else if is_custom_1
+        
+        if not display_only_sequence or is_main_sequence
+            main_label = label.new(bar_index, y_base, label_text, color=color.new(#FFFFFF, 100), textcolor=main_color, size=get_label_size(), style=label.style_none)
+            array.push(all_labels, main_label)
+    
+    // Custom Sequence 1 Label (if enabled and hit)
+    if use_custom_seq_1 and is_custom_1
+        custom1_text = if is_td
+            str.tostring(display_count) + "×"
+        else
+            str.tostring(display_count)
+        
+        custom1_color = if is_td
+            color.new(#00FF00, 50)  // Semi-transparent green for TD
+        else
             #00FF00  // Green
-        else if is_custom_2
+        
+        custom1_y = y_base + (display_position == "above_candle" ? (high - low) * 0.05 : -(high - low) * 0.05)
+        custom1_label = label.new(bar_index, custom1_y, custom1_text + "₁", color=color.new(#FFFFFF, 100), textcolor=custom1_color, size=get_label_size(), style=label.style_none)
+        array.push(all_labels, custom1_label)
+    
+    // Custom Sequence 2 Label (if enabled and hit)
+    if use_custom_seq_2 and is_custom_2
+        custom2_text = if is_td
+            str.tostring(display_count) + "×"
+        else
+            str.tostring(display_count)
+        
+        custom2_color = if is_td
+            color.new(#800080, 50)  // Semi-transparent purple for TD
+        else
             #800080  // Purple
-        else
-            normal_color
         
-        // Modify color if in time distortion
-        final_color = if is_td
-            color.new(label_color, 50)  // Semi-transparent to show frozen state
-        else
-            label_color
-        
-        if not display_only_sequence or is_main_sequence or is_custom_1 or is_custom_2
-            label_id = label.new(bar_index, y_position, label_text, color=color.new(#FFFFFF, 100), textcolor=final_color, size=get_label_size(), style=label.style_none)
-            array.push(all_labels, label_id)
+        custom2_y = y_base + (display_position == "above_candle" ? (high - low) * 0.08 : -(high - low) * 0.08)
+        custom2_label = label.new(bar_index, custom2_y, custom2_text + "₂", color=color.new(#FFFFFF, 100), textcolor=custom2_color, size=get_label_size(), style=label.style_none)
+        array.push(all_labels, custom2_label)
 
-// Backward counting logic
+// Backward counting logic with TD freeze behavior
 if enable_backward_count and counting_started and anchor_bar_index > 0
     for i = 1 to 50
         back_bar_index = anchor_bar_index - i
         if back_bar_index >= 0
+            // Check if this historical bar was a TD candle
+            is_back_td = enhanced_td_detection ? is_time_distortion_candle(bar_index - back_bar_index) : false
             is_backward_sequence = array.includes(backward_seq_array, float(i))
+            
             if is_backward_sequence
                 back_high = high[bar_index - back_bar_index]
                 back_low = low[bar_index - back_bar_index]
                 back_range = back_high - back_low
                 y_position = display_position == "above_candle" ? back_high + back_range * 0.1 : back_low - back_range * 0.1
-                label_text = "-" + str.tostring(i)
-                label_id = label.new(back_bar_index, y_position, label_text, color=color.new(#FFFFFF, 100), textcolor=backward_color, size=get_label_size(), style=label.style_none)
+                
+                // Apply TD formatting to backward counts too
+                label_text = if is_back_td
+                    "-" + str.tostring(i) + "×"
+                else
+                    "-" + str.tostring(i)
+                
+                back_color = if is_back_td
+                    color.new(backward_color, 50)  // Semi-transparent for TD
+                else
+                    backward_color
+                
+                label_id = label.new(back_bar_index, y_position, label_text, color=color.new(#FFFFFF, 100), textcolor=back_color, size=get_label_size(), style=label.style_none)
                 array.push(all_labels, label_id)
 
-// Future projections
+// Future projections with TD awareness
 if enable_future_projections and counting_started
-    current_bars_from_anchor = bar_index - anchor_bar_index + 1
     for i = 1 to 21
-        future_count = current_bars_from_anchor + i
+        future_count = current_count_number + i
         is_future_sequence = array.includes(future_seq_array, float(future_count))
         if is_future_sequence
             future_bar_index = bar_index + i
             y_position = display_position == "above_candle" ? high + (high - low) * 0.1 : low - (high - low) * 0.1
-            label_text = "+" + str.tostring(future_count)
-            label_id = label.new(future_bar_index, y_position, label_text, color=color.new(#FFFFFF, 100), textcolor=future_color, size=get_label_size(), style=label.style_none)
+            
+            // Future projections show where count WOULD be (accounting for current TD state)
+            label_text = if in_time_distortion
+                "+" + str.tostring(future_count) + "?"  // ? indicates uncertainty due to current TD
+            else
+                "+" + str.tostring(future_count)
+            
+            future_final_color = if in_time_distortion
+                color.new(future_color, 60)  // More transparent if currently in TD
+            else
+                future_color
+            
+            label_id = label.new(future_bar_index, y_position, label_text, color=color.new(#FFFFFF, 100), textcolor=future_final_color, size=get_label_size(), style=label.style_none)
             array.push(all_labels, label_id)
 
 // Multi-timeframe confluence detection
