@@ -34,8 +34,8 @@ show_mtf_confluence = input.bool(true, "Show MTF Confluence Markers", group="Mul
 
 // EMA Settings
 show_ema = input.bool(false, "Show EMA 8/21", group="EMA Settings")
-ema_8_color = input.color(color.blue, "EMA 8 Color", group="EMA Settings")
-ema_21_color = input.color(color.red, "EMA 21 Color", group="EMA Settings")
+ema_8_color = input.color(#0000FF, "EMA 8 Color", group="EMA Settings")
+ema_21_color = input.color(#FF0000, "EMA 21 Color", group="EMA Settings")
 
 // Time Distortion Enhanced
 enhanced_td_detection = input.bool(true, "Enhanced Time Distortion (Doji) Detection", group="Time Distortion")
@@ -47,10 +47,10 @@ display_position = input.string("above_candle", "Display Numbers Above/Below", o
 vertical_shift = input.int(0, "Vertical Shift Above/Below", group="Display Settings")
 normal_color = input.color(color.gray, "Normal Number Color", group="Display Settings")
 sequence_color = input.color(color.red, "Sequence Number Color", group="Display Settings")
-backward_color = input.color(color.purple, "Backward Count Color", group="Display Settings")
-future_color = input.color(color.orange, "Future Projection Color", group="Display Settings")
-mtf_color = input.color(color.cyan, "MTF Overlay Color", group="Display Settings")
-confluence_color = input.color(color.yellow, "Confluence Marker Color", group="Display Settings")
+backward_color = input.color(#800080, "Backward Count Color", group="Display Settings")
+future_color = input.color(#FFA500, "Future Projection Color", group="Display Settings")
+mtf_color = input.color(#00FFFF, "MTF Overlay Color", group="Display Settings")
+confluence_color = input.color(#FFFF00, "Confluence Marker Color", group="Display Settings")
 display_only_sequence = input.bool(true, "Display Only Sequence Numbers", group="Display Settings")
 label_size = input.string("normal", "Label Size", options=["tiny", "small", "normal", "large", "huge"], group="Display Settings")
 inputs_in_status = input.bool(true, "Inputs in Status Line", group="Display Settings")
@@ -144,7 +144,7 @@ var array<label> all_labels = array.new<label>()
 var line anchor_line = na
 
 // Multi-timeframe data request
-mtf_data = request.security(syminfo.tickerid, higher_tf, [close, high, low, open, bar_index])
+[mtf_close, mtf_high, mtf_low, mtf_open, mtf_bar_index] = request.security(syminfo.tickerid, higher_tf, [close, high, low, open, bar_index])
 
 // Get current sequences
 current_sequence_str = get_sequence(sequence_type)
@@ -175,7 +175,7 @@ if use_manual_anchor and manual_anchor_bar >= 0
     // Draw anchor line
     if not na(anchor_line)
         line.delete(anchor_line)
-    anchor_line := line.new(anchor_bar_index, low, anchor_bar_index, high, color=color.blue, width=3, style=line.style_solid)
+    anchor_line := line.new(anchor_bar_index, low, anchor_bar_index, high, color=#0000FF, width=3, style=line.style_solid)
 
 else if time >= start_date and not counting_started
     anchor_bar_index := bar_index
@@ -184,7 +184,7 @@ else if time >= start_date and not counting_started
     backward_count := 1
     
     // Draw anchor line
-    anchor_line := line.new(bar_index, low, bar_index, high, color=color.blue, width=3, style=line.style_solid)
+    anchor_line := line.new(bar_index, low, bar_index, high, color=#0000FF, width=3, style=line.style_solid)
 
 // Forward counting logic
 if counting_started and forward_count <= max_candles
@@ -215,14 +215,14 @@ if counting_started and forward_count <= max_candles
         if not display_only_sequence or is_main_sequence or is_custom_1 or is_custom_2
             label_text = str.tostring(bars_from_anchor)
             
-            if is_main_sequence
-                label_color = sequence_color
+            label_color = if is_main_sequence
+                sequence_color
             else if is_custom_1
-                label_color = color.green
+                #00FF00  // Green
             else if is_custom_2
-                label_color = color.purple
+                #800080  // Purple
             else
-                label_color = normal_color
+                normal_color
             
             if not display_only_sequence or is_main_sequence or is_custom_1 or is_custom_2
                 label_id = label.new(bar_index, y_position, label_text, color=color.new(color.white, 100), textcolor=label_color, size=get_label_size(), style=label.style_none)
@@ -255,7 +255,6 @@ if enable_future_projections and counting_started
 
 // Multi-timeframe confluence detection
 if enable_mtf and show_mtf_confluence and counting_started
-    mtf_close = array.get(mtf_data, 0)
     current_bars = bar_index - anchor_bar_index + 1
     
     // Simple MTF count simulation (this would need more complex logic for real MTF)
