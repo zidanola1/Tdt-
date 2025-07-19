@@ -46,7 +46,7 @@ parse_sequence(string seq_str) =>
     for part in parts
         trimmed_part = str.trim(part)
         if str.length(trimmed_part) > 0
-            array.push(sequence, str.tonumber(trimmed_part))
+            array.push(sequence, int(str.tonumber(trimmed_part)))
     sequence
 
 // Check if candle is inside candle
