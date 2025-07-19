@@ -142,6 +142,8 @@ var int backward_count = 0
 var bool counting_started = false
 var array<label> all_labels = array.new<label>()
 var line anchor_line = na
+var int current_count_number = 1
+var bool in_time_distortion = false
 
 // Multi-timeframe data request
 [mtf_close, mtf_high, mtf_low, mtf_open, mtf_bar_index] = request.security(syminfo.tickerid, higher_tf, [close, high, low, open, bar_index])
@@ -171,6 +173,8 @@ if use_manual_anchor and manual_anchor_bar >= 0
     counting_started := true
     forward_count := 1
     backward_count := 1
+    current_count_number := 1
+    in_time_distortion := false
     
     // Draw anchor line
     if not na(anchor_line)
@@ -182,51 +186,74 @@ else if time >= start_date and not counting_started
     counting_started := true
     forward_count := 1
     backward_count := 1
+    current_count_number := 1
+    in_time_distortion := false
     
     // Draw anchor line
     anchor_line := line.new(bar_index, low, bar_index, high, color=#0000FF, width=3, style=line.style_solid)
 
-// Forward counting logic
-if counting_started and forward_count <= max_candles
+// Forward counting logic with Time Distortion freeze behavior
+if counting_started and current_count_number <= max_candles and bar_index >= anchor_bar_index
     is_td = enhanced_td_detection ? is_time_distortion_candle(0) : false
-    should_count = true
     
-    // Skip time distortion candles if enabled
-    if is_td and skip_time_distortion
-        should_count := false
+    // Time Distortion Logic: Freeze counting until normal candle
+    if is_td
+        // Mark as in time distortion state
+        in_time_distortion := true
         
         // Show TD marker
-        if not display_only_sequence
-            td_y = display_position == "above_candle" ? high + (high - low) * 0.05 : low - (high - low) * 0.05
-            td_label = label.new(bar_index, td_y, "×", color=color.new(#FFFFFF, 100), textcolor=color.new(#808080, 50), size=size.tiny, style=label.style_none)
-            array.push(all_labels, td_label)
+        td_y = display_position == "above_candle" ? high + (high - low) * 0.05 + vertical_shift : low - (high - low) * 0.05 - vertical_shift
+        td_label = label.new(bar_index, td_y, "×", color=color.new(#FFFFFF, 100), textcolor=color.new(#FF0000, 70), size=size.tiny, style=label.style_circle)
+        array.push(all_labels, td_label)
+        
+        // Keep showing the SAME count number (frozen)
+        display_count = current_count_number
+        
+    else
+        // Normal candle - advance count if we were in TD, or continue normal counting
+        if in_time_distortion
+            // Exiting time distortion - advance to next count
+            current_count_number := current_count_number + 1
+            in_time_distortion := false
+        else
+            // Normal progression
+            current_count_number := current_count_number + 1
+            
+        display_count = current_count_number
     
-    if should_count and bar_index >= anchor_bar_index
-        bars_from_anchor = bar_index - anchor_bar_index + 1
+    // Main sequence counting
+    is_main_sequence = array.includes(sequence_array, float(display_count))
+    is_custom_1 = use_custom_seq_1 and array.includes(custom_seq_1_array, float(display_count))
+    is_custom_2 = use_custom_seq_2 and array.includes(custom_seq_2_array, float(display_count))
+    
+    y_position = display_position == "above_candle" ? high + (high - low) * 0.1 + vertical_shift : low - (high - low) * 0.1 - vertical_shift
+    
+    // Create labels for sequences
+    if not display_only_sequence or is_main_sequence or is_custom_1 or is_custom_2
+        // Show count with special formatting for TD state
+        label_text = if is_td
+            str.tostring(display_count) + "×"  // Add × to show it's frozen
+        else
+            str.tostring(display_count)
         
-        // Main sequence counting
-        is_main_sequence = array.includes(sequence_array, float(bars_from_anchor))
-        is_custom_1 = use_custom_seq_1 and array.includes(custom_seq_1_array, float(bars_from_anchor))
-        is_custom_2 = use_custom_seq_2 and array.includes(custom_seq_2_array, float(bars_from_anchor))
+        label_color = if is_main_sequence
+            sequence_color
+        else if is_custom_1
+            #00FF00  // Green
+        else if is_custom_2
+            #800080  // Purple
+        else
+            normal_color
         
-        y_position = display_position == "above_candle" ? high + (high - low) * 0.1 + vertical_shift : low - (high - low) * 0.1 - vertical_shift
+        // Modify color if in time distortion
+        final_color = if is_td
+            color.new(label_color, 50)  // Semi-transparent to show frozen state
+        else
+            label_color
         
-        // Create labels for sequences
         if not display_only_sequence or is_main_sequence or is_custom_1 or is_custom_2
-            label_text = str.tostring(bars_from_anchor)
-            
-            label_color = if is_main_sequence
-                sequence_color
-            else if is_custom_1
-                #00FF00  // Green
-            else if is_custom_2
-                #800080  // Purple
-            else
-                normal_color
-            
-            if not display_only_sequence or is_main_sequence or is_custom_1 or is_custom_2
-                label_id = label.new(bar_index, y_position, label_text, color=color.new(#FFFFFF, 100), textcolor=label_color, size=get_label_size(), style=label.style_none)
-                array.push(all_labels, label_id)
+            label_id = label.new(bar_index, y_position, label_text, color=color.new(#FFFFFF, 100), textcolor=final_color, size=get_label_size(), style=label.style_none)
+            array.push(all_labels, label_id)
 
 // Backward counting logic
 if enable_backward_count and counting_started and anchor_bar_index > 0
@@ -276,8 +303,8 @@ if inputs_in_status and barstate.islast
     array.push(status_parts, "DINC Pro: " + current_sequence_str)
     
     if counting_started
-        current_count = bar_index - anchor_bar_index + 1
-        array.push(status_parts, "Count: " + str.tostring(current_count))
+        status_suffix = in_time_distortion ? " (TD)" : ""
+        array.push(status_parts, "Count: " + str.tostring(current_count_number) + status_suffix)
     
     if use_custom_seq_1
         array.push(status_parts, "Seq1: " + custom_sequence_1)
@@ -297,8 +324,8 @@ if inputs_in_status and barstate.islast
     table.cell(status_table, 0, 0, status_text, text_color=#000000, text_size=size.tiny)
 
 // Alert conditions
-if counting_started
-    current_count_float = float(bar_index - anchor_bar_index + 1)
+if counting_started and not in_time_distortion
+    current_count_float = float(current_count_number)
     if array.includes(sequence_array, current_count_float)
         alert("DINC Sequence Number Reached: " + str.tostring(current_count_float), alert.freq_once_per_bar)
     
@@ -307,3 +334,12 @@ if counting_started
     
     if use_custom_seq_2 and array.includes(custom_seq_2_array, current_count_float)
         alert("Custom Sequence 2 Hit: " + str.tostring(current_count_float), alert.freq_once_per_bar)
+
+// Time Distortion alerts
+if counting_started and enhanced_td_detection
+    is_td_current = is_time_distortion_candle(0)
+    if is_td_current and not in_time_distortion[1]
+        alert("Time Distortion Detected - Count Frozen at: " + str.tostring(current_count_number), alert.freq_once_per_bar)
+    
+    if not is_td_current and in_time_distortion[1]
+        alert("Time Distortion Ended - Count Resumed at: " + str.tostring(current_count_number), alert.freq_once_per_bar)
