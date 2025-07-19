@@ -45,8 +45,8 @@ skip_time_distortion = input.bool(false, "Skip Time Distortion Candles", group="
 // Display settings
 display_position = input.string("above_candle", "Display Numbers Above/Below", options=["above_candle", "below_candle"], group="Display Settings")
 vertical_shift = input.int(0, "Vertical Shift Above/Below", group="Display Settings")
-normal_color = input.color(color.gray, "Normal Number Color", group="Display Settings")
-sequence_color = input.color(color.red, "Sequence Number Color", group="Display Settings")
+normal_color = input.color(#808080, "Normal Number Color", group="Display Settings")
+sequence_color = input.color(#FF0000, "Sequence Number Color", group="Display Settings")
 backward_color = input.color(#800080, "Backward Count Color", group="Display Settings")
 future_color = input.color(#FFA500, "Future Projection Color", group="Display Settings")
 mtf_color = input.color(#00FFFF, "MTF Overlay Color", group="Display Settings")
@@ -198,7 +198,7 @@ if counting_started and forward_count <= max_candles
         // Show TD marker
         if not display_only_sequence
             td_y = display_position == "above_candle" ? high + (high - low) * 0.05 : low - (high - low) * 0.05
-            td_label = label.new(bar_index, td_y, "×", color=color.new(color.white, 100), textcolor=color.new(color.gray, 50), size=size.tiny, style=label.style_none)
+            td_label = label.new(bar_index, td_y, "×", color=color.new(#FFFFFF, 100), textcolor=color.new(#808080, 50), size=size.tiny, style=label.style_none)
             array.push(all_labels, td_label)
     
     if should_count and bar_index >= anchor_bar_index
@@ -225,7 +225,7 @@ if counting_started and forward_count <= max_candles
                 normal_color
             
             if not display_only_sequence or is_main_sequence or is_custom_1 or is_custom_2
-                label_id = label.new(bar_index, y_position, label_text, color=color.new(color.white, 100), textcolor=label_color, size=get_label_size(), style=label.style_none)
+                label_id = label.new(bar_index, y_position, label_text, color=color.new(#FFFFFF, 100), textcolor=label_color, size=get_label_size(), style=label.style_none)
                 array.push(all_labels, label_id)
 
 // Backward counting logic
@@ -235,9 +235,12 @@ if enable_backward_count and counting_started and anchor_bar_index > 0
         if back_bar_index >= 0
             is_backward_sequence = array.includes(backward_seq_array, float(i))
             if is_backward_sequence
-                y_position = display_position == "above_candle" ? high[bar_index - back_bar_index] + (high[bar_index - back_bar_index] - low[bar_index - back_bar_index]) * 0.1 : low[bar_index - back_bar_index] - (high[bar_index - back_bar_index] - low[bar_index - back_bar_index]) * 0.1
+                back_high = high[bar_index - back_bar_index]
+                back_low = low[bar_index - back_bar_index]
+                back_range = back_high - back_low
+                y_position = display_position == "above_candle" ? back_high + back_range * 0.1 : back_low - back_range * 0.1
                 label_text = "-" + str.tostring(i)
-                label_id = label.new(back_bar_index, y_position, label_text, color=color.new(color.white, 100), textcolor=backward_color, size=get_label_size(), style=label.style_none)
+                label_id = label.new(back_bar_index, y_position, label_text, color=color.new(#FFFFFF, 100), textcolor=backward_color, size=get_label_size(), style=label.style_none)
                 array.push(all_labels, label_id)
 
 // Future projections
@@ -250,7 +253,7 @@ if enable_future_projections and counting_started
             future_bar_index = bar_index + i
             y_position = display_position == "above_candle" ? high + (high - low) * 0.1 : low - (high - low) * 0.1
             label_text = "+" + str.tostring(future_count)
-            label_id = label.new(future_bar_index, y_position, label_text, color=color.new(color.white, 100), textcolor=future_color, size=get_label_size(), style=label.style_none)
+            label_id = label.new(future_bar_index, y_position, label_text, color=color.new(#FFFFFF, 100), textcolor=future_color, size=get_label_size(), style=label.style_none)
             array.push(all_labels, label_id)
 
 // Multi-timeframe confluence detection
@@ -264,7 +267,7 @@ if enable_mtf and show_mtf_confluence and counting_started
     is_mtf_confluence = array.includes(mtf_sequence_array, float(current_bars)) and array.includes(mtf_sequence_array, float(mtf_count))
     if is_mtf_confluence
         confluence_y = display_position == "above_candle" ? high + (high - low) * 0.2 : low - (high - low) * 0.2
-        confluence_label = label.new(bar_index, confluence_y, "◆", color=color.new(color.white, 100), textcolor=confluence_color, size=size.large, style=label.style_none)
+        confluence_label = label.new(bar_index, confluence_y, "◆", color=color.new(#FFFFFF, 100), textcolor=confluence_color, size=size.large, style=label.style_none)
         array.push(all_labels, confluence_label)
 
 // Status line display
@@ -290,8 +293,8 @@ if inputs_in_status and barstate.islast
         array.push(status_parts, "TD: ON")
     
     status_text = array.join(status_parts, " | ")
-    var table status_table = table.new(position.top_right, 1, 1, bgcolor=color.new(color.white, 80), border_width=1)
-    table.cell(status_table, 0, 0, status_text, text_color=color.black, text_size=size.tiny)
+    var table status_table = table.new(position.top_right, 1, 1, bgcolor=color.new(#FFFFFF, 80), border_width=1)
+    table.cell(status_table, 0, 0, status_text, text_color=#000000, text_size=size.tiny)
 
 // Alert conditions
 if counting_started
