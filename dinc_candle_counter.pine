@@ -54,7 +54,35 @@ parse_sequence(string seq_str) =>
 // Check if candle is inside candle
 is_inside_candle(int index) =>
     result = false
-    if index > 0
+    if index == 0 and bar_index > 0
+        // Current bar compared to previous bar
+        current_high = high
+        current_low = low
+        prev_high = high[1]
+        prev_low = low[1]
+        
+        if inside_use_hl
+            if inside_comparison == "<="
+                result := current_high <= prev_high and current_low >= prev_low
+            else
+                result := current_high < prev_high and current_low > prev_low
+        else
+            current_open = open
+            current_close = close
+            prev_open = open[1]
+            prev_close = close[1]
+            
+            current_max = math.max(current_open, current_close)
+            current_min = math.min(current_open, current_close)
+            prev_max = math.max(prev_open, prev_close)
+            prev_min = math.min(prev_open, prev_close)
+            
+            if inside_comparison == "<="
+                result := current_max <= prev_max and current_min >= prev_min
+            else
+                result := current_max < prev_max and current_min > prev_min
+    else if index > 0
+        // Historical bars
         current_high = high[index]
         current_low = low[index]
         prev_high = high[index + 1]
@@ -125,14 +153,15 @@ else if counting_started and candle_count < max_candles
     should_count = true
     count_increment = 1
     
-    // Handle inside candles
+    // Handle inside candles (time distortion) - skip if enabled
     if is_inside and skip_inside_candles
         should_count := false
     
-    // Handle outside candles double counting
+    // Handle outside candles - count double if enabled
     if not is_inside and count_outside_double
         count_increment := 2
     
+    // Only process if we should count this candle
     if should_count
         candle_count := candle_count + count_increment
         
@@ -145,12 +174,23 @@ else if counting_started and candle_count < max_candles
         if not display_only_sequence or is_sequence_number
             label_id = label.new(bar_index, y_position, label_text, color=color.new(color.white, 100), textcolor=label_color, size=get_label_size(), style=label.style_none)
             array.push(all_labels, label_id)
+    else
+        // If inside candle is skipped, we can optionally show a marker
+        if is_inside and skip_inside_candles
+            // Optional: Add a small marker to show skipped inside candle
+            y_position = display_position == "above_candle" ? high + (high - low) * 0.05 + vertical_shift : low - (high - low) * 0.05 - vertical_shift
+            if not display_only_sequence
+                label_id = label.new(bar_index, y_position, "•", color=color.new(color.white, 100), textcolor=color.new(color.gray, 50), size=size.tiny, style=label.style_none)
+                array.push(all_labels, label_id)
 
 // Status line display
 if inputs_in_status and barstate.islast
-    status_text = "DINC: " + current_sequence_str + " | Count: " + str.tostring(candle_count) + " | Type: " + sequence_type
+    inside_status = skip_inside_candles ? " | Skip Inside: ON" : " | Skip Inside: OFF"
+    outside_status = count_outside_double ? " | Double Outside: ON" : " | Double Outside: OFF"
+    comparison_status = " | Inside Logic: " + inside_comparison
+    status_text = "DINC: " + current_sequence_str + " | Count: " + str.tostring(candle_count) + " | Type: " + sequence_type + inside_status + outside_status + comparison_status
     var table status_table = table.new(position.top_right, 1, 1, bgcolor=color.new(color.white, 80), border_width=1)
-    table.cell(status_table, 0, 0, status_text, text_color=color.black, text_size=size.small)
+    table.cell(status_table, 0, 0, status_text, text_color=color.black, text_size=size.tiny)
 
 // Alert conditions
 if counting_started and array.includes(sequence_array, float(candle_count))
