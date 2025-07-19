@@ -42,9 +42,9 @@ enhanced_td_detection = input.bool(true, "Enhanced Time Distortion (Doji) Detect
 doji_threshold = input.float(0.1, "Doji Body Threshold (% of range)", minval=0.01, maxval=0.5, step=0.01, group="Time Distortion")
 skip_time_distortion = input.bool(false, "Skip Time Distortion Candles", group="Time Distortion")
 
-// Inside Candle Settings
-inside_comparison = input.string("<=", "Inside Candle Comparison", options=["<", "<="], group="Time Distortion")
-inside_use_hl = input.bool(true, "Use High/Low vs Open/Close for Inside Detection", group="Time Distortion")
+// Inside Candle Settings (IPDA Method)
+inside_comparison = input.string("<=", "Inside Candle Comparison", options=["<=", "<"], group="Time Distortion")
+inside_method = input.string("High/Low", "Inside Candle Method", options=["High/Low", "Open/Close"], group="Time Distortion")
 
 // Display settings
 display_position = input.string("above_candle", "Display Numbers Above/Below", options=["above_candle", "below_candle"], group="Display Settings")
@@ -167,17 +167,17 @@ is_inside_candle_oc(int index) =>
     else
         false
 
-// Enhanced Time Distortion Detection (Clear Logic)
+// Enhanced Time Distortion Detection (IPDA Method - Inside Candle Primary)
 is_time_distortion_candle(int index) =>
     result = false
     if enhanced_td_detection
-        // 1. Doji Detection: Very small body relative to range
+        // 1. IPDA Primary: Inside Candle Detection (most important for institutional algorithm)
+        is_inside = inside_method == "High/Low" ? is_inside_candle_hl(index) : is_inside_candle_oc(index)
+        
+        // 2. Secondary: Doji Detection (market indecision)
         is_doji = is_doji_candle(index)
         
-        // 2. Inside Candle Detection: Choose High/Low or Open/Close method
-        is_inside = inside_use_hl ? is_inside_candle_hl(index) : is_inside_candle_oc(index)
-        
-        // 3. Small Range Detection: Significantly smaller than previous candle
+        // 3. Tertiary: Small Range Detection (low volatility)
         is_small_range = false
         if index == 0 and bar_index > 0
             current_range = high - low
@@ -188,8 +188,9 @@ is_time_distortion_candle(int index) =>
             prev_range = high[index + 1] - low[index + 1]
             is_small_range := prev_range > 0 ? current_range < (prev_range * 0.6) : false
         
-        // Time Distortion = Doji OR Inside Candle OR Small Range
-        result := is_doji or is_inside or is_small_range
+        // IPDA Priority: Inside Candle is PRIMARY indicator of Time Distortion
+        // Doji and Small Range are secondary confirmations
+        result := is_inside or is_doji or is_small_range
     result
 
 // EMA Calculations
@@ -438,7 +439,7 @@ if inputs_in_status and barstate.islast
     if enable_mtf
         array.push(status_parts, "MTF: " + higher_tf)
     if enhanced_td_detection
-        td_method = inside_use_hl ? "H/L" : "O/C"
+        td_method = inside_method == "High/Low" ? "H/L" : "O/C"
         td_comparison = inside_comparison
         td_skip = skip_time_distortion ? "SKIP" : "SHOW"
         array.push(status_parts, "TD: " + td_skip + " (" + td_method + " " + td_comparison + ")")
