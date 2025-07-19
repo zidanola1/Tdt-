@@ -41,14 +41,14 @@ get_sequence(string seq_type) =>
 
 // Parse sequence string into array
 parse_sequence(string seq_str) =>
-    sequence = array.new<int>()
+    sequence = array.new<float>()
     parts = str.split(seq_str, ",")
     for part in parts
         trimmed_part = str.trim(part)
         if str.length(trimmed_part) > 0
             num_value = str.tonumber(trimmed_part)
             if not na(num_value)
-                array.push(sequence, math.round(num_value))
+                array.push(sequence, num_value)
     sequence
 
 // Check if candle is inside candle
@@ -111,7 +111,7 @@ if time >= start_date and not counting_started
     
     // Create first label
     label_text = "1"
-    is_sequence_num = array.includes(sequence_array, 1)
+    is_sequence_num = array.includes(sequence_array, 1.0)
     label_color = is_sequence_num ? sequence_color : normal_color
     y_position = display_position == "above_candle" ? high + (high - low) * 0.1 + vertical_shift : low - (high - low) * 0.1 - vertical_shift
     
@@ -138,7 +138,7 @@ else if counting_started and candle_count < max_candles
         
         // Create label for this candle
         label_text = str.tostring(candle_count)
-        is_sequence_number = array.includes(sequence_array, candle_count)
+        is_sequence_number = array.includes(sequence_array, float(candle_count))
         label_color = is_sequence_number ? sequence_color : normal_color
         y_position = display_position == "above_candle" ? high + (high - low) * 0.1 + vertical_shift : low - (high - low) * 0.1 - vertical_shift
         
@@ -153,5 +153,5 @@ if inputs_in_status and barstate.islast
     table.cell(status_table, 0, 0, status_text, text_color=color.black, text_size=size.small)
 
 // Alert conditions
-if counting_started and array.includes(sequence_array, candle_count)
+if counting_started and array.includes(sequence_array, float(candle_count))
     alert("DINC Sequence Number Reached: " + str.tostring(candle_count), alert.freq_once_per_bar)
