@@ -1,4 +1,4 @@
-//@version=5
+//@version=6
 indicator("DINC Candle Counter", shorttitle="DINC", overlay=true, max_labels_count=500, max_lines_count=500)
 
 // Input parameters
@@ -24,8 +24,8 @@ label_size = input.string("normal", "Label Size", options=["tiny", "small", "nor
 inputs_in_status = input.bool(true, "Inputs in Status Line", group="Display Settings")
 
 // Predefined sequences
-get_sequence(seq_type) =>
-    result = switch seq_type
+get_sequence(string seq_type) =>
+    switch seq_type
         "time_expansion_1" => "4,7,9,15"
         "time_expansion_2" => "7,11,15,19"
         "time_expansion_3" => "1,6,9,11"
@@ -38,10 +38,9 @@ get_sequence(seq_type) =>
         "gann_cardinal" => "1,2,4,8,16,32,64,128"
         "gann_ordinal" => "3,6,12,24,48,96,192"
         => custom_sequence
-    result
 
 // Parse sequence string into array
-parse_sequence(seq_str) =>
+parse_sequence(string seq_str) =>
     sequence = array.new<int>()
     parts = str.split(seq_str, ",")
     for part in parts
@@ -51,7 +50,7 @@ parse_sequence(seq_str) =>
     sequence
 
 // Check if candle is inside candle
-is_inside_candle(index) =>
+is_inside_candle(int index) =>
     result = false
     if index > 0
         current_high = high[index]
@@ -83,13 +82,12 @@ is_inside_candle(index) =>
 
 // Get label size
 get_label_size() =>
-    result = switch label_size
+    switch label_size
         "tiny" => size.tiny
         "small" => size.small
         "large" => size.large
         "huge" => size.huge
         => size.normal
-    result
 
 // Main logic variables
 var int candle_count = 0
