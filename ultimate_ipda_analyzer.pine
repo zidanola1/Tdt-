@@ -102,10 +102,10 @@ is_ultimate_td_candle(int index) =>
         c_open = index == 0 ? open : open[index]
         c_close = index == 0 ? close : close[index]
         
-        prev_high = index == 0 ? (bar_index > 0 ? high[1] : high) : (index < bar_index ? high[index + 1] : high[index])
-        prev_low = index == 0 ? (bar_index > 0 ? low[1] : low) : (index < bar_index ? low[index + 1] : low[index])
-        prev_open = index == 0 ? (bar_index > 0 ? open[1] : open) : (index < bar_index ? open[index + 1] : open[index])
-        prev_close = index == 0 ? (bar_index > 0 ? close[1] : close) : (index < bar_index ? close[index + 1] : close[index])
+        prev_high = index == 0 ? (bar_index > 0 ? high[1] : high) : high[index + 1]
+        prev_low = index == 0 ? (bar_index > 0 ? low[1] : low) : low[index + 1]
+        prev_open = index == 0 ? (bar_index > 0 ? open[1] : open) : open[index + 1]
+        prev_close = index == 0 ? (bar_index > 0 ? close[1] : close) : close[index + 1]
         
         // Basic calculations
         candleRange = c_high - c_low
@@ -134,18 +134,16 @@ is_ultimate_td_candle(int index) =>
                 bodyMax < prevBodyMax and bodyMin > prevBodyMin
         
         // 3. Range Analysis
-        isSmallRange = if rangeAnalysis and prevRange > 0
-            candleRange < (prevRange * 0.6)
-        else
-            false
+        isSmallRange = false
+        if rangeAnalysis and prevRange > 0
+            isSmallRange := candleRange < (prevRange * 0.6)
         
         // 4. Wick Dominance (Fakeout detection)
-        hasWickDominance = if wickDominance and bodySize > 0
+        hasWickDominance = false
+        if wickDominance and bodySize > 0
             upperWick = c_high - math.max(c_open, c_close)
             lowerWick = math.min(c_open, c_close) - c_low
-            (upperWick > bodySize) or (lowerWick > bodySize)
-        else
-            false
+            hasWickDominance := (upperWick > bodySize) or (lowerWick > bodySize)
         
         // Combined TD Logic (IPDA Priority)
         primaryTD = isInsideBar  // IPDA Primary
@@ -172,9 +170,7 @@ var int display_count = 1
 var int td_count = 0
 
 // === MTF DATA ===
-[mtf_close, mtf_high, mtf_low, mtf_open, mtf_bar_index] = enable_mtf ? 
-    request.security(syminfo.tickerid, higher_tf, [close, high, low, open, bar_index]) : 
-    [close, high, low, open, bar_index]
+[mtf_close, mtf_high, mtf_low, mtf_open, mtf_bar_index] = enable_mtf ? request.security(syminfo.tickerid, higher_tf, [close, high, low, open, bar_index]) : [close, high, low, open, bar_index]
 
 // === SEQUENCE ARRAYS ===
 current_sequence_str = get_sequence(sequence_type)
