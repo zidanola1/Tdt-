@@ -3,7 +3,10 @@ indicator("Ultimate IPDA Analyzer", shorttitle="IPDA Pro", overlay=true, max_lab
 
 // === BASIC SETTINGS ===
 start_date = input.time(timestamp("2025-07-10 10:00"), "Start Date", group="Basic Settings")
-sequence_type = input.string("custom", "Sequence Type", options=["custom", "sequence_7", "sequence_13", "sequence_21", "sequence_5", "sequence_9", "sequence_11", "time_expansion_1", "time_expansion_2", "time_expansion_3", "time_contraction_1", "time_contraction_2", "time_contraction_3", "gann_cardinal", "gann_ordinal"], group="Basic Settings")
+sequence_type = input.string("custom", "Sequence Type", options=
+     ["custom", "sequence_7", "sequence_13", "sequence_21", "sequence_5", "sequence_9", "sequence_11", 
+      "time_expansion_1", "time_expansion_2", "time_expansion_3", "time_contraction_1", 
+      "time_contraction_2", "time_contraction_3", "gann_cardinal", "gann_ordinal"], group="Basic Settings")
 custom_sequence = input.string("7,13,21,31,42", "Custom Sequence", group="Basic Settings")
 max_candles = input.int(100, "Number of Candles", minval=1, maxval=500, group="Basic Settings")
 
