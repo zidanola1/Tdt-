@@ -144,6 +144,7 @@ var array<label> all_labels = array.new<label>()
 var line anchor_line = na
 var int current_count_number = 1
 var bool in_time_distortion = false
+var int display_count = 1
 
 // Multi-timeframe data request
 [mtf_close, mtf_high, mtf_low, mtf_open, mtf_bar_index] = request.security(syminfo.tickerid, higher_tf, [close, high, low, open, bar_index])
@@ -197,7 +198,7 @@ if counting_started and current_count_number <= max_candles and bar_index >= anc
     is_td = enhanced_td_detection ? is_time_distortion_candle(0) : false
     
     // Determine display count BEFORE updating count
-    display_count = current_count_number
+    display_count := current_count_number
     
     // Time Distortion Logic: Freeze counting until normal candle
     if is_td
