@@ -189,7 +189,12 @@ if enable_casting and counting_started
                 casting_phase_negative := false
                 casting_active := true
                 forward_cast_active := true
-                cast_forward_count := 1  // Always start forward sequence at 1
+                if same_candle_transition
+                    // CYCLE: -1 candle IS also the 1 candle - start counting from 1 on same candle
+                    cast_forward_count := 1
+                else
+                    // TRADITIONAL: separate candles - will start at 1 on next candle
+                    cast_forward_count := 0
             else
                 backward_cast_count := backward_cast_count + 1
         else
