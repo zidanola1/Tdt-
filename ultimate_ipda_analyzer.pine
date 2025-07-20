@@ -21,6 +21,8 @@ inside_comparison = input.string("<=", "Inside Comparison", options=["<=", "<"],
 
 // === DISPLAY SETTINGS ===
 display_position = input.string("above_candle", "Display Position", options=["above_candle", "below_candle"], group="Display Settings")
+vertical_shift = input.int(0, "Vertical Shift", group="Display Settings")
+label_size = input.string("normal", "Label Size", options=["tiny", "small", "normal", "large", "huge"], group="Display Settings")
 sequence_color = input.color(#FF0000, "Sequence Number Color", group="Display Settings")
 casting_color = input.color(#FF00FF, "Casting Color", group="Display Settings")
 display_only_sequence = input.bool(true, "Display Only Sequence Numbers", group="Display Settings")
@@ -110,7 +112,16 @@ var bool casting_initialized = false
 // === SEQUENCE ARRAYS ===
 current_sequence_str = get_sequence(sequence_type)
 sequence_array = parse_sequence(current_sequence_str)
-casting_seq_array = enable_casting ? parse_sequence(backward_casting_sequence) : array.new<float>()
+casting_seq_array = parse_sequence(backward_casting_sequence)  // Always parse, regardless of enable_casting
+
+// === LABEL SIZE FUNCTION ===
+get_label_size() =>
+    switch label_size
+        "tiny" => size.tiny
+        "small" => size.small
+        "large" => size.large
+        "huge" => size.huge
+        => size.normal
 
 // === ANCHOR POINT LOGIC ===
 if time >= start_date and not counting_started
@@ -144,7 +155,7 @@ if enable_casting and counting_started
                 casting_active := true
                 forward_cast_active := true
                 cast_forward_sequence := get_forward_from_backward(backward_casting_sequence)
-                cast_forward_count := 0  // Will increment to 1 on next bar
+                cast_forward_count := 1  // Start immediately at 1
             else
                 // Continue negative counting (moving toward -1)
                 backward_cast_count := backward_cast_count + 1
@@ -177,7 +188,7 @@ if counting_started and current_count_number <= max_candles and bar_index >= anc
     is_main_sequence = array.includes(sequence_array, float(current_count_number))
     
     range_mult = (high - low) * 0.1
-    y_base = display_position == "above_candle" ? high + range_mult : low - range_mult
+    y_base = display_position == "above_candle" ? high + range_mult + vertical_shift : low - range_mult - vertical_shift
     
     // === MAIN SEQUENCE LABELS ===
     if not display_only_sequence or is_main_sequence
@@ -192,7 +203,7 @@ if counting_started and current_count_number <= max_candles and bar_index >= anc
             sequence_color
         
         if not display_only_sequence or is_main_sequence
-            label.new(bar_index, y_base, label_text, color=color.new(#FFFFFF, 100), textcolor=main_color, size=size.normal)
+            label.new(bar_index, y_base, label_text, color=color.new(#FFFFFF, 100), textcolor=main_color, size=get_label_size())
 
 // === TDT CASTING DISPLAY ===
 if enable_casting and counting_started
@@ -201,18 +212,18 @@ if enable_casting and counting_started
         negative_hit = array.includes(casting_seq_array, float(math.abs(backward_cast_count)))
         if negative_hit
             casting_offset = (high - low) * 0.12
-            casting_y = display_position == "above_candle" ? high + casting_offset : low - casting_offset
-            casting_text = str.tostring(backward_cast_count) + "B"
-            label.new(bar_index, casting_y, casting_text, color=color.new(#FFFFFF, 100), textcolor=casting_color, size=size.small)
+            casting_y = display_position == "above_candle" ? high + casting_offset + vertical_shift : low - casting_offset - vertical_shift
+            casting_text = str.tostring(backward_cast_count)  // Remove "B" suffix
+            label.new(bar_index, casting_y, casting_text, color=color.new(#FFFFFF, 100), textcolor=casting_color, size=get_label_size())
     else
         // POSITIVE PHASE: Display forward casting hits
         if forward_cast_active
             forward_cast_hit = array.includes(cast_forward_sequence, float(cast_forward_count))
             if forward_cast_hit
                 forward_offset = (high - low) * 0.15
-                forward_y = display_position == "above_candle" ? high + forward_offset : low - forward_offset
-                forward_text = str.tostring(cast_forward_count) + "F"
-                label.new(bar_index, forward_y, forward_text, color=color.new(#FFFFFF, 100), textcolor=casting_color, size=size.small)
+                forward_y = display_position == "above_candle" ? high + forward_offset + vertical_shift : low - forward_offset - vertical_shift
+                forward_text = str.tostring(cast_forward_count)  // Remove "F" suffix
+                label.new(bar_index, forward_y, forward_text, color=color.new(#FFFFFF, 100), textcolor=casting_color, size=get_label_size())
 
 // === ALERTS ===
 if counting_started and not in_time_distortion
