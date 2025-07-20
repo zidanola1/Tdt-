@@ -185,24 +185,18 @@ if enable_casting and counting_started
     if casting_initialized and not (current_is_td and freezeOnTD)
         if casting_phase_negative
             if backward_cast_count == -1
-                if same_candle_transition
-                    // Keep -1 on this candle and start forward count at 1 on same candle
-                    casting_phase_negative := false
-                    casting_active := true
-                    forward_cast_active := true
-                    cast_forward_count := 1
-                else
-                    // Move to next candle before starting forward count
-                    backward_cast_count := backward_cast_count + 1
+                // Transition: -1 (end of backward) and 1 (start of forward) on SAME candle
+                casting_phase_negative := false
+                casting_active := true
+                forward_cast_active := true
+                cast_forward_count := 1
+                // Don't increment backward_cast_count, keep it at -1 for display
             else
                 backward_cast_count := backward_cast_count + 1
         else
             if forward_cast_active
-                if not same_candle_transition and cast_forward_count == 1 and casting_active[1] == false
-                    // Skip this first increment if we're not on same candle
-                    cast_forward_count := 1
-                else
-                    cast_forward_count := cast_forward_count + 1
+                // After transition candle, continue normal forward counting
+                cast_forward_count := cast_forward_count + 1
 
 // === MAIN COUNTING LOGIC ===
 if counting_started and current_count_number <= max_candles and bar_index >= anchor_bar_index
@@ -248,6 +242,7 @@ if counting_started and current_count_number <= max_candles and bar_index >= anc
 
 // === TDT CASTING DISPLAY ===
 if enable_casting and counting_started and casting_initialized
+    // Display backward sequence numbers (negative phase)
     if casting_phase_negative
         negative_hit = array.includes(casting_seq_array, float(math.abs(backward_cast_count)))
         if negative_hit
@@ -256,24 +251,32 @@ if enable_casting and counting_started and casting_initialized
             casting_text = str.tostring(backward_cast_count)
             label.new(bar_index, casting_y, casting_text, color=color.new(#FFFFFF, 100), textcolor=casting_color, size=get_label_size())
     
-    // Show both -1 and 1 on same candle if option enabled
-    if same_candle_transition and backward_cast_count == -1 and casting_phase_negative == false
-        // Show -1 
-        negative_hit = array.includes(casting_seq_array, 1.0) // Check if 1 is in backward sequence (which means -1 should show)
-        if negative_hit
-            casting_offset = (high - low) * 0.12
-            casting_y = display_position == "above_candle" ? high + casting_offset + vertical_shift : low - casting_offset - vertical_shift
-            label.new(bar_index, casting_y, "-1", color=color.new(#FFFFFF, 100), textcolor=casting_color, size=get_label_size())
-        
-        // Show 1 on same candle
-        forward_cast_hit = array.includes(forward_cast_seq_array, 1.0)
-        if forward_cast_hit
-            forward_offset = (high - low) * 0.15
-            forward_y = display_position == "above_candle" ? high + forward_offset + vertical_shift : low - forward_offset - vertical_shift
-            label.new(bar_index, forward_y, "1", color=color.new(#FFFFFF, 100), textcolor=casting_color, size=get_label_size())
+    // TRANSITION CANDLE: Show both -1 (end backward) and 1 (start forward) on SAME candle
+    if not casting_phase_negative and cast_forward_count == 1 and casting_active
+        if same_candle_transition
+            // Show -1 (end of backward sequence) 
+            backward_hit = array.includes(casting_seq_array, 1.0) // Check if 1 is in backward sequence
+            if backward_hit
+                casting_offset = (high - low) * 0.12
+                casting_y = display_position == "above_candle" ? high + casting_offset + vertical_shift : low - casting_offset - vertical_shift
+                label.new(bar_index, casting_y, "-1", color=color.new(#FFFFFF, 100), textcolor=casting_color, size=get_label_size())
+            
+            // Show 1 (start of forward sequence) on SAME candle
+            forward_hit = array.includes(forward_cast_seq_array, 1.0)
+            if forward_hit
+                forward_offset = (high - low) * 0.15
+                forward_y = display_position == "above_candle" ? high + forward_offset + vertical_shift : low - forward_offset - vertical_shift
+                label.new(bar_index, forward_y, "1", color=color.new(#FFFFFF, 100), textcolor=casting_color, size=get_label_size())
+        else
+            // Traditional mode: only show 1 
+            forward_hit = array.includes(forward_cast_seq_array, 1.0)
+            if forward_hit
+                forward_offset = (high - low) * 0.15
+                forward_y = display_position == "above_candle" ? high + forward_offset + vertical_shift : low - forward_offset - vertical_shift
+                label.new(bar_index, forward_y, "1", color=color.new(#FFFFFF, 100), textcolor=casting_color, size=get_label_size())
     else
-        // Normal forward casting display
-        if forward_cast_active and not casting_phase_negative
+        // Normal forward casting display (after transition candle)
+        if forward_cast_active and not casting_phase_negative and cast_forward_count > 1
             forward_cast_hit = array.includes(forward_cast_seq_array, float(cast_forward_count))
             if forward_cast_hit
                 forward_offset = (high - low) * 0.15
