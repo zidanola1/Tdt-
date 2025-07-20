@@ -1,0 +1,330 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © EL MEHDI QUANTUM ULTIMATE - ORIGINAL ENHANCED
+
+//@version=6
+indicator("💎 EL MEHDI QUANTUM ULTIMATE V6 - ORIGINAL ENHANCED 💎", overlay=true, max_labels_count=500, max_lines_count=500, max_boxes_count=500)
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 📊 INPUTS - BASED ON ORIGINAL
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Dashboard
+group_dash = "📊 DASHBOARD SETTINGS"
+showDashboard = input(true, "Smart Panel", group=group_dash)
+locationDashboard = input.string("Bottom Right", "Location", ["Top Right", "Middle Right", "Bottom Right", "Top Center", "Middle Center", "Bottom Center", "Top Left", "Middle Left", "Bottom Left"], group=group_dash, inline='dash1')
+sizeDashboard = input.string("Small", "Size", ["Large", "Normal", "Small", "Tiny"], group=group_dash, inline='dash1')
+
+// Signals - ORIGINAL LOGIC
+group_signals = "🎯 SIGNAL SETTINGS"
+nbuysell = input.bool(true, 'Show Signals', inline="BSNM", group=group_signals)
+nsensitivity = input.float(defval=2, title="Sensitivity", minval=1, maxval=20, group=group_signals)
+smartsignalsonly = input.bool(false, 'Smart Signals Only', group=group_signals)
+
+// Risk Management - ENHANCED
+group_risk = "🛡️ RISK MANAGEMENT"
+levels = input.bool(true, "Take Profit/ Stop-Loss Areas", group=group_risk, inline="MMDB2")
+atrRisk = input.int(1, "Risk %", 1, group=group_risk, inline="levels3")
+atrLen = input.int(14, "ATR Length", 1, group=group_risk, inline="levels3")
+tp1Multiplier = input.float(1.0, "TP1 R:R", 0.5, 5.0, 0.1, group=group_risk)
+tp2Multiplier = input.float(2.0, "TP2 R:R", 1.0, 10.0, 0.1, group=group_risk)
+tp3Multiplier = input.float(3.0, "TP3 R:R", 2.0, 15.0, 0.1, group=group_risk)
+
+// Quantum Enhancement
+group_quantum = "⚛️ QUANTUM ENHANCEMENT"
+enableQuantum = input.bool(true, "Enable Quantum Analysis", group=group_quantum)
+quantumWeight = input.float(0.3, "Quantum Weight", 0.0, 1.0, 0.1, group=group_quantum)
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🚀 ORIGINAL SUPERTREND FUNCTION - PROVEN LOGIC
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+supertrend(_close, factor, atrLen) =>
+    atr = ta.atr(atrLen)
+    upperBand = _close + factor * atr
+    lowerBand = _close - factor * atr
+    prevLowerBand = nz(lowerBand[1])
+    prevUpperBand = nz(upperBand[1])
+    lowerBand := lowerBand > prevLowerBand or close[1] < prevLowerBand ? lowerBand : prevLowerBand
+    upperBand := upperBand < prevUpperBand or close[1] > prevUpperBand ? upperBand : prevUpperBand
+    int direction = na
+    float superTrend = na
+    prevSuperTrend = superTrend[1]
+    if na(atr[1])
+        direction := 1
+    else if prevSuperTrend == prevUpperBand
+        direction := close > upperBand ? -1 : 1
+    else
+        direction := close < lowerBand ? 1 : -1
+    superTrend := direction == -1 ? lowerBand : upperBand
+    [superTrend, direction]
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// ⚛️ QUANTUM ENHANCEMENT MODULE
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+quantumAnalysis() =>
+    if not enableQuantum
+        [0.5, 0.5]
+    else
+        // Quantum superposition using price momentum
+        rsi_val = ta.rsi(close, 14)
+        [_, _, macd_hist] = ta.macd(close, 12, 26, 9)
+        
+        // Quantum states
+        bullish_state = math.sin(rsi_val * math.pi / 100)
+        bearish_state = math.cos(rsi_val * math.pi / 100)
+        
+        // Quantum interference and entanglement
+        interference = bullish_state * bearish_state
+        quantum_confidence = 1 - math.abs(interference)
+        
+        // Quantum tunneling probability
+        momentum_change = ta.change(close, 5) / close * 100
+        tunneling_prob = 1 / (1 + math.exp(-momentum_change * 2))
+        
+        // Enhanced quantum prediction
+        quantum_prediction = (bullish_state * bullish_state) * quantum_confidence + tunneling_prob * 0.2
+        
+        [quantum_prediction, quantum_confidence]
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 📊 ORIGINAL CALCULATIONS
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Moving averages from original
+ema200con = ta.ema(close, 200)
+sma9 = ta.sma(close, 13)
+
+// SuperTrend with original sensitivity
+[supertrend, direction] = supertrend(close, nsensitivity * 2, 11)
+
+// Original signal logic - PROVEN EFFECTIVE
+bull = ta.crossover(close, supertrend) and close >= sma9
+bear = ta.crossunder(close, supertrend) and close <= sma9
+
+// Quantum enhancement
+[quantum_prediction, quantum_confidence] = quantumAnalysis()
+
+// Enhanced signals with quantum
+quantum_enhanced_bull = bull and (not enableQuantum or quantum_prediction > 0.4)
+quantum_enhanced_bear = bear and (not enableQuantum or quantum_prediction < 0.6)
+
+// Smart signals (original logic)
+smart_buy = quantum_enhanced_bull and close > ema200con
+smart_sell = quantum_enhanced_bear and close < ema200con
+
+// Final signals based on settings
+final_buy = nbuysell and (smartsignalsonly ? smart_buy : quantum_enhanced_bull)
+final_sell = nbuysell and (smartsignalsonly ? smart_sell : quantum_enhanced_bear)
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🛡️ ENHANCED RISK MANAGEMENT - BASED ON ORIGINAL ATR LOGIC
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+var float entry_price = 0.0
+var float stop_loss = 0.0
+var float take_profit_1 = 0.0
+var float take_profit_2 = 0.0
+var float take_profit_3 = 0.0
+var int signal_direction = 0
+var bool active_trade = false
+
+// ATR calculation
+atr_value = ta.atr(atrLen)
+risk_amount = atr_value * atrRisk
+
+// Position tracking
+trigger = nz(ta.barssince(final_buy), bar_index) < nz(ta.barssince(final_sell), bar_index) ? 1 : 0
+countBull = ta.barssince(final_buy)
+countBear = ta.barssince(final_sell)
+currentposition = countBull > countBear ? 'Sell' : 'Buy'
+
+// Entry and risk calculation function
+lastTrade(src) => ta.valuewhen(final_buy or final_sell, src, 0)
+
+// Risk levels calculation
+if (final_buy and not final_buy[1]) or (final_sell and not final_sell[1])
+    entry_price := close
+    signal_direction := final_buy ? 1 : -1
+    active_trade := true
+    
+    if signal_direction == 1  // BUY
+        stop_loss := entry_price - risk_amount
+        take_profit_1 := entry_price + (risk_amount * tp1Multiplier)
+        take_profit_2 := entry_price + (risk_amount * tp2Multiplier)
+        take_profit_3 := entry_price + (risk_amount * tp3Multiplier)
+    else  // SELL
+        stop_loss := entry_price + risk_amount
+        take_profit_1 := entry_price - (risk_amount * tp1Multiplier)
+        take_profit_2 := entry_price - (risk_amount * tp2Multiplier)
+        take_profit_3 := entry_price - (risk_amount * tp3Multiplier)
+
+// Check for hits
+sl_hit = active_trade and ((signal_direction == 1 and low <= stop_loss) or (signal_direction == -1 and high >= stop_loss))
+tp1_hit = active_trade and ((signal_direction == 1 and high >= take_profit_1) or (signal_direction == -1 and low <= take_profit_1))
+tp3_hit = active_trade and ((signal_direction == 1 and high >= take_profit_3) or (signal_direction == -1 and low <= take_profit_3))
+
+if sl_hit or tp3_hit
+    active_trade := false
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 📊 PERFORMANCE TRACKING
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+var int total_signals = 0
+var int buy_signals = 0
+var int sell_signals = 0
+var int smart_buy_signals = 0
+var int smart_sell_signals = 0
+
+if final_buy and not final_buy[1]
+    total_signals += 1
+    buy_signals += 1
+    if close > ema200con
+        smart_buy_signals += 1
+
+if final_sell and not final_sell[1]
+    total_signals += 1
+    sell_signals += 1
+    if close < ema200con
+        smart_sell_signals += 1
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 📊 MULTI-TIMEFRAME ANALYSIS (FROM ORIGINAL)
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+emaBull = close > ta.ema(close, 200)
+
+TF1Bull = request.security(syminfo.tickerid, "1", emaBull, gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+TF5Bull = request.security(syminfo.tickerid, "5", emaBull, gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+TF15Bull = request.security(syminfo.tickerid, "15", emaBull, gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+TF30Bull = request.security(syminfo.tickerid, "30", emaBull, gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+TF60Bull = request.security(syminfo.tickerid, "60", emaBull, gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+TF240Bull = request.security(syminfo.tickerid, "240", emaBull, gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+TFDBull = request.security(syminfo.tickerid, "1440", emaBull, gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 📊 ENHANCED DASHBOARD (ORIGINAL STYLE + QUANTUM)
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+var dashboard_loc = locationDashboard == "Top Right" ? position.top_right : locationDashboard == "Middle Right" ? position.middle_right : locationDashboard == "Bottom Right" ? position.bottom_right : locationDashboard == "Top Center" ? position.top_center : locationDashboard == "Middle Center" ? position.middle_center : locationDashboard == "Bottom Center" ? position.bottom_center : locationDashboard == "Top Left" ? position.top_left : locationDashboard == "Middle Left" ? position.middle_left : position.bottom_left
+
+var dashboard_size = sizeDashboard == "Large" ? size.large : sizeDashboard == "Normal" ? size.normal : sizeDashboard == "Small" ? size.small : size.tiny
+
+dashboard_cell(dashboard, column, row, txt, signal=false) => 
+    table.cell(dashboard, column, row, txt, 0, 0, signal ? #000000 : color.white, text_size=dashboard_size)
+    
+dashboard_cell_bg(dashboard, column, row, col) => 
+    table.cell_set_bgcolor(dashboard, column, row, col)
+
+if barstate.islast and showDashboard
+    var dashboard = table.new(dashboard_loc, 3, 10, color.rgb(30, 34, 45, 60), #3d384300, 2, color.rgb(30, 34, 45, 60), 1)
+    
+    // MTF Trend Analysis
+    dashboard_cell(dashboard, 0, 0, "MTF")
+    dashboard_cell(dashboard, 0, 1, "M1"), dashboard_cell_bg(dashboard, 0, 1, TF1Bull ? #0395fc : #fd0205)
+    dashboard_cell(dashboard, 0, 2, "M5"), dashboard_cell_bg(dashboard, 0, 2, TF5Bull ? #0395fc : #fd0205)
+    dashboard_cell(dashboard, 0, 3, "M15"), dashboard_cell_bg(dashboard, 0, 3, TF15Bull ? #0395fc : #fd0205)
+    dashboard_cell(dashboard, 0, 4, "M30"), dashboard_cell_bg(dashboard, 0, 4, TF30Bull ? #0395fc : #fd0205)
+    dashboard_cell(dashboard, 0, 5, "1H"), dashboard_cell_bg(dashboard, 0, 5, TF60Bull ? #0395fc : #fd0205)
+    dashboard_cell(dashboard, 0, 6, "4H"), dashboard_cell_bg(dashboard, 0, 6, TF240Bull ? #0395fc : #fd0205)
+    dashboard_cell(dashboard, 0, 7, "D1"), dashboard_cell_bg(dashboard, 0, 7, TFDBull ? #0395fc : #fd0205)
+    dashboard_cell(dashboard, 0, 8, "⚛️ Quantum"), dashboard_cell_bg(dashboard, 0, 8, enableQuantum and quantum_confidence > 0.6 ? (quantum_prediction > 0.5 ? #0395fc : #fd0205) : #4b148d)
+    dashboard_cell(dashboard, 0, 9, "🎯 Signal"), dashboard_cell_bg(dashboard, 0, 9, final_buy ? #0395fc : final_sell ? #fd0205 : #4b148d)
+    
+    // Middle Information
+    dashboard_cell(dashboard, 1, 0, "💎 EL MEHDI QUANTUM 💎")
+    dashboard_cell(dashboard, 1, 1, "👉 Position")
+    dashboard_cell(dashboard, 1, 2, "🔎 Sensitivity")
+    dashboard_cell(dashboard, 1, 3, "⚛️ Quantum State")
+    dashboard_cell(dashboard, 1, 4, "📊 Total Signals")
+    dashboard_cell(dashboard, 1, 5, "🟢 Buy Signals")
+    dashboard_cell(dashboard, 1, 6, "🔴 Sell Signals")
+    dashboard_cell(dashboard, 1, 7, "⭐ Smart Buys")
+    dashboard_cell(dashboard, 1, 8, "⭐ Smart Sells")
+    dashboard_cell(dashboard, 1, 9, "💹 Trade Status")
+    
+    // Values
+    dashboard_cell(dashboard, 2, 0, "")
+    dashboard_cell(dashboard, 2, 1, str.tostring(currentposition))
+    dashboard_cell(dashboard, 2, 2, str.tostring(nsensitivity))
+    dashboard_cell(dashboard, 2, 3, enableQuantum ? str.tostring(math.round(quantum_confidence * 100, 1)) + "%" : "OFF")
+    dashboard_cell(dashboard, 2, 4, str.tostring(total_signals))
+    dashboard_cell(dashboard, 2, 5, str.tostring(buy_signals))
+    dashboard_cell(dashboard, 2, 6, str.tostring(sell_signals))
+    dashboard_cell(dashboard, 2, 7, str.tostring(smart_buy_signals))
+    dashboard_cell(dashboard, 2, 8, str.tostring(smart_sell_signals))
+    dashboard_cell(dashboard, 2, 9, active_trade ? (signal_direction == 1 ? "LONG" : "SHORT") : "WAITING")
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🎨 VISUAL SIGNALS (ORIGINAL STYLE + QUANTUM GLOW)
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// High/Low calculations for label positioning
+y1 = low - (ta.atr(30) * 2)
+y2 = high + (ta.atr(30) * 2)
+
+// Buy signals with quantum enhancement
+buy_label_text = close > ema200con ? (enableQuantum and quantum_confidence > 0.7 ? "Quantum\nSmart Buy" : "Smart\nBuy") : (enableQuantum and quantum_confidence > 0.7 ? "Quantum\nBuy" : "Buy")
+sell_label_text = close < ema200con ? (enableQuantum and quantum_confidence > 0.7 ? "Quantum\nSmart Sell" : "Smart\nSell") : (enableQuantum and quantum_confidence > 0.7 ? "Quantum\nSell" : "Sell")
+
+// Labels with quantum glow effect
+buy_color = enableQuantum and quantum_confidence > 0.7 ? color.new(#00ff88, 0) : #0395fc
+sell_color = enableQuantum and quantum_confidence > 0.7 ? color.new(#ff0044, 0) : #fd0205
+
+buy = final_buy and not smartsignalsonly ? label.new(bar_index, y1, buy_label_text, xloc.bar_index, yloc.price, buy_color, label.style_label_up, color.white, size.normal) : na
+sell = final_sell and not smartsignalsonly ? label.new(bar_index, y2, sell_label_text, xloc.bar_index, yloc.price, sell_color, label.style_label_down, color.white, size.normal) : na
+
+SmartBuy = final_buy and close > ema200con and smartsignalsonly ? label.new(bar_index, y1, buy_label_text, xloc.bar_index, yloc.price, buy_color, label.style_label_up, color.white, size.normal) : na
+SmartSell = final_sell and close < ema200con and smartsignalsonly ? label.new(bar_index, y2, sell_label_text, xloc.bar_index, yloc.price, sell_color, label.style_label_down, color.white, size.normal) : na
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🛡️ RISK LEVEL VISUALIZATION
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+if levels and active_trade
+    // Entry line
+    line.new(bar_index - 1, entry_price, bar_index + 20, entry_price, color=color.blue, width=2, style=line.style_solid, extend=extend.right)
+    label.new(bar_index, entry_price, "ENTRY: " + str.tostring(entry_price, "#.####"), color=color.blue, textcolor=color.white, style=label.style_label_left, size=size.small)
+    
+    // Stop Loss
+    line.new(bar_index - 1, stop_loss, bar_index + 20, stop_loss, color=color.red, width=2, style=line.style_dashed, extend=extend.right)
+    label.new(bar_index, stop_loss, "SL: " + str.tostring(stop_loss, "#.####"), color=color.red, textcolor=color.white, style=label.style_label_left, size=size.small)
+    
+    // Take Profits
+    line.new(bar_index - 1, take_profit_1, bar_index + 20, take_profit_1, color=color.lime, width=2, style=line.style_dotted, extend=extend.right)
+    label.new(bar_index, take_profit_1, "TP1 " + str.tostring(tp1Multiplier) + ":1 = " + str.tostring(take_profit_1, "#.####"), color=color.lime, textcolor=color.black, style=label.style_label_left, size=size.small)
+    
+    line.new(bar_index - 1, take_profit_2, bar_index + 20, take_profit_2, color=color.yellow, width=1, style=line.style_dotted, extend=extend.right)
+    label.new(bar_index, take_profit_2, "TP2 " + str.tostring(tp2Multiplier) + ":1 = " + str.tostring(take_profit_2, "#.####"), color=color.yellow, textcolor=color.black, style=label.style_label_left, size=size.small)
+    
+    line.new(bar_index - 1, take_profit_3, bar_index + 20, take_profit_3, color=color.orange, width=1, style=line.style_dotted, extend=extend.right)
+    label.new(bar_index, take_profit_3, "TP3 " + str.tostring(tp3Multiplier) + ":1 = " + str.tostring(take_profit_3, "#.####"), color=color.orange, textcolor=color.black, style=label.style_label_left, size=size.small)
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🚨 ENHANCED ALERTS
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+alertcondition(final_buy, title="🚀 BUY SIGNAL", 
+    message="💎 EL MEHDI QUANTUM: " + (close > ema200con ? "SMART BUY" : "BUY") + " Signal!" + 
+    (enableQuantum ? "\n⚛️ Quantum Confidence: " + str.tostring(math.round(quantum_confidence * 100, 1)) + "%" : "") + 
+    "\n📊 Entry: " + str.tostring(close) + 
+    "\n🛑 SL: " + str.tostring(stop_loss) + 
+    "\n🎯 TP1: " + str.tostring(take_profit_1))
+
+alertcondition(final_sell, title="🔻 SELL SIGNAL", 
+    message="💎 EL MEHDI QUANTUM: " + (close < ema200con ? "SMART SELL" : "SELL") + " Signal!" + 
+    (enableQuantum ? "\n⚛️ Quantum Confidence: " + str.tostring(math.round(quantum_confidence * 100, 1)) + "%" : "") + 
+    "\n📊 Entry: " + str.tostring(close) + 
+    "\n🛑 SL: " + str.tostring(stop_loss) + 
+    "\n🎯 TP1: " + str.tostring(take_profit_1))
+
+alertcondition(tp1_hit, title="🎯 TP1 HIT", message="✅ Take Profit 1 reached! 💰")
+alertcondition(sl_hit, title="🛑 SL HIT", message="❌ Stop Loss hit! 😔")
+
+// Bar coloring (from original)
+trendbarcolor = close > supertrend ? #0395fc : #ff0002
+barcolor(trendbarcolor)
+
+// Plot SuperTrend
+plot(supertrend, "SuperTrend", color=direction == 1 ? color.lime : color.red, linewidth=2)
