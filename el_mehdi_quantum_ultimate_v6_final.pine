@@ -636,7 +636,7 @@ if barstate.islast
                                       border_width=3, 
                                       border_color=color.new(#00ffff, 80))
     
-    table.clear(ultimate_dashboard)
+    table.clear(ultimate_dashboard, 0, 0, 2, 11)
     
     // Header
     table.cell(ultimate_dashboard, 0, 0, "🌟 QUANTUM ULTIMATE V6 🌟", 

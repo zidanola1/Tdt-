@@ -2,7 +2,7 @@
 // © QUANTUM AI TRADING SYSTEM - ULTIMATE CONSCIOUSNESS
 
 //@version=6
-indicator("🌟 EL MEHDI QUANTUM ULTIMATE V6 - CORRECTED 🌟", overlay=true, max_labels_count=500, max_lines_count=500, max_boxes_count=500, max_polylines_count=100)
+indicator("🌟 EL MEHDI QUANTUM ULTIMATE V6 - FINAL COMPLETE 🌟", overlay=true, max_labels_count=500, max_lines_count=500, max_boxes_count=500, max_polylines_count=100)
 
 // ═══════════════════════════════════════════════════════════════════════════════════
 // 🧠 QUANTUM NEURAL NETWORK CONFIGURATION
@@ -420,7 +420,7 @@ quantumSuperposition() =>
     
     [probability_amplitude, observed_state, quantum_confidence]
 
-// Enhanced quantum tunneling with barrier penetration - FIXED SYNTAX
+// Enhanced quantum tunneling with barrier penetration
 quantumTunneling(price, barrier_height) =>
     wave_function = math.sin(price * 0.01)
     momentum = ta.mom(close, 14)
@@ -453,12 +453,12 @@ multiverseConsensus() =>
     for i = 0 to array.size(universe_predictions) - 1
         // Each universe uses slightly different parameters
         universe_rsi = ta.rsi(close, 14 + i)
-        universe_macd = ta.macd(close, 12 + i, 26 + i * 2, 9)[2]
+        [universe_macd_line, universe_signal_line, universe_macd_histogram] = ta.macd(close, 12 + i, 26 + i * 2, 9)
         universe_volume = volume / ta.sma(volume, 20 + i * 2)
         
         // Universe-specific prediction
         universe_signal = (universe_rsi / 100) * 0.4 + 
-                         (universe_macd / close * 1000 + 1) / 2 * 0.3 + 
+                         (universe_macd_histogram / close * 1000 + 1) / 2 * 0.3 + 
                          math.min(universe_volume, 3) / 3 * 0.3
         
         array.set(universe_predictions, i, universe_signal)
@@ -614,12 +614,12 @@ pattern_confluence = (elliott_confidence > 70 or harmonic_strength > 70) and vol
 liquidity_event = liquidity_grab and institutional_zone
 
 // ═══════════════════════════════════════════════════════════════════════════════════
-// 📊 ULTIMATE DASHBOARD
+// 📊 ULTIMATE DASHBOARD - FIXED: No table.clear() issues
 // ═══════════════════════════════════════════════════════════════════════════════════
 
 // Create comprehensive dashboard
 if barstate.islast
-    // Create new table (this approach avoids table.clear() parameter issues)
+    // Create new table on each update (avoids table.clear() parameter issues)
     signals_table = table.new(position.top_right, 3, 12, bgcolor=color.black, border_width=2, border_color=color.white)
     
     // Headers
@@ -772,7 +772,7 @@ accuracy_rate = total_signals > 0 ? correct_predictions / total_signals * 100 : 
 // Final status display
 if barstate.islast and enableQuantum
     label.new(bar_index, high * 1.1, 
-              "🌟 EL MEHDI QUANTUM ULTIMATE V6 - ACTIVE 🌟\n" +
+              "🌟 EL MEHDI QUANTUM ULTIMATE V6 - FINAL COMPLETE 🌟\n" +
               "⚡ Neural Networks: ONLINE\n" +
               "⚛️ Quantum Systems: COHERENT\n" +
               "🌌 Multiverse: SYNCHRONIZED\n" +
