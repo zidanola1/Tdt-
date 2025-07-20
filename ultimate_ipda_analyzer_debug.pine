@@ -1,0 +1,58 @@
+//@version=6
+indicator("IPDA Debug", overlay=true)
+
+// Simple test inputs
+same_candle_transition = input.bool(true, "Toggle: -1 IS 1 candle")
+start_date = input.time(timestamp("2025-01-15 09:30"), "Start Date")
+
+// Variables
+var bool counting_started = false
+var int forward_count = 0
+var bool reached_minus_one = false
+var bool transition_happened = false
+
+// Start counting
+if time >= start_date and not counting_started
+    counting_started := true
+    forward_count := -3  // Start from -3 for simple test
+
+// Increment logic
+if counting_started
+    if forward_count == -1 and not transition_happened
+        // We're at -1, this is the transition point
+        transition_happened := true
+        reached_minus_one := true
+        
+        if same_candle_transition
+            // Toggle ON: -1 IS 1, so next candle will be 2
+            forward_count := 1  // This -1 candle represents 1
+        else
+            // Toggle OFF: -1 separate, next candle will be 1
+            forward_count := forward_count + 1  // Go to 0, then will become 1
+    else
+        // Normal increment
+        forward_count := forward_count + 1
+
+// Display
+if counting_started
+    if forward_count == 1 and reached_minus_one and same_candle_transition
+        // This is the cycle candle showing -1 (which represents both -1 and 1)
+        label.new(bar_index, high, "-1", color=color.red, textcolor=color.white, size=size.normal)
+    else if forward_count >= 1
+        // Normal forward display
+        label.new(bar_index, high, str.tostring(forward_count), color=color.blue, textcolor=color.white, size=size.normal)
+    else if forward_count < 0
+        // Backward display
+        label.new(bar_index, high, str.tostring(forward_count), color=color.yellow, textcolor=color.black, size=size.normal)
+
+// Debug table
+if barstate.islast
+    var table debug_table = table.new(position.top_right, 2, 4)
+    table.cell(debug_table, 0, 0, "Count", text_color=color.black)
+    table.cell(debug_table, 1, 0, str.tostring(forward_count), text_color=color.black)
+    table.cell(debug_table, 0, 1, "Toggle", text_color=color.black)
+    table.cell(debug_table, 1, 1, same_candle_transition ? "ON" : "OFF", text_color=color.black)
+    table.cell(debug_table, 0, 2, "Reached -1", text_color=color.black)
+    table.cell(debug_table, 1, 2, reached_minus_one ? "YES" : "NO", text_color=color.black)
+    table.cell(debug_table, 0, 3, "Transition", text_color=color.black)
+    table.cell(debug_table, 1, 3, transition_happened ? "YES" : "NO", text_color=color.black)

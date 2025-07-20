@@ -191,13 +191,15 @@ if enable_casting and counting_started
                 casting_active := true
                 forward_cast_active := true
                 if same_candle_transition
-                    // CYCLE: -1 candle IS the 1 candle - mark this
+                    // CYCLE: -1 candle IS the 1 candle - don't increment this candle
                     cast_forward_count := 1
                     on_cycle_candle := true
+                    // Don't increment backward_cast_count - stay at -1 for display
                 else
-                    // TRADITIONAL: -1 ends, next candle will be 1
-                    cast_forward_count := 0
+                    // TRADITIONAL: -1 ends, start forward count
+                    cast_forward_count := 1
                     on_cycle_candle := false
+                    backward_cast_count := backward_cast_count + 1
             else
                 backward_cast_count := backward_cast_count + 1
         else
