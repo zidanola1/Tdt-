@@ -132,7 +132,6 @@ var bool casting_active = false
 var bool forward_cast_active = false
 var int backward_cast_count = 0  // Will start at first negative number
 var bool casting_phase_negative = true
-var array<float> cast_forward_sequence = array.new<float>()
 var int cast_forward_count = 0
 var bool casting_initialized = false
 
@@ -193,7 +192,6 @@ if enable_casting and counting_started
                 casting_phase_negative := false
                 casting_active := true
                 forward_cast_active := true
-                cast_forward_sequence := forward_cast_seq_array
                 cast_forward_count := 1  // Start at 1 on next candle
             else
                 // Continue negative counting (moving toward -1)
@@ -288,7 +286,7 @@ if enable_casting and casting_active and not casting_active[1]
     alert("TDT Casting Activated - Forward Count Started", alert.freq_once_per_bar)
 
 if enable_casting and forward_cast_active
-    forward_cast_hit = array.includes(cast_forward_sequence, float(cast_forward_count))
+    forward_cast_hit = array.includes(forward_cast_seq_array, float(cast_forward_count))
     if forward_cast_hit
         alert("TDT Forward Cast Hit: " + str.tostring(cast_forward_count), alert.freq_once_per_bar)
 
