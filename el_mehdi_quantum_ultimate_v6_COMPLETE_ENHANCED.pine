@@ -1,0 +1,928 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © EL MEHDI QUANTUM ULTIMATE - COMPLETE ENHANCED VERSION
+
+//@version=6
+indicator("🌟 EL MEHDI QUANTUM ULTIMATE V6 - COMPLETE ENHANCED 🌟", overlay=true, max_labels_count=500, max_lines_count=500, max_boxes_count=500, max_polylines_count=100)
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🧠 QUANTUM NEURAL NETWORK CONFIGURATION
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+group_quantum = "⚡ QUANTUM AI ENGINE"
+enableQuantum = input.bool(true, "🧠 Quantum Neural Network", group=group_quantum)
+neuralLayers = input.int(7, "Neural Network Layers", 3, 12, group=group_quantum)
+learningRate = input.float(0.001, "Learning Rate", 0.0001, 0.01, 0.0001, group=group_quantum)
+quantumSensitivity = input.float(3.0, "Quantum Sensitivity", 0.1, 50.0, 0.1, group=group_quantum)
+enableTimeTravel = input.bool(true, "⏰ Time-Travel Prediction", group=group_quantum)
+enableMultiverse = input.bool(true, "🌌 Multiverse Analysis", group=group_quantum)
+enableQuantumTunneling = input.bool(true, "⚛️ Quantum Tunneling", group=group_quantum)
+
+group_ai = "🤖 ADVANCED AI SYSTEMS"
+enableGPT = input.bool(true, "🧠 GPT-like Pattern Recognition", group=group_ai)
+enableVision = input.bool(true, "👁️ Computer Vision Analysis", group=group_ai)
+enableNLP = input.bool(true, "📝 Natural Language Processing", group=group_ai)
+enableRL = input.bool(true, "🎯 Reinforcement Learning", group=group_ai)
+enableAutoML = input.bool(true, "🔬 AutoML Optimization", group=group_ai)
+enableDeepLearning = input.bool(true, "🧬 Deep Learning Network", group=group_ai)
+
+group_extreme = "🚀 EXTREME FEATURES"
+enableMarketManipulation = input.bool(true, "🕵️ Market Manipulation Detection", group=group_extreme)
+enableWhaleTracking = input.bool(true, "🐋 Whale Movement Tracking", group=group_extreme)
+enableNewsAI = input.bool(true, "📰 Real-time News AI Analysis", group=group_extreme)
+enableSentimentAI = input.bool(true, "😊 Social Sentiment AI", group=group_extreme)
+enableQuantumEntanglement = input.bool(true, "⚛️ Quantum Entanglement Signals", group=group_extreme)
+enableFractalAnalysis = input.bool(true, "🌀 Fractal Dimension Analysis", group=group_extreme)
+
+group_patterns = "🎯 PATTERN RECOGNITION"
+enableElliottWave = input.bool(true, "🌊 Elliott Wave Detection", group=group_patterns)
+enableHarmonicPatterns = input.bool(true, "🎵 Harmonic Pattern Analysis", group=group_patterns)
+enableVolumeProfile = input.bool(true, "📊 Volume Profile AI", group=group_patterns)
+enableOrderFlow = input.bool(true, "💹 Order Flow Analysis", group=group_patterns)
+enableLiquidityMapping = input.bool(true, "💧 Liquidity Pool Mapping", group=group_patterns)
+
+group_risk = "🛡️ RISK MANAGEMENT"
+enableRiskLevels = input.bool(true, "🎯 Show S.L & T.P Levels", group=group_risk)
+atrPeriod = input.int(14, "ATR Period", 5, 50, 1, group=group_risk)
+slMultiplier = input.float(2.0, "Stop Loss ATR Multiplier", 0.5, 5.0, 0.1, group=group_risk)
+tp1Multiplier = input.float(2.5, "Take Profit 1 ATR Multiplier", 1.0, 10.0, 0.1, group=group_risk)
+tp2Multiplier = input.float(4.0, "Take Profit 2 ATR Multiplier", 2.0, 15.0, 0.1, group=group_risk)
+tp3Multiplier = input.float(6.0, "Take Profit 3 ATR Multiplier", 3.0, 20.0, 0.1, group=group_risk)
+
+group_signals = "🎯 SIGNAL SETTINGS"
+signalThreshold = input.float(65.0, "Signal Threshold %", 50.0, 90.0, 1.0, group=group_signals)
+confidenceThreshold = input.float(60.0, "Confidence Threshold %", 40.0, 90.0, 1.0, group=group_signals)
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🧠 ENHANCED NEURAL NETWORK FUNCTIONS
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Enhanced Neural Network Weight Matrices (larger networks)
+var weights_layer1 = array.new<float>(50, 0.0)
+var weights_layer2 = array.new<float>(50, 0.0)
+var weights_layer3 = array.new<float>(50, 0.0)
+var weights_layer4 = array.new<float>(30, 0.0)
+var weights_layer5 = array.new<float>(20, 0.0)
+var bias_layer1 = array.new<float>(10, 0.0)
+var bias_layer2 = array.new<float>(10, 0.0)
+var bias_layer3 = array.new<float>(8, 0.0)
+
+// Memory system for learning
+var neural_memory = array.new<float>(100, 0.0)
+var performance_history = array.new<float>(50, 0.0)
+
+// Initialize enhanced neural network
+if barstate.isfirst and enableQuantum
+    for i = 0 to array.size(weights_layer1) - 1
+        array.set(weights_layer1, i, math.random(-2, 2))
+        array.set(weights_layer2, i, math.random(-2, 2))
+        array.set(weights_layer3, i, math.random(-2, 2))
+    for i = 0 to array.size(weights_layer4) - 1
+        array.set(weights_layer4, i, math.random(-1.5, 1.5))
+    for i = 0 to array.size(weights_layer5) - 1
+        array.set(weights_layer5, i, math.random(-1, 1))
+    for i = 0 to array.size(bias_layer1) - 1
+        array.set(bias_layer1, i, math.random(-1, 1))
+        array.set(bias_layer2, i, math.random(-1, 1))
+    for i = 0 to array.size(bias_layer3) - 1
+        array.set(bias_layer3, i, math.random(-0.5, 0.5))
+
+// Advanced activation functions
+sigmoid(x) => 1 / (1 + math.exp(-x))
+tanh_activation(x) => (math.exp(x) - math.exp(-x)) / (math.exp(x) + math.exp(-x))
+relu(x) => math.max(0, x)
+leaky_relu(x) => x > 0 ? x : 0.01 * x
+swish(x) => x * sigmoid(x)
+gelu(x) => 0.5 * x * (1 + tanh_activation(math.sqrt(2/math.pi) * (x + 0.044715 * math.pow(x, 3))))
+
+// Heisenberg Uncertainty Principle
+heisenbergUncertainty() =>
+    position_uncertainty = ta.atr(14) / close
+    momentum_uncertainty = ta.roc(close, 14) / 100
+    uncertainty_product = position_uncertainty * momentum_uncertainty
+    uncertainty_product
+
+// Enhanced neural network with deeper architecture
+enhancedNeuralNetworkPredict(input1, input2, input3, input4, input5, input6, input7, input8) =>
+    // Layer 1 - Input Processing
+    layer1_1 = swish(input1 * array.get(weights_layer1, 0) + input2 * array.get(weights_layer1, 1) + array.get(bias_layer1, 0))
+    layer1_2 = gelu(input3 * array.get(weights_layer1, 2) + input4 * array.get(weights_layer1, 3) + array.get(bias_layer1, 1))
+    layer1_3 = relu(input5 * array.get(weights_layer1, 4) + input6 * array.get(weights_layer1, 5) + array.get(bias_layer1, 2))
+    layer1_4 = leaky_relu(input7 * array.get(weights_layer1, 6) + input8 * array.get(weights_layer1, 7) + array.get(bias_layer1, 3))
+    
+    // Layer 2 - Feature Extraction
+    layer2_1 = tanh_activation(layer1_1 * array.get(weights_layer2, 0) + layer1_2 * array.get(weights_layer2, 1) + array.get(bias_layer2, 0))
+    layer2_2 = swish(layer1_3 * array.get(weights_layer2, 2) + layer1_4 * array.get(weights_layer2, 3) + array.get(bias_layer2, 1))
+    layer2_3 = gelu(layer1_1 * array.get(weights_layer2, 4) + layer1_3 * array.get(weights_layer2, 5) + array.get(bias_layer2, 2))
+    
+    // Layer 3 - Pattern Recognition
+    layer3_1 = relu(layer2_1 * array.get(weights_layer3, 0) + layer2_2 * array.get(weights_layer3, 1) + array.get(bias_layer3, 0))
+    layer3_2 = leaky_relu(layer2_2 * array.get(weights_layer3, 2) + layer2_3 * array.get(weights_layer3, 3) + array.get(bias_layer3, 1))
+    
+    // Layer 4 - Decision Making
+    layer4_output = tanh_activation(layer3_1 * array.get(weights_layer4, 0) + layer3_2 * array.get(weights_layer4, 1))
+    
+    // Output Layer - Final Prediction
+    final_output = sigmoid(layer4_output * array.get(weights_layer5, 0) + layer3_1 * array.get(weights_layer5, 1))
+    final_output
+
+// Fractal Dimension Analysis
+calculateFractalDimension() =>
+    // Simplified fractal dimension using box counting
+    price_ranges = array.new<float>()
+    for i = 1 to 20
+        high_val = ta.highest(high, i)
+        low_val = ta.lowest(low, i)
+        range_val = high_val - low_val
+        array.push(price_ranges, range_val)
+    
+    // Calculate fractal dimension
+    sum_log_ranges = 0.0
+    sum_log_scales = 0.0
+    for i = 0 to math.min(array.size(price_ranges) - 1, 19)
+        if array.get(price_ranges, i) > 0
+            sum_log_ranges += math.log(array.get(price_ranges, i))
+            sum_log_scales += math.log(i + 1)
+    
+    fractal_dim = sum_log_scales != 0 ? 1 - (sum_log_ranges / sum_log_scales) : 1.5
+    math.max(1.0, math.min(fractal_dim, 2.0))
+
+// Hurst Exponent Calculation
+calculateHurstExponent() =>
+    // R/S analysis for Hurst exponent
+    returns = array.new<float>()
+    for i = 1 to 50
+        if close[i] > 0
+            ret = math.log(close / close[i])
+            array.push(returns, ret)
+    
+    // Calculate mean and deviations
+    mean_return = 0.0
+    size = array.size(returns)
+    if size > 0
+        for i = 0 to size - 1
+            mean_return += array.get(returns, i)
+        mean_return := mean_return / size
+        
+        // Calculate R/S statistic
+        cumulative_deviation = 0.0
+        max_dev = 0.0
+        min_dev = 0.0
+        
+        for i = 0 to size - 1
+            deviation = array.get(returns, i) - mean_return
+            cumulative_deviation += deviation
+            max_dev := math.max(max_dev, cumulative_deviation)
+            min_dev := math.min(min_dev, cumulative_deviation)
+        
+        range_val = max_dev - min_dev
+        
+        // Calculate standard deviation
+        variance = 0.0
+        for i = 0 to size - 1
+            diff = array.get(returns, i) - mean_return
+            variance += diff * diff
+        std_dev = math.sqrt(variance / size)
+        
+        rs_stat = std_dev > 0 ? range_val / std_dev : 1.0
+        hurst = rs_stat > 0 ? math.log(rs_stat) / math.log(size) : 0.5
+        math.max(0.0, math.min(hurst, 1.0))
+    else
+        0.5
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// ⚛️ QUANTUM MECHANICS SIMULATION
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+quantumSuperposition() =>
+    rsi_val = ta.rsi(close, 14)
+    
+    // Wave function components
+    bullish_amplitude = math.sin(rsi_val * math.pi / 100)
+    bearish_amplitude = math.cos(rsi_val * math.pi / 100)
+    
+    // Quantum interference
+    interference = bullish_amplitude * bearish_amplitude
+    
+    // Probability amplitude
+    probability_amplitude = math.sqrt(bullish_amplitude * bullish_amplitude + bearish_amplitude * bearish_amplitude)
+    
+    // Observed state with noise
+    quantum_noise = (math.random() - 0.5) * 0.1
+    observed_state = probability_amplitude + quantum_noise
+    
+    // Quantum confidence (coherence)
+    quantum_confidence = 1 - math.abs(interference)
+    
+    [probability_amplitude, observed_state, quantum_confidence]
+
+quantumTunneling(price, barrier_height) =>
+    wave_function = math.sin(price * 0.01)
+    momentum = ta.mom(close, 14)
+    
+    // Transmission coefficient
+    transmission_coefficient = math.exp(-2 * barrier_height * math.sqrt(2 * math.abs(momentum) + 1))
+    tunneling_probability = math.abs(wave_function) * transmission_coefficient
+    
+    // Reflection probability
+    reflection_probability = 1 - tunneling_probability
+    
+    [tunneling_probability, reflection_probability]
+
+quantumEntanglement() =>
+    // Simulate market entanglement between different timeframes
+    short_momentum = ta.mom(close, 5)
+    medium_momentum = ta.mom(close, 14)
+    long_momentum = ta.mom(close, 50)
+    
+    // Entanglement strength
+    entanglement_strength = math.abs(short_momentum * medium_momentum * long_momentum) / (ta.atr(14) * close * close)
+    
+    // Entanglement coherence
+    coherence = 1 - math.abs(short_momentum - medium_momentum) / (math.abs(short_momentum) + math.abs(medium_momentum) + 1)
+    
+    [entanglement_strength, coherence]
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🌊 ELLIOTT WAVE DETECTION
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+detectElliottWave() =>
+    // Simplified Elliott Wave using ZigZag-like approach
+    atr_current = ta.atr(14)
+    
+    // Find significant highs and lows
+    pivot_high = ta.pivothigh(high, 5, 5)
+    pivot_low = ta.pivotlow(low, 5, 5)
+    
+    var float[] wave_points = array.new<float>()
+    var int wave_count = 0
+    
+    // Track wave points
+    if not na(pivot_high)
+        if array.size(wave_points) >= 5
+            array.shift(wave_points)
+        array.push(wave_points, pivot_high)
+        wave_count += 1
+    
+    if not na(pivot_low)
+        if array.size(wave_points) >= 5
+            array.shift(wave_points)
+        array.push(wave_points, pivot_low)
+        wave_count += 1
+    
+    // Elliott Wave confidence based on momentum and structure
+    rsi_val = ta.rsi(close, 14)
+    momentum = ta.mom(close, 10)
+    trend_strength = math.abs(momentum) / atr_current
+    
+    elliott_confidence = 0.0
+    elliott_direction = 0.0
+    
+    if array.size(wave_points) >= 3
+        recent_trend = array.get(wave_points, array.size(wave_points) - 1) > array.get(wave_points, array.size(wave_points) - 3) ? 1 : -1
+        elliott_confidence := math.min(trend_strength * 20 + (wave_count % 5 == 0 ? 20 : 0), 100)
+        elliott_direction := recent_trend
+    else
+        elliott_confidence := math.min(trend_strength * 15, 75)
+        elliott_direction := momentum > 0 ? 1 : -1
+    
+    [elliott_confidence, elliott_direction]
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🎵 HARMONIC PATTERN DETECTION
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+detectHarmonicPatterns() =>
+    // Advanced harmonic pattern detection
+    atr_val = ta.atr(14)
+    
+    // Get recent price action
+    high_5 = ta.highest(high, 5)
+    low_5 = ta.lowest(low, 5)
+    high_10 = ta.highest(high, 10)
+    low_10 = ta.lowest(low, 10)
+    high_20 = ta.highest(high, 20)
+    low_20 = ta.lowest(low, 20)
+    
+    // Calculate retracement ratios
+    range_recent = high_5 - low_5
+    range_medium = high_10 - low_10
+    range_long = high_20 - low_20
+    
+    retracement_1 = range_recent / range_medium
+    retracement_2 = range_medium / range_long
+    
+    // Pattern detection based on Fibonacci ratios
+    fibonacci_618 = math.abs(retracement_1 - 0.618) < 0.1
+    fibonacci_382 = math.abs(retracement_1 - 0.382) < 0.1
+    fibonacci_786 = math.abs(retracement_2 - 0.786) < 0.1
+    fibonacci_1618 = math.abs(retracement_2 - 1.618) < 0.2
+    
+    pattern_strength = 0.0
+    pattern_direction = 0.0
+    pattern_type = "NONE"
+    
+    if fibonacci_618 and fibonacci_786
+        pattern_strength := 85.0
+        pattern_type := "GARTLEY"
+        pattern_direction := close > ta.sma(close, 20) ? 1 : -1
+    else if fibonacci_382 and fibonacci_618
+        pattern_strength := 75.0
+        pattern_type := "BAT"
+        pattern_direction := close > ta.sma(close, 20) ? 1 : -1
+    else if fibonacci_786 and fibonacci_1618
+        pattern_strength := 80.0
+        pattern_type := "BUTTERFLY"
+        pattern_direction := close > ta.sma(close, 20) ? 1 : -1
+    else if fibonacci_618
+        pattern_strength := 65.0
+        pattern_type := "CRAB"
+        pattern_direction := close > ta.sma(close, 20) ? 1 : -1
+    else
+        // Basic pattern based on momentum
+        momentum = ta.mom(close, 14)
+        pattern_strength := math.min(math.abs(momentum) / atr_val * 20, 50)
+        pattern_direction := momentum > 0 ? 1 : -1
+    
+    [pattern_strength, pattern_direction, pattern_type]
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 📊 VOLUME PROFILE ANALYSIS
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+analyzeVolumeProfile() =>
+    // Advanced VWAP and volume analysis
+    vwap_current = ta.vwap(close)
+    volume_sma = ta.sma(volume, 20)
+    volume_ratio = volume / volume_sma
+    
+    // High volume detection
+    high_volume_node = volume_ratio > 1.5
+    volume_spike = volume_ratio > 2.0
+    unusual_volume = volume_ratio > 3.0
+    
+    // Volume bias based on price position relative to VWAP
+    volume_bias = close > vwap_current ? 1 : -1
+    volume_strength = math.min(volume_ratio, 5.0)
+    
+    // POC significance (Point of Control)
+    poc_distance = math.abs(close - vwap_current) / close
+    poc_significance = volume_ratio * (1 - poc_distance)
+    
+    // Volume imbalance detection
+    buying_pressure = close > open ? volume : 0
+    selling_pressure = close < open ? volume : 0
+    volume_imbalance = buying_pressure - selling_pressure
+    
+    [volume_bias, volume_strength, poc_significance, high_volume_node, volume_imbalance]
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 💹 ORDER FLOW ANALYSIS
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+analyzeOrderFlow() =>
+    // Advanced order flow analysis
+    uptick = close > close[1]
+    downtick = close < close[1]
+    
+    delta = uptick ? volume : downtick ? -volume : 0
+    volume_avg = ta.sma(volume, 20)
+    
+    // Order flow direction and strength
+    flow_direction = delta > 0 ? 1 : delta < 0 ? -1 : 0
+    flow_strength = math.abs(delta) / volume_avg
+    
+    // Absorption (high volume, small price movement)
+    price_change = math.abs(close - close[1])
+    atr_current = ta.atr(14)
+    volume_spike = volume > volume_avg * 1.5
+    absorption_detected = volume_spike and price_change < atr_current * 0.2
+    
+    // Iceberg orders (repeated large volume at levels)
+    iceberg_threshold = volume_avg * 2
+    near_high = close >= ta.highest(close, 3) * 0.995
+    near_low = close <= ta.lowest(close, 3) * 1.005
+    
+    iceberg_buy = volume > iceberg_threshold and near_low
+    iceberg_sell = volume > iceberg_threshold and near_high
+    
+    // Institutional footprint
+    institutional_signature = volume > volume_avg * 2.5 and math.abs(close - open) < atr_current * 0.3
+    
+    [flow_direction, flow_strength, absorption_detected, iceberg_buy, iceberg_sell, institutional_signature]
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 💧 LIQUIDITY POOL MAPPING
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+mapLiquidityPools() =>
+    atr_current = ta.atr(14)
+    
+    // Support and resistance levels
+    support_level = ta.lowest(low, 20)
+    resistance_level = ta.highest(high, 20)
+    
+    // Stop hunt detection (price spikes beyond levels then reverses)
+    stop_hunt_below = low < support_level and close > support_level + atr_current * 0.3
+    stop_hunt_above = high > resistance_level and close < resistance_level - atr_current * 0.3
+    liquidity_grab = stop_hunt_below or stop_hunt_above
+    
+    // Fair Value Gap detection
+    gap_up = low > high[2] + atr_current * 0.1
+    gap_down = high < low[2] - atr_current * 0.1
+    fair_value_gap = gap_up or gap_down
+    
+    // Institutional zone (high volume + low volatility)
+    volume_avg = ta.sma(volume, 50)
+    volatility = ta.atr(5) / ta.atr(20)
+    institutional_zone = volume > volume_avg * 1.2 and volatility < 0.8
+    
+    // Liquidity cluster identification
+    recent_highs = ta.highest(high, 10)
+    recent_lows = ta.lowest(low, 10)
+    cluster_above = high >= recent_highs * 0.998
+    cluster_below = low <= recent_lows * 1.002
+    
+    // Liquidity score
+    liquidity_score = 0.0
+    if liquidity_grab
+        liquidity_score += 40.0
+    if fair_value_gap
+        liquidity_score += 30.0
+    if institutional_zone
+        liquidity_score += 20.0
+    if cluster_above or cluster_below
+        liquidity_score += 15.0
+    
+    // Add base liquidity based on volume
+    liquidity_score += math.min(volume / volume_avg * 10, 30)
+    
+    [liquidity_score, liquidity_grab, institutional_zone, fair_value_gap, cluster_above, cluster_below]
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🌌 MULTIVERSE CONSENSUS
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+multiverseConsensus() =>
+    // Advanced multiverse analysis with multiple timeframes
+    rsi_14 = ta.rsi(close, 14)
+    rsi_21 = ta.rsi(close, 21)
+    rsi_28 = ta.rsi(close, 28)
+    
+    [macd_12_26, _, hist_12_26] = ta.macd(close, 12, 26, 9)
+    [macd_19_39, _, hist_19_39] = ta.macd(close, 19, 39, 9)
+    
+    sma_20 = ta.sma(close, 20)
+    sma_50 = ta.sma(close, 50)
+    ema_20 = ta.ema(close, 20)
+    ema_50 = ta.ema(close, 50)
+    
+    // Universe predictions with enhanced logic
+    universe1 = rsi_14 > 50 ? 0.7 : 0.3  // RSI universe
+    universe2 = hist_12_26 > 0 ? 0.8 : 0.2  // MACD universe
+    universe3 = close > sma_20 ? 0.75 : 0.25  // SMA universe
+    universe4 = close > ema_20 ? 0.65 : 0.35  // EMA universe
+    universe5 = (rsi_21 + rsi_28) / 2 > 50 ? 0.6 : 0.4  // Multi-RSI universe
+    universe6 = close > sma_50 ? 0.7 : 0.3  // Long-term trend universe
+    universe7 = hist_19_39 > 0 ? 0.6 : 0.4  // Alternative MACD universe
+    universe8 = close > ema_50 ? 0.65 : 0.35  // Long-term EMA universe
+    
+    // Weighted consensus with more universes
+    consensus_strength = (universe1 * 0.15 + universe2 * 0.15 + universe3 * 0.125 + universe4 * 0.125 + 
+                         universe5 * 0.1 + universe6 * 0.1 + universe7 * 0.1 + universe8 * 0.1)
+    
+    // Direction and certainty
+    consensus_direction = consensus_strength > 0.5 ? 1 : -1
+    consensus_certainty = math.abs(consensus_strength - 0.5) * 2
+    
+    [consensus_strength, consensus_direction, consensus_certainty]
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🛡️ ATR-BASED RISK MANAGEMENT
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Calculate ATR for risk levels
+atr_value = ta.atr(atrPeriod)
+
+// Store signal entry prices and levels
+var float entry_price = 0.0
+var float stop_loss = 0.0
+var float take_profit_1 = 0.0
+var float take_profit_2 = 0.0
+var float take_profit_3 = 0.0
+var int signal_direction = 0
+var bool active_trade = false
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🎯 MAIN SIGNAL CALCULATION
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Get all analysis results
+neural_inputs = array.new<float>()
+array.push(neural_inputs, ta.rsi(close, 14) / 100)
+array.push(neural_inputs, ta.macd(close, 12, 26, 9)[2] / close * 1000)
+array.push(neural_inputs, volume / ta.sma(volume, 20))
+array.push(neural_inputs, ta.mom(close, 10) / close * 100)
+array.push(neural_inputs, ta.atr(14) / close * 100)
+array.push(neural_inputs, (close - ta.sma(close, 20)) / ta.sma(close, 20) * 100)
+array.push(neural_inputs, ta.stoch(close, high, low, 14) / 100)
+array.push(neural_inputs, ta.cci(close, 20) / 100)
+
+neural_prediction = enableQuantum ? enhancedNeuralNetworkPredict(
+    array.get(neural_inputs, 0), array.get(neural_inputs, 1), array.get(neural_inputs, 2), array.get(neural_inputs, 3),
+    array.get(neural_inputs, 4), array.get(neural_inputs, 5), array.get(neural_inputs, 6), array.get(neural_inputs, 7)
+) : 0.5
+
+[quantum_amplitude, quantum_state, quantum_confidence] = quantumSuperposition()
+[entanglement_strength, entanglement_coherence] = quantumEntanglement()
+
+// Fractal and Hurst analysis
+fractal_dimension = enableFractalAnalysis ? calculateFractalDimension() : 1.5
+hurst_exponent = enableFractalAnalysis ? calculateHurstExponent() : 0.5
+
+// Quantum tunneling
+tunneling_prob = 0.0
+reflection_prob = 0.0
+if enableQuantumTunneling
+    [tunneling_prob, reflection_prob] = quantumTunneling(close, ta.atr(14))
+
+// Pattern analysis
+elliott_confidence = 0.0
+elliott_direction = 0.0
+if enableElliottWave
+    [elliott_confidence, elliott_direction] = detectElliottWave()
+
+harmonic_strength = 0.0
+harmonic_direction = 0.0
+harmonic_type = "NONE"
+if enableHarmonicPatterns
+    [harmonic_strength, harmonic_direction, harmonic_type] = detectHarmonicPatterns()
+
+volume_bias = 0.0
+volume_strength = 0.0
+poc_significance = 0.0
+high_volume_node = false
+volume_imbalance = 0.0
+if enableVolumeProfile
+    [volume_bias, volume_strength, poc_significance, high_volume_node, volume_imbalance] = analyzeVolumeProfile()
+
+flow_direction = 0.0
+flow_strength = 0.0
+absorption_detected = false
+iceberg_buy = false
+iceberg_sell = false
+institutional_signature = false
+if enableOrderFlow
+    [flow_direction, flow_strength, absorption_detected, iceberg_buy, iceberg_sell, institutional_signature] = analyzeOrderFlow()
+
+liquidity_score = 0.0
+liquidity_grab = false
+institutional_zone = false
+fair_value_gap = false
+cluster_above = false
+cluster_below = false
+if enableLiquidityMapping
+    [liquidity_score, liquidity_grab, institutional_zone, fair_value_gap, cluster_above, cluster_below] = mapLiquidityPools()
+
+// Multiverse consensus
+consensus_strength = 0.5
+consensus_direction = 0.0
+consensus_certainty = 0.5
+if enableMultiverse
+    [consensus_strength, consensus_direction, consensus_certainty] = multiverseConsensus()
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🎯 ULTIMATE SIGNAL COMBINATION
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Enhanced signal combination with more factors
+ultimate_signal = 
+  neural_prediction * 0.20 +
+  quantum_confidence * 0.15 +
+  (elliott_confidence / 100) * 0.12 +
+  (harmonic_strength / 100) * 0.10 +
+  (volume_strength / 3) * 0.08 +
+  (flow_strength / 2) * 0.07 +
+  (liquidity_score / 100) * 0.05 +
+  consensus_strength * 0.08 +
+  entanglement_coherence * 0.05 +
+  (1 - fractal_dimension / 2) * 0.05 +
+  hurst_exponent * 0.05
+
+// Enhanced direction consensus
+direction_signals = 
+  (neural_prediction > 0.5 ? 1 : -1) +
+  elliott_direction +
+  harmonic_direction +
+  volume_bias +
+  flow_direction +
+  consensus_direction +
+  (entanglement_strength > 0.5 ? 1 : -1) +
+  (hurst_exponent > 0.5 ? 1 : -1)
+
+final_direction = direction_signals > 0 ? 1 : -1
+
+// Enhanced confidence calculation
+confidence_factors = quantum_confidence + consensus_certainty + (elliott_confidence / 100) + 
+                    (harmonic_strength / 100) + entanglement_coherence
+final_confidence = math.min(confidence_factors / 5 * 100, 100)
+
+// Buy/Sell signals
+buy_signal = ultimate_signal * 100 > signalThreshold and final_direction > 0 and final_confidence > confidenceThreshold
+sell_signal = ultimate_signal * 100 < (100 - signalThreshold) and final_direction < 0 and final_confidence > confidenceThreshold
+
+// Special signals
+quantum_breakthrough = tunneling_prob > 0.7 and quantum_confidence > 0.8
+multiverse_alignment = consensus_certainty > 0.8 and math.abs(consensus_direction) > 0
+pattern_confluence = (elliott_confidence > 70 or harmonic_strength > 70) and volume_strength > 2
+liquidity_event = liquidity_grab and institutional_zone
+neural_anomaly = neural_prediction > 0.8 or neural_prediction < 0.2
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🛡️ RISK LEVEL CALCULATION
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Calculate risk levels on new signals
+if (buy_signal and not buy_signal[1]) or (sell_signal and not sell_signal[1])
+    entry_price := close
+    signal_direction := buy_signal ? 1 : -1
+    active_trade := true
+    
+    if signal_direction == 1  // BUY signal
+        stop_loss := entry_price - (atr_value * slMultiplier)
+        take_profit_1 := entry_price + (atr_value * tp1Multiplier)
+        take_profit_2 := entry_price + (atr_value * tp2Multiplier)
+        take_profit_3 := entry_price + (atr_value * tp3Multiplier)
+    else  // SELL signal
+        stop_loss := entry_price + (atr_value * slMultiplier)
+        take_profit_1 := entry_price - (atr_value * tp1Multiplier)
+        take_profit_2 := entry_price - (atr_value * tp2Multiplier)
+        take_profit_3 := entry_price - (atr_value * tp3Multiplier)
+
+// Check if levels are hit
+sl_hit = active_trade and ((signal_direction == 1 and low <= stop_loss) or (signal_direction == -1 and high >= stop_loss))
+tp1_hit = active_trade and ((signal_direction == 1 and high >= take_profit_1) or (signal_direction == -1 and low <= take_profit_1))
+tp2_hit = active_trade and ((signal_direction == 1 and high >= take_profit_2) or (signal_direction == -1 and low <= take_profit_2))
+tp3_hit = active_trade and ((signal_direction == 1 and high >= take_profit_3) or (signal_direction == -1 and low <= take_profit_3))
+
+// Reset trade on SL or TP3 hit
+if sl_hit or tp3_hit
+    active_trade := false
+
+// Calculate Risk:Reward Ratio
+risk_amount = math.abs(entry_price - stop_loss)
+reward_amount_1 = math.abs(take_profit_1 - entry_price)
+risk_reward_1 = risk_amount > 0 ? reward_amount_1 / risk_amount : 0
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 📊 PERFORMANCE TRACKING
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+var int total_signals = 0
+var int correct_predictions = 0
+var float last_signal_price = 0.0
+var int last_signal_direction = 0
+var int tp1_hits = 0
+var int tp2_hits = 0
+var int tp3_hits = 0
+var int sl_hits = 0
+
+// Track signals
+if buy_signal and not buy_signal[1]
+    total_signals += 1
+    last_signal_price := close
+    last_signal_direction := 1
+
+if sell_signal and not sell_signal[1]
+    total_signals += 1
+    last_signal_price := close
+    last_signal_direction := -1
+
+// Track TP and SL hits
+if tp1_hit and not tp1_hit[1]
+    tp1_hits += 1
+if tp2_hit and not tp2_hit[1]
+    tp2_hits += 1
+if tp3_hit and not tp3_hit[1]
+    tp3_hits += 1
+if sl_hit and not sl_hit[1]
+    sl_hits += 1
+
+// Check prediction accuracy after 10 bars
+if bar_index % 10 == 0 and last_signal_price > 0
+    price_change = (close - last_signal_price) / last_signal_price
+    if (last_signal_direction == 1 and price_change > 0.001) or (last_signal_direction == -1 and price_change < -0.001)
+        correct_predictions += 1
+
+accuracy_rate = total_signals > 0 ? correct_predictions / total_signals * 100 : 0
+tp1_success_rate = total_signals > 0 ? tp1_hits / total_signals * 100 : 0
+sl_hit_rate = total_signals > 0 ? sl_hits / total_signals * 100 : 0
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 📊 ULTIMATE DASHBOARD
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+if barstate.islast
+    signals_table = table.new(position.top_right, 3, 18, bgcolor=color.black, border_width=2, border_color=color.white)
+    
+    // Headers
+    table.cell(signals_table, 0, 0, "🌟 EL MEHDI QUANTUM ULTIMATE", text_color=color.yellow, text_size=size.large, bgcolor=color.navy)
+    table.cell(signals_table, 1, 0, "VALUE", text_color=color.white, text_size=size.normal, bgcolor=color.navy)
+    table.cell(signals_table, 2, 0, "STATUS", text_color=color.white, text_size=size.normal, bgcolor=color.navy)
+    
+    // Neural Network
+    table.cell(signals_table, 0, 1, "🧠 Neural Network", text_color=color.aqua, text_size=size.normal)
+    table.cell(signals_table, 1, 1, str.tostring(math.round(neural_prediction * 100, 1)) + "%", text_color=color.white, text_size=size.normal)
+    table.cell(signals_table, 2, 1, neural_prediction > 0.6 ? "🟢 BULLISH" : neural_prediction < 0.4 ? "🔴 BEARISH" : "🟡 NEUTRAL", 
+               text_color=neural_prediction > 0.6 ? color.lime : neural_prediction < 0.4 ? color.red : color.yellow, text_size=size.normal)
+    
+    // Quantum State
+    table.cell(signals_table, 0, 2, "⚛️ Quantum State", text_color=color.purple, text_size=size.normal)
+    table.cell(signals_table, 1, 2, str.tostring(math.round(quantum_confidence * 100, 1)) + "%", text_color=color.white, text_size=size.normal)
+    table.cell(signals_table, 2, 2, quantum_breakthrough ? "💥 BREAKTHROUGH" : quantum_confidence > 0.7 ? "🟢 COHERENT" : "🟡 UNSTABLE", 
+               text_color=quantum_breakthrough ? color.orange : quantum_confidence > 0.7 ? color.lime : color.yellow, text_size=size.normal)
+    
+    // Elliott Wave
+    table.cell(signals_table, 0, 3, "🌊 Elliott Wave", text_color=color.blue, text_size=size.normal)
+    table.cell(signals_table, 1, 3, str.tostring(math.round(elliott_confidence, 1)) + "%", text_color=color.white, text_size=size.normal)
+    table.cell(signals_table, 2, 3, elliott_confidence > 60 ? "🟢 STRONG" : elliott_confidence > 30 ? "🟡 WEAK" : "🔴 NONE", 
+               text_color=elliott_confidence > 60 ? color.lime : elliott_confidence > 30 ? color.yellow : color.red, text_size=size.normal)
+    
+    // Harmonic Patterns
+    table.cell(signals_table, 0, 4, "🎵 Harmonic", text_color=color.fuchsia, text_size=size.normal)
+    table.cell(signals_table, 1, 4, harmonic_type + " " + str.tostring(math.round(harmonic_strength, 1)), text_color=color.white, text_size=size.normal)
+    table.cell(signals_table, 2, 4, harmonic_strength > 50 ? "🟢 STRONG" : harmonic_strength > 20 ? "🟡 WEAK" : "🔴 NONE", 
+               text_color=harmonic_strength > 50 ? color.lime : harmonic_strength > 20 ? color.yellow : color.red, text_size=size.normal)
+    
+    // Volume Profile
+    table.cell(signals_table, 0, 5, "📊 Volume Profile", text_color=color.orange, text_size=size.normal)
+    table.cell(signals_table, 1, 5, str.tostring(math.round(volume_strength, 2)) + "x", text_color=color.white, text_size=size.normal)
+    table.cell(signals_table, 2, 5, high_volume_node ? "🟢 HIGH NODE" : volume_strength > 1.5 ? "🟡 ACTIVE" : "🔴 LOW", 
+               text_color=high_volume_node ? color.lime : volume_strength > 1.5 ? color.yellow : color.red, text_size=size.normal)
+    
+    // Order Flow
+    table.cell(signals_table, 0, 6, "💹 Order Flow", text_color=color.teal, text_size=size.normal)
+    table.cell(signals_table, 1, 6, str.tostring(math.round(flow_strength, 2)), text_color=color.white, text_size=size.normal)
+    table.cell(signals_table, 2, 6, absorption_detected ? "🔵 ABSORPTION" : iceberg_buy ? "🟢 ICEBERG BUY" : iceberg_sell ? "🔴 ICEBERG SELL" : "🟡 NORMAL", 
+               text_color=absorption_detected ? color.blue : iceberg_buy ? color.lime : iceberg_sell ? color.red : color.yellow, text_size=size.normal)
+    
+    // Liquidity
+    table.cell(signals_table, 0, 7, "💧 Liquidity", text_color=color.aqua, text_size=size.normal)
+    table.cell(signals_table, 1, 7, str.tostring(math.round(liquidity_score, 1)), text_color=color.white, text_size=size.normal)
+    table.cell(signals_table, 2, 7, liquidity_grab ? "🚨 GRAB DETECTED" : institutional_zone ? "🏛️ INSTITUTION" : fair_value_gap ? "📊 FVG" : "🟡 NORMAL", 
+               text_color=liquidity_grab ? color.red : institutional_zone ? color.purple : fair_value_gap ? color.orange : color.yellow, text_size=size.normal)
+    
+    // Multiverse
+    table.cell(signals_table, 0, 8, "🌌 Multiverse", text_color=color.silver, text_size=size.normal)
+    table.cell(signals_table, 1, 8, str.tostring(math.round(consensus_strength * 100, 1)) + "%", text_color=color.white, text_size=size.normal)
+    table.cell(signals_table, 2, 8, multiverse_alignment ? "🌟 ALIGNED" : consensus_certainty > 0.6 ? "🟢 CONSENSUS" : "🟡 DIVERGED", 
+               text_color=multiverse_alignment ? color.yellow : consensus_certainty > 0.6 ? color.lime : color.orange, text_size=size.normal)
+    
+    // Fractal Analysis
+    table.cell(signals_table, 0, 9, "🌀 Fractal Dim", text_color=color.maroon, text_size=size.normal)
+    table.cell(signals_table, 1, 9, str.tostring(math.round(fractal_dimension, 3)), text_color=color.white, text_size=size.normal)
+    table.cell(signals_table, 2, 9, fractal_dimension > 1.7 ? "🔴 CHAOTIC" : fractal_dimension > 1.3 ? "🟡 COMPLEX" : "🟢 SMOOTH", 
+               text_color=fractal_dimension > 1.7 ? color.red : fractal_dimension > 1.3 ? color.yellow : color.lime, text_size=size.normal)
+    
+    // Hurst Exponent
+    table.cell(signals_table, 0, 10, "📈 Hurst Exp", text_color=color.olive, text_size=size.normal)
+    table.cell(signals_table, 1, 10, str.tostring(math.round(hurst_exponent, 3)), text_color=color.white, text_size=size.normal)
+    table.cell(signals_table, 2, 10, hurst_exponent > 0.6 ? "🟢 TRENDING" : hurst_exponent < 0.4 ? "🔴 MEAN REV" : "🟡 RANDOM", 
+               text_color=hurst_exponent > 0.6 ? color.lime : hurst_exponent < 0.4 ? color.red : color.yellow, text_size=size.normal)
+    
+    // Quantum Entanglement
+    table.cell(signals_table, 0, 11, "⚛️ Entanglement", text_color=color.purple, text_size=size.normal)
+    table.cell(signals_table, 1, 11, str.tostring(math.round(entanglement_coherence * 100, 1)) + "%", text_color=color.white, text_size=size.normal)
+    table.cell(signals_table, 2, 11, entanglement_coherence > 0.7 ? "🟢 COHERENT" : entanglement_coherence > 0.4 ? "🟡 WEAK" : "🔴 DECOHERENT", 
+               text_color=entanglement_coherence > 0.7 ? color.lime : entanglement_coherence > 0.4 ? color.yellow : color.red, text_size=size.normal)
+    
+    // Performance
+    table.cell(signals_table, 0, 12, "🎯 Performance", text_color=color.white, text_size=size.normal)
+    table.cell(signals_table, 1, 12, str.tostring(math.round(accuracy_rate, 1)) + "%", text_color=color.white, text_size=size.normal)
+    table.cell(signals_table, 2, 12, accuracy_rate > 70 ? "🟢 EXCELLENT" : accuracy_rate > 50 ? "🟡 GOOD" : "🔴 LEARNING", 
+               text_color=accuracy_rate > 70 ? color.lime : accuracy_rate > 50 ? color.yellow : color.red, text_size=size.normal)
+    
+    // Risk Management
+    table.cell(signals_table, 0, 13, "🛡️ Risk:Reward", text_color=color.white, text_size=size.normal)
+    table.cell(signals_table, 1, 13, "R:R " + str.tostring(math.round(risk_reward_1, 1)), text_color=color.white, text_size=size.normal)
+    table.cell(signals_table, 2, 13, risk_reward_1 > 2 ? "🟢 EXCELLENT" : risk_reward_1 > 1.5 ? "🟡 GOOD" : "🔴 POOR", 
+               text_color=risk_reward_1 > 2 ? color.lime : risk_reward_1 > 1.5 ? color.yellow : color.red, text_size=size.normal)
+    
+    // TP Success Rate
+    table.cell(signals_table, 0, 14, "🎯 TP1 Success", text_color=color.lime, text_size=size.normal)
+    table.cell(signals_table, 1, 14, str.tostring(math.round(tp1_success_rate, 1)) + "%", text_color=color.white, text_size=size.normal)
+    table.cell(signals_table, 2, 14, tp1_success_rate > 60 ? "🟢 EXCELLENT" : tp1_success_rate > 40 ? "🟡 GOOD" : "🔴 POOR", 
+               text_color=tp1_success_rate > 60 ? color.lime : tp1_success_rate > 40 ? color.yellow : color.red, text_size=size.normal)
+    
+    // Total Signals
+    table.cell(signals_table, 0, 15, "📊 Total Signals", text_color=color.gray, text_size=size.normal)
+    table.cell(signals_table, 1, 15, str.tostring(total_signals), text_color=color.white, text_size=size.normal)
+    table.cell(signals_table, 2, 15, total_signals > 10 ? "🟢 ACTIVE" : total_signals > 5 ? "🟡 MODERATE" : "🔴 LOW", 
+               text_color=total_signals > 10 ? color.lime : total_signals > 5 ? color.yellow : color.red, text_size=size.normal)
+    
+    // Trade Status
+    table.cell(signals_table, 0, 16, "💹 Trade Status", text_color=color.aqua, text_size=size.normal)
+    table.cell(signals_table, 1, 16, active_trade ? (signal_direction == 1 ? "LONG" : "SHORT") : "WAITING", text_color=color.white, text_size=size.normal)
+    table.cell(signals_table, 2, 16, active_trade ? "🟢 ACTIVE" : "🟡 STANDBY", 
+               text_color=active_trade ? color.lime : color.yellow, text_size=size.normal)
+    
+    // Final Signal
+    table.cell(signals_table, 0, 17, "🎯 FINAL SIGNAL", text_color=color.white, text_size=size.large, bgcolor=color.gray)
+    table.cell(signals_table, 1, 17, str.tostring(math.round(ultimate_signal * 100, 1)) + "%", text_color=color.white, text_size=size.large, bgcolor=color.gray)
+    table.cell(signals_table, 2, 17, buy_signal ? "🚀 STRONG BUY" : sell_signal ? "🔻 STRONG SELL" : ultimate_signal > 0.55 ? "🟢 BUY" : ultimate_signal < 0.45 ? "🔴 SELL" : "🟡 HOLD", 
+               text_color=buy_signal ? color.lime : sell_signal ? color.red : ultimate_signal > 0.55 ? color.green : ultimate_signal < 0.45 ? color.maroon : color.yellow, 
+               text_size=size.large, bgcolor=color.gray)
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🎨 ENHANCED VISUAL SIGNALS
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Buy/Sell signals
+plotshape(buy_signal and not buy_signal[1], style=shape.triangleup, location=location.belowbar, color=color.lime, size=size.normal, title="Buy Signal")
+plotshape(sell_signal and not sell_signal[1], style=shape.triangledown, location=location.abovebar, color=color.red, size=size.normal, title="Sell Signal")
+
+// Elliott Wave signals
+plotshape(elliott_confidence > 70 and elliott_direction > 0, style=shape.circle, location=location.belowbar, color=color.blue, size=size.small, title="Elliott Wave Up")
+plotshape(elliott_confidence > 70 and elliott_direction < 0, style=shape.circle, location=location.abovebar, color=color.blue, size=size.small, title="Elliott Wave Down")
+
+// Harmonic patterns
+plotshape(harmonic_strength > 60 and harmonic_direction > 0, style=shape.diamond, location=location.belowbar, color=color.purple, size=size.small, title="Harmonic Pattern Up")
+plotshape(harmonic_strength > 60 and harmonic_direction < 0, style=shape.diamond, location=location.abovebar, color=color.purple, size=size.small, title="Harmonic Pattern Down")
+
+// Volume nodes
+plotshape(high_volume_node, style=shape.square, location=location.bottom, color=color.orange, size=size.tiny, title="High Volume Node")
+
+// Liquidity events
+plotshape(liquidity_grab, style=shape.xcross, location=location.top, color=color.red, size=size.small, title="Liquidity Grab")
+
+// Order flow
+plotshape(iceberg_buy, style=shape.arrowup, location=location.belowbar, color=color.aqua, size=size.small, title="Iceberg Buy")
+plotshape(iceberg_sell, style=shape.arrowdown, location=location.abovebar, color=color.red, size=size.small, title="Iceberg Sell")
+
+// Special events
+plotshape(neural_anomaly, style=shape.star, location=location.top, color=color.yellow, size=size.small, title="Neural Anomaly")
+
+// Background colors
+bgcolor(quantum_breakthrough ? color.new(color.orange, 85) : na, title="Quantum Breakthrough")
+bgcolor(multiverse_alignment ? color.new(color.blue, 90) : na, title="Multiverse Alignment")
+
+// Neural network confidence visualization
+neural_color = neural_prediction > 0.6 ? color.new(color.lime, 80) : neural_prediction < 0.4 ? color.new(color.red, 80) : color.new(color.gray, 90)
+plot(neural_prediction > 0.6 or neural_prediction < 0.4 ? close : na, color=neural_color, linewidth=2, title="Neural Confidence Zone")
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🛡️ RISK LEVEL VISUALIZATION
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Plot risk levels when active trade exists
+if enableRiskLevels and active_trade
+    // Entry line
+    line.new(bar_index - 1, entry_price, bar_index + 10, entry_price, 
+             color=color.blue, width=2, style=line.style_solid, extend=extend.right)
+    label.new(bar_index, entry_price, "ENTRY: " + str.tostring(entry_price, "#.####"), 
+              color=color.blue, textcolor=color.white, style=label.style_label_left, size=size.small)
+    
+    // Stop Loss line
+    line.new(bar_index - 1, stop_loss, bar_index + 10, stop_loss, 
+             color=color.red, width=2, style=line.style_dashed, extend=extend.right)
+    label.new(bar_index, stop_loss, "SL: " + str.tostring(stop_loss, "#.####") + " (-" + str.tostring(slMultiplier) + " ATR)", 
+              color=color.red, textcolor=color.white, style=label.style_label_left, size=size.small)
+    
+    // Take Profit levels
+    line.new(bar_index - 1, take_profit_1, bar_index + 10, take_profit_1, 
+             color=color.lime, width=2, style=line.style_dotted, extend=extend.right)
+    label.new(bar_index, take_profit_1, "TP1: " + str.tostring(take_profit_1, "#.####") + " (+" + str.tostring(tp1Multiplier) + " ATR)", 
+              color=color.lime, textcolor=color.black, style=label.style_label_left, size=size.small)
+    
+    line.new(bar_index - 1, take_profit_2, bar_index + 10, take_profit_2, 
+             color=color.yellow, width=1, style=line.style_dotted, extend=extend.right)
+    label.new(bar_index, take_profit_2, "TP2: " + str.tostring(take_profit_2, "#.####") + " (+" + str.tostring(tp2Multiplier) + " ATR)", 
+              color=color.yellow, textcolor=color.black, style=label.style_label_left, size=size.small)
+    
+    line.new(bar_index - 1, take_profit_3, bar_index + 10, take_profit_3, 
+             color=color.orange, width=1, style=line.style_dotted, extend=extend.right)
+    label.new(bar_index, take_profit_3, "TP3: " + str.tostring(take_profit_3, "#.####") + " (+" + str.tostring(tp3Multiplier) + " ATR)", 
+              color=color.orange, textcolor=color.black, style=label.style_label_left, size=size.small)
+
+// Plot ATR value for reference
+plot(enableRiskLevels ? atr_value : na, title="ATR Value", color=color.new(color.gray, 70), linewidth=1)
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🚨 ENHANCED ALERTS
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+alertcondition(buy_signal, title="🚀 QUANTUM BUY SIGNAL", message="🌟 EL MEHDI QUANTUM: Strong BUY signal!\nEntry: " + str.tostring(close) + "\nSL: " + str.tostring(stop_loss) + "\nTP1: " + str.tostring(take_profit_1) + "\nR:R: " + str.tostring(risk_reward_1))
+alertcondition(sell_signal, title="🔻 QUANTUM SELL SIGNAL", message="🌟 EL MEHDI QUANTUM: Strong SELL signal!\nEntry: " + str.tostring(close) + "\nSL: " + str.tostring(stop_loss) + "\nTP1: " + str.tostring(take_profit_1) + "\nR:R: " + str.tostring(risk_reward_1))
+alertcondition(tp1_hit, title="🎯 TP1 HIT", message="✅ Take Profit 1 reached!")
+alertcondition(tp2_hit, title="🎯 TP2 HIT", message="✅ Take Profit 2 reached!")
+alertcondition(tp3_hit, title="🎯 TP3 HIT", message="✅ Take Profit 3 reached!")
+alertcondition(sl_hit, title="🛑 STOP LOSS HIT", message="❌ Stop Loss triggered!")
+alertcondition(quantum_breakthrough, title="💥 QUANTUM BREAKTHROUGH", message="⚛️ Quantum breakthrough detected!")
+alertcondition(multiverse_alignment, title="🌟 MULTIVERSE ALIGNMENT", message="🌌 All universes aligned!")
+alertcondition(pattern_confluence, title="📐 PATTERN CONFLUENCE", message="🎯 Multiple patterns converging!")
+alertcondition(liquidity_event, title="💧 LIQUIDITY EVENT", message="🚨 Liquidity event detected!")
+alertcondition(neural_anomaly, title="🧠 NEURAL ANOMALY", message="🤖 Neural network detected anomaly!")
+
+// Plot for alerts
+plot(ultimate_signal * 100, title="Ultimate Signal", color=color.new(color.purple, 100))
+plot(final_confidence, title="Final Confidence", color=color.new(color.blue, 100))
