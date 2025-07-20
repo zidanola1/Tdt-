@@ -260,14 +260,15 @@ if enable_casting and counting_started and casting_initialized
         // Check if current count matches any number in the forward sequence
         forward_cast_hit = array.includes(forward_cast_seq_array, float(cast_forward_count))
         if forward_cast_hit and cast_forward_count > 0
-            // Check if we should show this number based on toggle
-            should_show = true
-            if same_candle_transition and cast_forward_count == 1 and backward_cast_count == -1
-                // CYCLE MODE: Don't show 1 because -1 represents both -1 and 1
-                should_show := false
+            // Check if this is the cycle transition candle
+            is_cycle_transition = same_candle_transition and cast_forward_count == 1 and backward_cast_count == -1
             
-            if should_show
-                // FORWARD CASTING - show the sequence number on its exact candle count
+            if is_cycle_transition
+                // CYCLE MODE: This candle shows -1 (which represents both -1 and 1)
+                // Don't show separate 1 label since -1 already represents it
+                na
+            else
+                // NORMAL FORWARD CASTING - show the sequence number on its exact candle count
                 forward_offset = (high - low) * 0.15
                 forward_y = display_position == "above_candle" ? high + forward_offset + vertical_shift : low - forward_offset - vertical_shift
                 forward_text = str.tostring(cast_forward_count)
