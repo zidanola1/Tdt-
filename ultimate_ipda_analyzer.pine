@@ -186,13 +186,13 @@ if enable_casting and counting_started
     
     if casting_initialized and not (current_is_td and freezeOnTD)
         if casting_phase_negative
-                         // Check if we reached -1 (trigger point) BEFORE incrementing
-             if backward_cast_count == -1
-                 // Switch to positive phase with custom forward sequence on NEXT candle
-                 casting_phase_negative := false
-                 casting_active := true
-                 forward_cast_active := true
-                 cast_forward_count := 1  // Start at 1 on next candle
+            // Check if we reached -1 (trigger point) BEFORE incrementing
+            if backward_cast_count == -1
+                // Switch to positive phase with custom forward sequence on NEXT candle
+                casting_phase_negative := false
+                casting_active := true
+                forward_cast_active := true
+                cast_forward_count := 1  // Start at 1 on next candle
             else
                 // Continue negative counting (moving toward -1)
                 backward_cast_count := backward_cast_count + 1
