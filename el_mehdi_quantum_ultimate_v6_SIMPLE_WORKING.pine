@@ -1,0 +1,399 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © EL MEHDI QUANTUM ULTIMATE - SIMPLE WORKING VERSION
+
+//@version=6
+indicator("🌟 EL MEHDI QUANTUM ULTIMATE V6 - SIMPLE WORKING 🌟", overlay=true, max_labels_count=500, max_lines_count=500, max_boxes_count=500)
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 📊 INPUTS
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+group_signals = "🎯 SIGNAL SETTINGS"
+signalThreshold = input.float(55.0, "Signal Threshold %", 50.0, 80.0, 1.0, group=group_signals)
+
+group_risk = "🛡️ RISK MANAGEMENT"
+enableRiskLevels = input.bool(true, "🎯 Show S.L & T.P Levels", group=group_risk)
+atrPeriod = input.int(14, "ATR Period", 5, 50, 1, group=group_risk)
+slMultiplier = input.float(2.0, "Stop Loss ATR Multiplier", 0.5, 5.0, 0.1, group=group_risk)
+tp1Multiplier = input.float(2.5, "Take Profit 1 ATR Multiplier", 1.0, 10.0, 0.1, group=group_risk)
+tp2Multiplier = input.float(4.0, "Take Profit 2 ATR Multiplier", 2.0, 15.0, 0.1, group=group_risk)
+tp3Multiplier = input.float(6.0, "Take Profit 3 ATR Multiplier", 3.0, 20.0, 0.1, group=group_risk)
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🧠 SIMPLE NEURAL NETWORK
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+simpleNeuralNetwork() =>
+    // Technical indicators as inputs
+    rsi_val = ta.rsi(close, 14) / 100
+    [_, _, macd_hist] = ta.macd(close, 12, 26, 9)
+    macd_val = macd_hist / close * 1000
+    volume_ratio = volume / ta.sma(volume, 20)
+    momentum = ta.mom(close, 10) / close * 100
+    
+    // Simple neural network calculation
+    input_sum = rsi_val * 0.3 + macd_val * 0.25 + (volume_ratio / 3) * 0.2 + (momentum / 10) * 0.25
+    
+    // Activation function (sigmoid)
+    prediction = 1 / (1 + math.exp(-input_sum * 5))
+    prediction
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// ⚛️ QUANTUM ANALYSIS
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+quantumAnalysis() =>
+    rsi_val = ta.rsi(close, 14)
+    
+    // Quantum superposition
+    bullish_state = math.sin(rsi_val * math.pi / 100)
+    bearish_state = math.cos(rsi_val * math.pi / 100)
+    
+    // Quantum confidence
+    interference = bullish_state * bearish_state
+    quantum_confidence = 1 - math.abs(interference)
+    
+    // Quantum prediction
+    quantum_prediction = (bullish_state * bullish_state)
+    
+    [quantum_prediction, quantum_confidence]
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🌊 ELLIOTT WAVE
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+elliottWave() =>
+    // Simple Elliott Wave using momentum
+    momentum = ta.mom(close, 10)
+    atr_val = ta.atr(14)
+    
+    // Wave strength
+    wave_strength = math.abs(momentum) / atr_val
+    wave_direction = momentum > 0 ? 1 : -1
+    
+    // Elliott confidence
+    elliott_confidence = math.min(wave_strength * 30, 100)
+    
+    [elliott_confidence, wave_direction]
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🎵 HARMONIC PATTERNS
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+harmonicPatterns() =>
+    // Simple harmonic pattern detection
+    high_5 = ta.highest(high, 5)
+    low_5 = ta.lowest(low, 5)
+    high_20 = ta.highest(high, 20)
+    low_20 = ta.lowest(low, 20)
+    
+    // Retracement ratio
+    current_range = high_5 - low_5
+    total_range = high_20 - low_20
+    retracement = current_range / total_range
+    
+    // Pattern strength based on Fibonacci levels
+    fib_618 = math.abs(retracement - 0.618) < 0.1
+    fib_382 = math.abs(retracement - 0.382) < 0.1
+    
+    pattern_strength = 0.0
+    pattern_type = "NONE"
+    
+    if fib_618
+        pattern_strength := 70.0
+        pattern_type := "GARTLEY"
+    else if fib_382
+        pattern_strength := 60.0
+        pattern_type := "BAT"
+    else
+        pattern_strength := math.min(retracement * 100, 40)
+    
+    pattern_direction = close > ta.sma(close, 20) ? 1 : -1
+    
+    [pattern_strength, pattern_direction, pattern_type]
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 📊 VOLUME PROFILE
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+volumeProfile() =>
+    // Volume analysis
+    vwap_val = ta.vwap(close)
+    volume_sma = ta.sma(volume, 20)
+    volume_strength = volume / volume_sma
+    
+    // Volume bias
+    volume_bias = close > vwap_val ? 1 : -1
+    high_volume = volume_strength > 1.5
+    
+    [volume_strength, volume_bias, high_volume]
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 💹 ORDER FLOW
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+orderFlow() =>
+    // Simple order flow
+    uptick = close > close[1]
+    downtick = close < close[1]
+    
+    flow_direction = uptick ? 1 : downtick ? -1 : 0
+    flow_strength = math.abs(close - close[1]) / ta.atr(14)
+    
+    [flow_strength, flow_direction]
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🌌 MULTIVERSE CONSENSUS
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+multiverseConsensus() =>
+    // Multiple timeframe analysis
+    rsi_14 = ta.rsi(close, 14)
+    [_, _, macd_hist] = ta.macd(close, 12, 26, 9)
+    sma_trend = close > ta.sma(close, 20)
+    ema_trend = close > ta.ema(close, 20)
+    
+    // Simple consensus
+    bullish_votes = 0
+    total_votes = 4
+    
+    if rsi_14 > 50
+        bullish_votes += 1
+    if macd_hist > 0
+        bullish_votes += 1
+    if sma_trend
+        bullish_votes += 1
+    if ema_trend
+        bullish_votes += 1
+    
+    consensus_strength = bullish_votes / total_votes
+    consensus_direction = consensus_strength > 0.5 ? 1 : -1
+    consensus_certainty = math.abs(consensus_strength - 0.5) * 2
+    
+    [consensus_strength, consensus_direction, consensus_certainty]
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🛡️ ATR RISK MANAGEMENT
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+atr_value = ta.atr(atrPeriod)
+
+var float entry_price = 0.0
+var float stop_loss = 0.0
+var float take_profit_1 = 0.0
+var float take_profit_2 = 0.0
+var float take_profit_3 = 0.0
+var int signal_direction = 0
+var bool active_trade = false
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🎯 MAIN SIGNAL CALCULATION
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Get all analysis
+neural_prediction = simpleNeuralNetwork()
+[quantum_prediction, quantum_confidence] = quantumAnalysis()
+[elliott_confidence, elliott_direction] = elliottWave()
+[harmonic_strength, harmonic_direction, harmonic_type] = harmonicPatterns()
+[volume_strength, volume_bias, high_volume] = volumeProfile()
+[flow_strength, flow_direction] = orderFlow()
+[consensus_strength, consensus_direction, consensus_certainty] = multiverseConsensus()
+
+// SIMPLE SIGNAL COMBINATION
+ultimate_signal = 
+  neural_prediction * 0.30 +
+  quantum_prediction * 0.25 +
+  (elliott_confidence / 100) * 0.15 +
+  (harmonic_strength / 100) * 0.10 +
+  consensus_strength * 0.20
+
+// Direction consensus
+direction_votes = 
+  (neural_prediction > 0.5 ? 1 : -1) +
+  elliott_direction +
+  harmonic_direction +
+  volume_bias +
+  flow_direction +
+  consensus_direction
+
+final_direction = direction_votes > 0 ? 1 : -1
+
+// SIMPLE BUY/SELL SIGNALS
+buy_signal = ultimate_signal > (signalThreshold / 100) and final_direction > 0
+sell_signal = ultimate_signal < (1 - signalThreshold / 100) and final_direction < 0
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🛡️ RISK LEVELS
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+if (buy_signal and not buy_signal[1]) or (sell_signal and not sell_signal[1])
+    entry_price := close
+    signal_direction := buy_signal ? 1 : -1
+    active_trade := true
+    
+    if signal_direction == 1  // BUY
+        stop_loss := entry_price - (atr_value * slMultiplier)
+        take_profit_1 := entry_price + (atr_value * tp1Multiplier)
+        take_profit_2 := entry_price + (atr_value * tp2Multiplier)
+        take_profit_3 := entry_price + (atr_value * tp3Multiplier)
+    else  // SELL
+        stop_loss := entry_price + (atr_value * slMultiplier)
+        take_profit_1 := entry_price - (atr_value * tp1Multiplier)
+        take_profit_2 := entry_price - (atr_value * tp2Multiplier)
+        take_profit_3 := entry_price - (atr_value * tp3Multiplier)
+
+// Check hits
+sl_hit = active_trade and ((signal_direction == 1 and low <= stop_loss) or (signal_direction == -1 and high >= stop_loss))
+tp1_hit = active_trade and ((signal_direction == 1 and high >= take_profit_1) or (signal_direction == -1 and low <= take_profit_1))
+tp3_hit = active_trade and ((signal_direction == 1 and high >= take_profit_3) or (signal_direction == -1 and low <= take_profit_3))
+
+if sl_hit or tp3_hit
+    active_trade := false
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 📊 PERFORMANCE TRACKING
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+var int total_signals = 0
+var int buy_signals = 0
+var int sell_signals = 0
+
+if buy_signal and not buy_signal[1]
+    total_signals += 1
+    buy_signals += 1
+
+if sell_signal and not sell_signal[1]
+    total_signals += 1
+    sell_signals += 1
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 📊 SIMPLE DASHBOARD
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+if barstate.islast
+    var table dashboard = table.new(position.top_right, 3, 12, bgcolor=color.black, border_width=2, border_color=color.white)
+    
+    // Headers
+    table.cell(dashboard, 0, 0, "🌟 EL MEHDI QUANTUM", text_color=color.yellow, text_size=size.large, bgcolor=color.navy)
+    table.cell(dashboard, 1, 0, "VALUE", text_color=color.white, text_size=size.normal, bgcolor=color.navy)
+    table.cell(dashboard, 2, 0, "STATUS", text_color=color.white, text_size=size.normal, bgcolor=color.navy)
+    
+    // Neural Network
+    table.cell(dashboard, 0, 1, "🧠 Neural Network", text_color=color.aqua, text_size=size.normal)
+    table.cell(dashboard, 1, 1, str.tostring(math.round(neural_prediction * 100, 1)) + "%", text_color=color.white, text_size=size.normal)
+    table.cell(dashboard, 2, 1, neural_prediction > 0.6 ? "🟢 BULLISH" : neural_prediction < 0.4 ? "🔴 BEARISH" : "🟡 NEUTRAL", 
+               text_color=neural_prediction > 0.6 ? color.lime : neural_prediction < 0.4 ? color.red : color.yellow, text_size=size.normal)
+    
+    // Quantum
+    table.cell(dashboard, 0, 2, "⚛️ Quantum", text_color=color.purple, text_size=size.normal)
+    table.cell(dashboard, 1, 2, str.tostring(math.round(quantum_confidence * 100, 1)) + "%", text_color=color.white, text_size=size.normal)
+    table.cell(dashboard, 2, 2, quantum_confidence > 0.7 ? "🟢 STRONG" : "🟡 WEAK", 
+               text_color=quantum_confidence > 0.7 ? color.lime : color.yellow, text_size=size.normal)
+    
+    // Elliott Wave
+    table.cell(dashboard, 0, 3, "🌊 Elliott Wave", text_color=color.blue, text_size=size.normal)
+    table.cell(dashboard, 1, 3, str.tostring(math.round(elliott_confidence, 1)) + "%", text_color=color.white, text_size=size.normal)
+    table.cell(dashboard, 2, 3, elliott_confidence > 50 ? "🟢 STRONG" : "🟡 WEAK", 
+               text_color=elliott_confidence > 50 ? color.lime : color.yellow, text_size=size.normal)
+    
+    // Harmonic
+    table.cell(dashboard, 0, 4, "🎵 Harmonic", text_color=color.fuchsia, text_size=size.normal)
+    table.cell(dashboard, 1, 4, harmonic_type + " " + str.tostring(math.round(harmonic_strength, 1)), text_color=color.white, text_size=size.normal)
+    table.cell(dashboard, 2, 4, harmonic_strength > 50 ? "🟢 STRONG" : "🟡 WEAK", 
+               text_color=harmonic_strength > 50 ? color.lime : color.yellow, text_size=size.normal)
+    
+    // Volume
+    table.cell(dashboard, 0, 5, "📊 Volume", text_color=color.orange, text_size=size.normal)
+    table.cell(dashboard, 1, 5, str.tostring(math.round(volume_strength, 2)) + "x", text_color=color.white, text_size=size.normal)
+    table.cell(dashboard, 2, 5, high_volume ? "🟢 HIGH" : "🟡 NORMAL", 
+               text_color=high_volume ? color.lime : color.yellow, text_size=size.normal)
+    
+    // Multiverse
+    table.cell(dashboard, 0, 6, "🌌 Multiverse", text_color=color.silver, text_size=size.normal)
+    table.cell(dashboard, 1, 6, str.tostring(math.round(consensus_strength * 100, 1)) + "%", text_color=color.white, text_size=size.normal)
+    table.cell(dashboard, 2, 6, consensus_certainty > 0.6 ? "🟢 CONSENSUS" : "🟡 MIXED", 
+               text_color=consensus_certainty > 0.6 ? color.lime : color.yellow, text_size=size.normal)
+    
+    // Signals Count
+    table.cell(dashboard, 0, 7, "📊 Total Signals", text_color=color.gray, text_size=size.normal)
+    table.cell(dashboard, 1, 7, str.tostring(total_signals), text_color=color.white, text_size=size.normal)
+    table.cell(dashboard, 2, 7, total_signals > 5 ? "🟢 ACTIVE" : "🟡 LOW", 
+               text_color=total_signals > 5 ? color.lime : color.yellow, text_size=size.normal)
+    
+    // Buy Signals
+    table.cell(dashboard, 0, 8, "🟢 Buy Signals", text_color=color.lime, text_size=size.normal)
+    table.cell(dashboard, 1, 8, str.tostring(buy_signals), text_color=color.white, text_size=size.normal)
+    table.cell(dashboard, 2, 8, buy_signals > 0 ? "🟢 " + str.tostring(buy_signals) : "⚪ 0", 
+               text_color=buy_signals > 0 ? color.lime : color.gray, text_size=size.normal)
+    
+    // Sell Signals
+    table.cell(dashboard, 0, 9, "🔴 Sell Signals", text_color=color.red, text_size=size.normal)
+    table.cell(dashboard, 1, 9, str.tostring(sell_signals), text_color=color.white, text_size=size.normal)
+    table.cell(dashboard, 2, 9, sell_signals > 0 ? "🔴 " + str.tostring(sell_signals) : "⚪ 0", 
+               text_color=sell_signals > 0 ? color.red : color.gray, text_size=size.normal)
+    
+    // Trade Status
+    table.cell(dashboard, 0, 10, "💹 Trade Status", text_color=color.aqua, text_size=size.normal)
+    table.cell(dashboard, 1, 10, active_trade ? (signal_direction == 1 ? "LONG" : "SHORT") : "WAITING", text_color=color.white, text_size=size.normal)
+    table.cell(dashboard, 2, 10, active_trade ? "🟢 ACTIVE" : "🟡 STANDBY", 
+               text_color=active_trade ? color.lime : color.yellow, text_size=size.normal)
+    
+    // Final Signal
+    table.cell(dashboard, 0, 11, "🎯 FINAL SIGNAL", text_color=color.white, text_size=size.large, bgcolor=color.gray)
+    table.cell(dashboard, 1, 11, str.tostring(math.round(ultimate_signal * 100, 1)) + "%", text_color=color.white, text_size=size.large, bgcolor=color.gray)
+    table.cell(dashboard, 2, 11, buy_signal ? "🚀 BUY" : sell_signal ? "🔻 SELL" : "🟡 HOLD", 
+               text_color=buy_signal ? color.lime : sell_signal ? color.red : color.yellow, text_size=size.large, bgcolor=color.gray)
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🎨 VISUAL SIGNALS
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Main signals
+plotshape(buy_signal and not buy_signal[1], style=shape.triangleup, location=location.belowbar, color=color.lime, size=size.normal, title="Buy Signal")
+plotshape(sell_signal and not sell_signal[1], style=shape.triangledown, location=location.abovebar, color=color.red, size=size.normal, title="Sell Signal")
+
+// Elliott Wave
+plotshape(elliott_confidence > 60 and elliott_direction > 0, style=shape.circle, location=location.belowbar, color=color.blue, size=size.small, title="Elliott Up")
+plotshape(elliott_confidence > 60 and elliott_direction < 0, style=shape.circle, location=location.abovebar, color=color.blue, size=size.small, title="Elliott Down")
+
+// Harmonic
+plotshape(harmonic_strength > 50 and harmonic_direction > 0, style=shape.diamond, location=location.belowbar, color=color.purple, size=size.small, title="Harmonic Up")
+plotshape(harmonic_strength > 50 and harmonic_direction < 0, style=shape.diamond, location=location.abovebar, color=color.purple, size=size.small, title="Harmonic Down")
+
+// Volume
+plotshape(high_volume, style=shape.square, location=location.bottom, color=color.orange, size=size.tiny, title="High Volume")
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🛡️ RISK LEVEL LINES
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+if enableRiskLevels and active_trade
+    // Entry
+    line.new(bar_index - 1, entry_price, bar_index + 10, entry_price, color=color.blue, width=2, style=line.style_solid, extend=extend.right)
+    label.new(bar_index, entry_price, "ENTRY: " + str.tostring(entry_price, "#.####"), color=color.blue, textcolor=color.white, style=label.style_label_left, size=size.small)
+    
+    // Stop Loss
+    line.new(bar_index - 1, stop_loss, bar_index + 10, stop_loss, color=color.red, width=2, style=line.style_dashed, extend=extend.right)
+    label.new(bar_index, stop_loss, "SL: " + str.tostring(stop_loss, "#.####"), color=color.red, textcolor=color.white, style=label.style_label_left, size=size.small)
+    
+    // Take Profits
+    line.new(bar_index - 1, take_profit_1, bar_index + 10, take_profit_1, color=color.lime, width=2, style=line.style_dotted, extend=extend.right)
+    label.new(bar_index, take_profit_1, "TP1: " + str.tostring(take_profit_1, "#.####"), color=color.lime, textcolor=color.black, style=label.style_label_left, size=size.small)
+    
+    line.new(bar_index - 1, take_profit_2, bar_index + 10, take_profit_2, color=color.yellow, width=1, style=line.style_dotted, extend=extend.right)
+    label.new(bar_index, take_profit_2, "TP2: " + str.tostring(take_profit_2, "#.####"), color=color.yellow, textcolor=color.black, style=label.style_label_left, size=size.small)
+    
+    line.new(bar_index - 1, take_profit_3, bar_index + 10, take_profit_3, color=color.orange, width=1, style=line.style_dotted, extend=extend.right)
+    label.new(bar_index, take_profit_3, "TP3: " + str.tostring(take_profit_3, "#.####"), color=color.orange, textcolor=color.black, style=label.style_label_left, size=size.small)
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🚨 ALERTS
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+alertcondition(buy_signal, title="🚀 BUY SIGNAL", message="🌟 EL MEHDI QUANTUM: BUY Signal!\nEntry: " + str.tostring(close) + "\nSL: " + str.tostring(stop_loss) + "\nTP1: " + str.tostring(take_profit_1))
+alertcondition(sell_signal, title="🔻 SELL SIGNAL", message="🌟 EL MEHDI QUANTUM: SELL Signal!\nEntry: " + str.tostring(close) + "\nSL: " + str.tostring(stop_loss) + "\nTP1: " + str.tostring(take_profit_1))
+alertcondition(tp1_hit, title="🎯 TP1 HIT", message="✅ Take Profit 1 reached!")
+alertcondition(sl_hit, title="🛑 SL HIT", message="❌ Stop Loss hit!")
+
+// Plot for alerts
+plot(ultimate_signal * 100, title="Ultimate Signal", color=color.new(color.purple, 100))
