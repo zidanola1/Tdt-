@@ -1,0 +1,215 @@
+//@version=5
+indicator("Simplified FVG + Multi-TF Levels", overlay=true)
+
+// =============================================================================
+// SIMPLIFIED FVG + MULTI-TIMEFRAME INDICATOR
+// =============================================================================
+
+// Input parameters
+enableFVG = input.bool(true, "Enable FVG Detection")
+enableMultiTF = input.bool(true, "Enable Multi-Timeframe Levels")
+sessionTime = input.session("0932-1600", "Trading Session")
+maxDays = input.int(3, "Max Days to Show", minval=1, maxval=10)
+
+// =============================================================================
+// FVG DETECTION
+// =============================================================================
+
+// Fair Value Gap detection
+detectFVG() =>
+    // Bullish FVG: low > high[2] and close[1] > high[2]
+    bullishFVG = close[1] > open[1] and high[2] < low[0]
+    
+    // Bearish FVG: high < low[2] and close[1] < low[2]
+    bearishFVG = close[1] < open[1] and low[2] > high[0]
+    
+    [bullishFVG, bearishFVG]
+
+// Session management
+inSession() => not na(time(timeframe.period, sessionTime, "America/New_York"))
+
+// FVG variables
+var box fvgBox = na
+var bool fvgFound = false
+var color fvgColor = color.gray
+
+// FVG detection logic
+if inSession() and enableFVG
+    [bullishFVG, bearishFVG] = detectFVG()
+    
+    if not fvgFound and (bullishFVG or bearishFVG)
+        fvgFound := true
+        fvgColor := bullishFVG ? color.new(color.green, 80) : color.new(color.red, 80)
+        
+        // Create FVG box
+        boxTop = bullishFVG ? high[2] : low[2]
+        boxBottom = bullishFVG ? low[0] : high[0]
+        
+        fvgBox := box.new(
+            left=bar_index-2, 
+            right=bar_index+10, 
+            top=boxTop, 
+            bottom=boxBottom, 
+            bgcolor=fvgColor,
+            border_color=color.new(fvgColor, 50)
+        )
+
+// Reset FVG at session end
+if not inSession() and inSession()[1]
+    fvgFound := false
+
+// Extend FVG box
+if fvgFound and not na(fvgBox)
+    box.set_right(fvgBox, bar_index+10)
+
+// =============================================================================
+// MULTI-TIMEFRAME LEVELS
+// =============================================================================
+
+// Simple consolidation range detection
+detectConsolidation(tf) =>
+    [tfHigh, tfLow, tfClose] = request.security(syminfo.tickerid, tf, [high, low, close])
+    
+    // Simple range calculation
+    rangeHigh = ta.highest(tfHigh, 20)
+    rangeLow = ta.lowest(tfLow, 20)
+    rangeMid = (rangeHigh + rangeLow) / 2
+    
+    // Touch detection
+    bullishTouch = low < rangeLow and close > rangeLow
+    bearishTouch = high > rangeHigh and close < rangeHigh
+    
+    [rangeHigh, rangeLow, rangeMid, bullishTouch, bearishTouch]
+
+// Process timeframes
+if enableMultiTF
+    // 15-minute levels
+    [h15, l15, m15, bt15, st15] = detectConsolidation("15")
+    
+    // 1-hour levels
+    [h1, l1, m1, bt1, st1] = detectConsolidation("60")
+    
+    // 4-hour levels
+    [h4, l4, m4, bt4, st4] = detectConsolidation("240")
+    
+    // Daily levels
+    [hD, lD, mD, btD, stD] = detectConsolidation("D")
+
+// =============================================================================
+// VISUALIZATION
+// =============================================================================
+
+// Plot multi-timeframe levels
+if enableMultiTF
+    // 15-minute levels (Pink)
+    plot(h15, "15min High", color=color.new(#FF1493, 0), linewidth=2)
+    plot(l15, "15min Low", color=color.new(#FF1493, 0), linewidth=2)
+    plot(m15, "15min Mid", color=color.new(#FF1493, 50), linewidth=1, style=plot.style_dashed)
+    
+    // 1-hour levels (Orange)
+    plot(h1, "1H High", color=color.new(#FF4500, 0), linewidth=2)
+    plot(l1, "1H Low", color=color.new(#FF4500, 0), linewidth=2)
+    plot(m1, "1H Mid", color=color.new(#FF4500, 50), linewidth=1, style=plot.style_dashed)
+    
+    // 4-hour levels (Blue)
+    plot(h4, "4H High", color=color.new(#1E90FF, 0), linewidth=2)
+    plot(l4, "4H Low", color=color.new(#1E90FF, 0), linewidth=2)
+    plot(m4, "4H Mid", color=color.new(#1E90FF, 50), linewidth=1, style=plot.style_dashed)
+    
+    // Daily levels (Purple)
+    plot(hD, "Daily High", color=color.new(#9932CC, 0), linewidth=2)
+    plot(lD, "Daily Low", color=color.new(#9932CC, 0), linewidth=2)
+    plot(mD, "Daily Mid", color=color.new(#9932CC, 50), linewidth=1, style=plot.style_dashed)
+
+// Plot touch signals
+if enableMultiTF
+    // 15-minute touches
+    plotshape(bt15, "15min Bullish Touch", style=shape.triangleup, location=location.belowbar, color=color.green, size=size.small)
+    plotshape(st15, "15min Bearish Touch", style=shape.triangledown, location=location.abovebar, color=color.red, size=size.small)
+    
+    // 1-hour touches
+    plotshape(bt1, "1H Bullish Touch", style=shape.triangleup, location=location.belowbar, color=color.green, size=size.normal)
+    plotshape(st1, "1H Bearish Touch", style=shape.triangledown, location=location.abovebar, color=color.red, size=size.normal)
+    
+    // 4-hour touches
+    plotshape(bt4, "4H Bullish Touch", style=shape.triangleup, location=location.belowbar, color=color.green, size=size.large)
+    plotshape(st4, "4H Bearish Touch", style=shape.triangledown, location=location.abovebar, color=color.red, size=size.large)
+    
+    // Daily touches
+    plotshape(btD, "Daily Bullish Touch", style=shape.triangleup, location=location.belowbar, color=color.green, size=size.huge)
+    plotshape(stD, "Daily Bearish Touch", style=shape.triangledown, location=location.abovebar, color=color.red, size=size.huge)
+
+// =============================================================================
+// 9:30 NY OPEN MARKER
+// =============================================================================
+
+// Detect 9:30 AM EST (8:30 AM CST on CME servers)
+is930Open = (hour(time, "America/New_York") == 9 and minute == 30)
+
+if is930Open
+    // Vertical line at 9:30
+    line.new(
+        x1=bar_index, y1=high, 
+        x2=bar_index, y2=low, 
+        color=color.gray, 
+        style=line.style_dashed, 
+        width=1, 
+        extend=extend.both
+    )
+    
+    // Price level at 9:30 open
+    line.new(
+        x1=bar_index, y1=open, 
+        x2=bar_index+20, y2=open, 
+        color=color.gray, 
+        style=line.style_dotted, 
+        width=1
+    )
+
+// =============================================================================
+// DASHBOARD
+// =============================================================================
+
+if barstate.islast
+    var table dashboard = table.new(position.top_right, 2, 6, bgcolor=color.black, border_width=1)
+    
+    table.cell(dashboard, 0, 0, "FVG Status", text_color=color.white, bgcolor=color.gray)
+    table.cell(dashboard, 1, 0, fvgFound ? "ACTIVE" : "NONE", 
+               text_color=fvgFound ? color.green : color.red, bgcolor=color.gray)
+    
+    table.cell(dashboard, 0, 1, "15min Touch", text_color=#FF1493)
+    table.cell(dashboard, 1, 1, bt15 ? "BULL" : st15 ? "BEAR" : "NONE", 
+               text_color=bt15 ? color.green : st15 ? color.red : color.gray)
+    
+    table.cell(dashboard, 0, 2, "1H Touch", text_color=#FF4500)
+    table.cell(dashboard, 1, 2, bt1 ? "BULL" : st1 ? "BEAR" : "NONE", 
+               text_color=bt1 ? color.green : st1 ? color.red : color.gray)
+    
+    table.cell(dashboard, 0, 3, "4H Touch", text_color=#1E90FF)
+    table.cell(dashboard, 1, 3, bt4 ? "BULL" : st4 ? "BEAR" : "NONE", 
+               text_color=bt4 ? color.green : st4 ? color.red : color.gray)
+    
+    table.cell(dashboard, 0, 4, "Daily Touch", text_color=#9932CC)
+    table.cell(dashboard, 1, 4, btD ? "BULL" : stD ? "BEAR" : "NONE", 
+               text_color=btD ? color.green : stD ? color.red : color.gray)
+    
+    table.cell(dashboard, 0, 5, "Session", text_color=color.white, bgcolor=color.gray)
+    table.cell(dashboard, 1, 5, inSession() ? "ACTIVE" : "CLOSED", 
+               text_color=inSession() ? color.green : color.red, bgcolor=color.gray)
+
+// =============================================================================
+// ALERTS
+// =============================================================================
+
+// FVG alerts
+alertcondition(fvgFound and not fvgFound[1], "FVG Detected", "Fair Value Gap detected!")
+alertcondition(not fvgFound and fvgFound[1], "FVG Reset", "FVG detection reset for new session")
+
+// Touch alerts
+alertcondition(bt15 or st15, "15min Touch", "15-minute level touched")
+alertcondition(bt1 or st1, "1H Touch", "1-hour level touched")
+alertcondition(bt4 or st4, "4H Touch", "4-hour level touched")
+alertcondition(btD or stD, "Daily Touch", "Daily level touched")
+
+// Session alerts
+alertcondition(is930Open, "9:30 Open", "NY session opened at 9:30")
