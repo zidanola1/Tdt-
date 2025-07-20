@@ -25,6 +25,14 @@ group_signals = "🎯 SIGNAL SETTINGS"
 signalThreshold = input.float(65.0, "Signal Threshold %", 50.0, 90.0, 1.0, group=group_signals)
 confidenceThreshold = input.float(60.0, "Confidence Threshold %", 40.0, 90.0, 1.0, group=group_signals)
 
+group_risk = "🛡️ RISK MANAGEMENT"
+enableRiskLevels = input.bool(true, "🎯 Show S.L & T.P Levels", group=group_risk)
+atrPeriod = input.int(14, "ATR Period", 5, 50, 1, group=group_risk)
+slMultiplier = input.float(2.0, "Stop Loss ATR Multiplier", 0.5, 5.0, 0.1, group=group_risk)
+tp1Multiplier = input.float(2.5, "Take Profit 1 ATR Multiplier", 1.0, 10.0, 0.1, group=group_risk)
+tp2Multiplier = input.float(4.0, "Take Profit 2 ATR Multiplier", 2.0, 15.0, 0.1, group=group_risk)
+tp3Multiplier = input.float(6.0, "Take Profit 3 ATR Multiplier", 3.0, 20.0, 0.1, group=group_risk)
+
 // ═══════════════════════════════════════════════════════════════════════════════════
 // 📊 VOLUME PROFILE ANALYSIS - WORKING VERSION
 // ═══════════════════════════════════════════════════════════════════════════════════
@@ -417,6 +425,54 @@ pattern_confluence = (elliott_confidence > 70 or harmonic_strength > 70) and vol
 liquidity_event = liquidity_grab and institutional_zone
 
 // ═══════════════════════════════════════════════════════════════════════════════════
+// 🛡️ ATR-BASED RISK MANAGEMENT
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Calculate ATR for risk levels
+atr_value = ta.atr(atrPeriod)
+
+// Store signal entry prices and levels
+var float entry_price = 0.0
+var float stop_loss = 0.0
+var float take_profit_1 = 0.0
+var float take_profit_2 = 0.0
+var float take_profit_3 = 0.0
+var int signal_direction = 0
+var bool active_trade = false
+
+// Calculate risk levels on new signals
+if (buy_signal and not buy_signal[1]) or (sell_signal and not sell_signal[1])
+    entry_price := close
+    signal_direction := buy_signal ? 1 : -1
+    active_trade := true
+    
+    if signal_direction == 1  // BUY signal
+        stop_loss := entry_price - (atr_value * slMultiplier)
+        take_profit_1 := entry_price + (atr_value * tp1Multiplier)
+        take_profit_2 := entry_price + (atr_value * tp2Multiplier)
+        take_profit_3 := entry_price + (atr_value * tp3Multiplier)
+    else  // SELL signal
+        stop_loss := entry_price + (atr_value * slMultiplier)
+        take_profit_1 := entry_price - (atr_value * tp1Multiplier)
+        take_profit_2 := entry_price - (atr_value * tp2Multiplier)
+        take_profit_3 := entry_price - (atr_value * tp3Multiplier)
+
+// Check if levels are hit
+sl_hit = active_trade and ((signal_direction == 1 and low <= stop_loss) or (signal_direction == -1 and high >= stop_loss))
+tp1_hit = active_trade and ((signal_direction == 1 and high >= take_profit_1) or (signal_direction == -1 and low <= take_profit_1))
+tp2_hit = active_trade and ((signal_direction == 1 and high >= take_profit_2) or (signal_direction == -1 and low <= take_profit_2))
+tp3_hit = active_trade and ((signal_direction == 1 and high >= take_profit_3) or (signal_direction == -1 and low <= take_profit_3))
+
+// Reset trade on SL or TP3 hit
+if sl_hit or tp3_hit
+    active_trade := false
+
+// Calculate Risk:Reward Ratio
+risk_amount = math.abs(entry_price - stop_loss)
+reward_amount_1 = math.abs(take_profit_1 - entry_price)
+risk_reward_1 = risk_amount > 0 ? reward_amount_1 / risk_amount : 0
+
+// ═══════════════════════════════════════════════════════════════════════════════════
 // 📊 PERFORMANCE TRACKING
 // ═══════════════════════════════════════════════════════════════════════════════════
 
@@ -424,6 +480,10 @@ var int total_signals = 0
 var int correct_predictions = 0
 var float last_signal_price = 0.0
 var int last_signal_direction = 0
+var int tp1_hits = 0
+var int tp2_hits = 0
+var int tp3_hits = 0
+var int sl_hits = 0
 
 // Track signals
 if buy_signal and not buy_signal[1]
@@ -436,6 +496,16 @@ if sell_signal and not sell_signal[1]
     last_signal_price := close
     last_signal_direction := -1
 
+// Track TP and SL hits
+if tp1_hit and not tp1_hit[1]
+    tp1_hits += 1
+if tp2_hit and not tp2_hit[1]
+    tp2_hits += 1
+if tp3_hit and not tp3_hit[1]
+    tp3_hits += 1
+if sl_hit and not sl_hit[1]
+    sl_hits += 1
+
 // Check prediction accuracy after 10 bars
 if bar_index % 10 == 0 and last_signal_price > 0
     price_change = (close - last_signal_price) / last_signal_price
@@ -443,16 +513,18 @@ if bar_index % 10 == 0 and last_signal_price > 0
         correct_predictions += 1
 
 accuracy_rate = total_signals > 0 ? correct_predictions / total_signals * 100 : 0
+tp1_success_rate = total_signals > 0 ? tp1_hits / total_signals * 100 : 0
+sl_hit_rate = total_signals > 0 ? sl_hits / total_signals * 100 : 0
 
 // ═══════════════════════════════════════════════════════════════════════════════════
 // 📊 DASHBOARD
 // ═══════════════════════════════════════════════════════════════════════════════════
 
 if barstate.islast
-    var table dashboard = table.new(position.top_right, 3, 13, bgcolor=color.black, border_width=2, border_color=color.white)
+    var table dashboard = table.new(position.top_right, 3, 16, bgcolor=color.black, border_width=2, border_color=color.white)
     
     // Clear and rebuild table
-    table.clear(dashboard, 0, 0, 2, 12)
+    table.clear(dashboard, 0, 0, 2, 15)
     
     // Headers
     table.cell(dashboard, 0, 0, "🌟 EL MEHDI QUANTUM ULTIMATE", text_color=color.yellow, text_size=size.large, bgcolor=color.navy)
@@ -519,10 +591,34 @@ if barstate.islast
     table.cell(dashboard, 2, 10, total_signals > 10 ? "🟢 ACTIVE" : total_signals > 5 ? "🟡 MODERATE" : "🔴 LOW", 
                text_color=total_signals > 10 ? color.lime : total_signals > 5 ? color.yellow : color.red, text_size=size.normal)
     
+    // Risk Management Stats
+    table.cell(dashboard, 0, 11, "🛡️ Risk Management", text_color=color.white, text_size=size.normal)
+    table.cell(dashboard, 1, 11, "R:R " + str.tostring(math.round(risk_reward_1, 1)), text_color=color.white, text_size=size.normal)
+    table.cell(dashboard, 2, 11, risk_reward_1 > 2 ? "🟢 EXCELLENT" : risk_reward_1 > 1.5 ? "🟡 GOOD" : "🔴 POOR", 
+               text_color=risk_reward_1 > 2 ? color.lime : risk_reward_1 > 1.5 ? color.yellow : color.red, text_size=size.normal)
+    
+    // TP1 Success Rate
+    table.cell(dashboard, 0, 12, "🎯 TP1 Success", text_color=color.lime, text_size=size.normal)
+    table.cell(dashboard, 1, 12, str.tostring(math.round(tp1_success_rate, 1)) + "%", text_color=color.white, text_size=size.normal)
+    table.cell(dashboard, 2, 12, tp1_success_rate > 60 ? "🟢 EXCELLENT" : tp1_success_rate > 40 ? "🟡 GOOD" : "🔴 POOR", 
+               text_color=tp1_success_rate > 60 ? color.lime : tp1_success_rate > 40 ? color.yellow : color.red, text_size=size.normal)
+    
+    // SL Hit Rate
+    table.cell(dashboard, 0, 13, "🛑 SL Hit Rate", text_color=color.red, text_size=size.normal)
+    table.cell(dashboard, 1, 13, str.tostring(math.round(sl_hit_rate, 1)) + "%", text_color=color.white, text_size=size.normal)
+    table.cell(dashboard, 2, 13, sl_hit_rate < 30 ? "🟢 EXCELLENT" : sl_hit_rate < 50 ? "🟡 ACCEPTABLE" : "🔴 HIGH", 
+               text_color=sl_hit_rate < 30 ? color.lime : sl_hit_rate < 50 ? color.yellow : color.red, text_size=size.normal)
+    
+    // Current Trade Status
+    table.cell(dashboard, 0, 14, "💹 Trade Status", text_color=color.aqua, text_size=size.normal)
+    table.cell(dashboard, 1, 14, active_trade ? (signal_direction == 1 ? "LONG" : "SHORT") : "WAITING", text_color=color.white, text_size=size.normal)
+    table.cell(dashboard, 2, 14, active_trade ? "🟢 ACTIVE" : "🟡 STANDBY", 
+               text_color=active_trade ? color.lime : color.yellow, text_size=size.normal)
+    
     // Final Signal
-    table.cell(dashboard, 0, 11, "🎯 FINAL SIGNAL", text_color=color.white, text_size=size.large, bgcolor=color.gray)
-    table.cell(dashboard, 1, 11, str.tostring(math.round(ultimate_signal * 100, 1)) + "%", text_color=color.white, text_size=size.large, bgcolor=color.gray)
-    table.cell(dashboard, 2, 11, buy_signal ? "🚀 STRONG BUY" : sell_signal ? "🔻 STRONG SELL" : ultimate_signal > 0.55 ? "🟢 BUY" : ultimate_signal < 0.45 ? "🔴 SELL" : "🟡 HOLD", 
+    table.cell(dashboard, 0, 15, "🎯 FINAL SIGNAL", text_color=color.white, text_size=size.large, bgcolor=color.gray)
+    table.cell(dashboard, 1, 15, str.tostring(math.round(ultimate_signal * 100, 1)) + "%", text_color=color.white, text_size=size.large, bgcolor=color.gray)
+    table.cell(dashboard, 2, 15, buy_signal ? "🚀 STRONG BUY" : sell_signal ? "🔻 STRONG SELL" : ultimate_signal > 0.55 ? "🟢 BUY" : ultimate_signal < 0.45 ? "🔴 SELL" : "🟡 HOLD", 
                text_color=buy_signal ? color.lime : sell_signal ? color.red : ultimate_signal > 0.55 ? color.green : ultimate_signal < 0.45 ? color.maroon : color.yellow, 
                text_size=size.large, bgcolor=color.gray)
 
@@ -556,11 +652,52 @@ plotshape(iceberg_sell, style=shape.arrowdown, location=location.abovebar, color
 bgcolor(quantum_breakthrough ? color.new(color.orange, 85) : na, title="Quantum Breakthrough")
 
 // ═══════════════════════════════════════════════════════════════════════════════════
+// 🛡️ RISK LEVEL VISUALIZATION
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Plot risk levels when active trade exists
+if enableRiskLevels and active_trade
+    // Entry line
+    line.new(bar_index - 1, entry_price, bar_index + 10, entry_price, 
+             color=color.blue, width=2, style=line.style_solid, extend=extend.right)
+    label.new(bar_index, entry_price, "ENTRY: " + str.tostring(entry_price, "#.####"), 
+              color=color.blue, textcolor=color.white, style=label.style_label_left, size=size.small)
+    
+    // Stop Loss line
+    line.new(bar_index - 1, stop_loss, bar_index + 10, stop_loss, 
+             color=color.red, width=2, style=line.style_dashed, extend=extend.right)
+    label.new(bar_index, stop_loss, "SL: " + str.tostring(stop_loss, "#.####") + " (-" + str.tostring(slMultiplier) + " ATR)", 
+              color=color.red, textcolor=color.white, style=label.style_label_left, size=size.small)
+    
+    // Take Profit levels
+    line.new(bar_index - 1, take_profit_1, bar_index + 10, take_profit_1, 
+             color=color.lime, width=2, style=line.style_dotted, extend=extend.right)
+    label.new(bar_index, take_profit_1, "TP1: " + str.tostring(take_profit_1, "#.####") + " (+" + str.tostring(tp1Multiplier) + " ATR)", 
+              color=color.lime, textcolor=color.black, style=label.style_label_left, size=size.small)
+    
+    line.new(bar_index - 1, take_profit_2, bar_index + 10, take_profit_2, 
+             color=color.yellow, width=1, style=line.style_dotted, extend=extend.right)
+    label.new(bar_index, take_profit_2, "TP2: " + str.tostring(take_profit_2, "#.####") + " (+" + str.tostring(tp2Multiplier) + " ATR)", 
+              color=color.yellow, textcolor=color.black, style=label.style_label_left, size=size.small)
+    
+    line.new(bar_index - 1, take_profit_3, bar_index + 10, take_profit_3, 
+             color=color.orange, width=1, style=line.style_dotted, extend=extend.right)
+    label.new(bar_index, take_profit_3, "TP3: " + str.tostring(take_profit_3, "#.####") + " (+" + str.tostring(tp3Multiplier) + " ATR)", 
+              color=color.orange, textcolor=color.black, style=label.style_label_left, size=size.small)
+
+// Plot ATR value for reference
+plot(enableRiskLevels ? atr_value : na, title="ATR Value", color=color.new(color.gray, 70), linewidth=1)
+
+// ═══════════════════════════════════════════════════════════════════════════════════
 // 🚨 ALERTS
 // ═══════════════════════════════════════════════════════════════════════════════════
 
-alertcondition(buy_signal, title="🚀 QUANTUM BUY SIGNAL", message="🌟 EL MEHDI QUANTUM: Strong BUY signal!\nSignal: {{plot_0}}%\nConfidence: {{plot_1}}%")
-alertcondition(sell_signal, title="🔻 QUANTUM SELL SIGNAL", message="🌟 EL MEHDI QUANTUM: Strong SELL signal!\nSignal: {{plot_0}}%\nConfidence: {{plot_1}}%")
+alertcondition(buy_signal, title="🚀 QUANTUM BUY SIGNAL", message="🌟 EL MEHDI QUANTUM: Strong BUY signal!\nEntry: " + str.tostring(close) + "\nSL: " + str.tostring(stop_loss) + "\nTP1: " + str.tostring(take_profit_1) + "\nR:R: " + str.tostring(risk_reward_1))
+alertcondition(sell_signal, title="🔻 QUANTUM SELL SIGNAL", message="🌟 EL MEHDI QUANTUM: Strong SELL signal!\nEntry: " + str.tostring(close) + "\nSL: " + str.tostring(stop_loss) + "\nTP1: " + str.tostring(take_profit_1) + "\nR:R: " + str.tostring(risk_reward_1))
+alertcondition(tp1_hit, title="🎯 TP1 HIT", message="✅ Take Profit 1 reached!")
+alertcondition(tp2_hit, title="🎯 TP2 HIT", message="✅ Take Profit 2 reached!")
+alertcondition(tp3_hit, title="🎯 TP3 HIT", message="✅ Take Profit 3 reached!")
+alertcondition(sl_hit, title="🛑 STOP LOSS HIT", message="❌ Stop Loss triggered!")
 alertcondition(quantum_breakthrough, title="💥 QUANTUM BREAKTHROUGH", message="⚛️ Quantum breakthrough detected!")
 alertcondition(pattern_confluence, title="📐 PATTERN CONFLUENCE", message="🎯 Multiple patterns converging!")
 alertcondition(liquidity_event, title="💧 LIQUIDITY EVENT", message="🚨 Liquidity event detected!")
