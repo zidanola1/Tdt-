@@ -191,13 +191,13 @@ if enable_casting and counting_started
                 casting_active := true
                 forward_cast_active := true
                 if same_candle_transition
-                    // TOGGLE ON: -1 candle IS the 1 candle - next candle becomes 2
-                    cast_forward_count := 1  // This -1 candle represents 1, next will be 2
+                    // TOGGLE ON: -1 candle IS the 1 candle - next candle becomes 3 (shift left by 2)
+                    cast_forward_count := 2  // This -1 candle represents 1, next will be 3
                     on_cycle_candle := false
                     // Don't increment backward_cast_count - stay at -1 for display
                 else
-                    // TOGGLE OFF: -1 ends, next candle becomes 1  
-                    cast_forward_count := 0  // Will become 1 on next candle
+                    // TOGGLE OFF: -1 ends, next candle becomes 2 (shift left by 1)
+                    cast_forward_count := 1  // Will become 2 on next candle
                     on_cycle_candle := false
                     backward_cast_count := backward_cast_count + 1
             else
