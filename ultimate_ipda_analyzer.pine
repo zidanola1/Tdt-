@@ -132,6 +132,7 @@ var bool casting_active = false
 var bool forward_cast_active = false
 var int backward_cast_count = 0  // Will start at first negative number
 var bool casting_phase_negative = true
+var array<float> cast_forward_sequence = array.new<float>()
 var int cast_forward_count = 0
 var bool casting_initialized = false
 
@@ -192,6 +193,7 @@ if enable_casting and counting_started
                 casting_phase_negative := false
                 casting_active := true
                 forward_cast_active := true
+                cast_forward_sequence := forward_cast_seq_array
                 cast_forward_count := 1  // Start at 1 on next candle
             else
                 // Continue negative counting (moving toward -1)
