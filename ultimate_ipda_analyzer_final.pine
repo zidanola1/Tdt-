@@ -194,20 +194,8 @@ if enable_casting and counting_started
                 backward_cast_count := backward_cast_count + 1
         else
             if forward_cast_active
-                // Move to next number in forward sequence array
-                current_index = -1
-                // Find current position in sequence array
-                for i = 0 to array.size(forward_cast_seq_array) - 1
-                    if array.get(forward_cast_seq_array, i) == cast_forward_count
-                        current_index := i
-                        break
-                
-                // Move to next position in sequence
-                if current_index >= 0 and current_index < array.size(forward_cast_seq_array) - 1
-                    cast_forward_count := int(array.get(forward_cast_seq_array, current_index + 1))
-                else
-                    // If not found in sequence or at end, just increment
-                    cast_forward_count := cast_forward_count + 1
+                // Normal candle counting - increment by 1 each candle
+                cast_forward_count := cast_forward_count + 1
 
 // === MAIN COUNTING LOGIC ===
 if counting_started and current_count_number <= max_candles and bar_index >= anchor_bar_index
