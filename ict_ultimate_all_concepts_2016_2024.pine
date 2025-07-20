@@ -421,10 +421,12 @@ if show_dashboard and barstate.islast
     table.cell(ict_table, 2, 6, "INSTITUTIONAL", text_color=color.white, text_size=table_size)
     
     // Silver Bullet
-    sb_now = time(timeframe.period, "1000-1003:1234567", "America/New_York") or time(timeframe.period, "1400-1403:1234567", "America/New_York")
+    sb_now_morning = time(timeframe.period, "1000-1003:1234567", "America/New_York")
+    sb_now_afternoon = time(timeframe.period, "1400-1403:1234567", "America/New_York")
+    sb_now_active = not na(sb_now_morning) or not na(sb_now_afternoon)
     table.cell(ict_table, 0, 7, "🎯 Silver Bullet", text_color=color.lime, text_size=table_size)
-    table.cell(ict_table, 1, 7, not na(sb_now) ? "FIRING" : "LOADING", text_color=not na(sb_now) ? color.lime : color.gray, text_size=table_size)
-    table.cell(ict_table, 2, 7, not na(sb_now) ? "READY" : "STANDBY", text_color=color.white, text_size=table_size)
+    table.cell(ict_table, 1, 7, sb_now_active ? "FIRING" : "LOADING", text_color=sb_now_active ? color.lime : color.gray, text_size=table_size)
+    table.cell(ict_table, 2, 7, sb_now_active ? "READY" : "STANDBY", text_color=color.white, text_size=table_size)
     
     // OTE Zone
     table.cell(ict_table, 0, 8, "📊 OTE Zone", text_color=color.fuchsia, text_size=table_size)
@@ -468,8 +470,10 @@ alertcondition(bos and new_ll, title="🔻 ICT BOS BEARISH", message="ICT: Break
 alertcondition(choch, title="🔄 ICT CHoCH", message="ICT: Change of Character detected! Trend reversal possible!")
 
 // Silver Bullet Alert
-sb_alert = time(timeframe.period, "1000-1003:1234567", "America/New_York") or time(timeframe.period, "1400-1403:1234567", "America/New_York")
-alertcondition(not na(sb_alert) and na(sb_alert[1]), title="🎯 SILVER BULLET ACTIVE", message="ICT: Silver Bullet setup ACTIVE! High probability trade window!")
+sb_alert_morning = time(timeframe.period, "1000-1003:1234567", "America/New_York")
+sb_alert_afternoon = time(timeframe.period, "1400-1403:1234567", "America/New_York")
+sb_alert_active = not na(sb_alert_morning) or not na(sb_alert_afternoon)
+alertcondition(sb_alert_active and not sb_alert_active[1], title="🎯 SILVER BULLET ACTIVE", message="ICT: Silver Bullet setup ACTIVE! High probability trade window!")
 
 // Kill Zone Alerts
 london_alert = time(timeframe.period, "0200-0500:1234567", "America/New_York")
