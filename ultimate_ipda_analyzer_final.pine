@@ -200,10 +200,30 @@ if enable_casting and counting_started
         else
             if forward_cast_active
                 if same_candle_transition and cast_forward_count == 0 and casting_active
-                    // CYCLE MODE: This -1 candle becomes 1 on the SAME candle
+                    // CYCLE MODE: This -1 candle becomes 1, then skip to next sequence number
                     cast_forward_count := 1
+                    // Check if 1 is in forward sequence, if not go to next number
+                    if not array.includes(forward_cast_seq_array, 1.0)
+                        // Find next number in sequence after 1
+                        for i = 0 to array.size(forward_cast_seq_array) - 1
+                            seq_num = array.get(forward_cast_seq_array, i)
+                            if seq_num > 1
+                                cast_forward_count := int(seq_num)
+                                break
                 else
-                    cast_forward_count := cast_forward_count + 1
+                    // Normal increment, but find next sequence number
+                    next_count = cast_forward_count + 1
+                    found_next = false
+                    // Look for next number in forward sequence
+                    for i = 0 to array.size(forward_cast_seq_array) - 1
+                        seq_num = array.get(forward_cast_seq_array, i)
+                        if seq_num > cast_forward_count and not found_next
+                            cast_forward_count := int(seq_num)
+                            found_next := true
+                            break
+                    
+                    if not found_next
+                        cast_forward_count := cast_forward_count + 1
 
 // === MAIN COUNTING LOGIC ===
 if counting_started and current_count_number <= max_candles and bar_index >= anchor_bar_index
@@ -268,9 +288,10 @@ if enable_casting and counting_started and casting_initialized
             
             if is_cycle_candle and backward_has_one
                 // CYCLE MODE: Don't show forward label, -1 already shown represents both
+                // The -1 represents both backward end and forward start (1)
                 na
             else
-                // NORMAL FORWARD CASTING
+                // NORMAL FORWARD CASTING - only show if it's in the sequence
                 forward_offset = (high - low) * 0.15
                 forward_y = display_position == "above_candle" ? high + forward_offset + vertical_shift : low - forward_offset - vertical_shift
                 forward_text = str.tostring(cast_forward_count)
