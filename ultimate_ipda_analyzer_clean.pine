@@ -190,16 +190,20 @@ if enable_casting and counting_started
                 casting_active := true
                 forward_cast_active := true
                 if same_candle_transition
-                    // CYCLE: -1 candle IS the 1 candle (same point)
-                    cast_forward_count := 1  // This -1 candle counts as 1 in forward sequence
+                    // CYCLE: -1 candle IS the 1 candle (same point) - DON'T increment yet
+                    cast_forward_count := 0  // Will become 1 on this same candle
                 else
                     // TRADITIONAL: separate candles
-                    cast_forward_count := 1  // Next candle will be 1
+                    cast_forward_count := 0  // Will become 1 on next candle
             else
                 backward_cast_count := backward_cast_count + 1
         else
             if forward_cast_active
-                cast_forward_count := cast_forward_count + 1
+                if same_candle_transition and cast_forward_count == 0 and casting_active
+                    // CYCLE MODE: This -1 candle becomes 1 on the SAME candle
+                    cast_forward_count := 1
+                else
+                    cast_forward_count := cast_forward_count + 1
 
 // === MAIN COUNTING LOGIC ===
 if counting_started and current_count_number <= max_candles and bar_index >= anchor_bar_index
@@ -254,25 +258,23 @@ if enable_casting and counting_started and casting_initialized
             casting_text = str.tostring(backward_cast_count)
             label.new(bar_index, casting_y, casting_text, color=color.new(#FFFFFF, 100), textcolor=casting_color, size=get_label_size())
     
-    // FORWARD CASTING DISPLAY
+            // FORWARD CASTING DISPLAY
     if not casting_phase_negative and forward_cast_active
-        // Normal forward sequence display
         forward_cast_hit = array.includes(forward_cast_seq_array, float(cast_forward_count))
         if forward_cast_hit and cast_forward_count > 0
-            if same_candle_transition and cast_forward_count == 1
-                // CYCLE MODE: Show -1 (this candle is both -1 backward end and 1 forward start)
+            if same_candle_transition and cast_forward_count == 1 and backward_cast_count == -1
+                // CYCLE MODE: -1 candle IS also the 1 candle - show -1 only (represents both)
                 backward_hit = array.includes(casting_seq_array, 1.0)
                 if backward_hit
-                    casting_offset = (high - low) * 0.12
-                    casting_y = display_position == "above_candle" ? high + casting_offset + vertical_shift : low - casting_offset - vertical_shift
-                    label.new(bar_index, casting_y, "-1", color=color.new(#FFFFFF, 100), textcolor=casting_color, size=get_label_size())
-                                else
-                    // Show 1 if not in backward sequence
+                    // Don't show forward label - the -1 label already represents both
+                    // The -1 label shown above represents this cycle point
+                else
+                    // Show 1 if -1 is not in backward sequence
                     forward_offset = (high - low) * 0.15
                     forward_y = display_position == "above_candle" ? high + forward_offset + vertical_shift : low - forward_offset - vertical_shift
                     label.new(bar_index, forward_y, "1", color=color.new(#FFFFFF, 100), textcolor=casting_color, size=get_label_size())
             else
-                // NORMAL FORWARD CASTING (after cycle point) or TRADITIONAL MODE  
+                // NORMAL FORWARD CASTING
                 forward_offset = (high - low) * 0.15
                 forward_y = display_position == "above_candle" ? high + forward_offset + vertical_shift : low - forward_offset - vertical_shift
                 forward_text = str.tostring(cast_forward_count)
