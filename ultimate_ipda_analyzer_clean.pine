@@ -1,0 +1,294 @@
+//@version=6
+indicator("Ultimate IPDA Analyzer", shorttitle="IPDA Pro", overlay=true, max_labels_count=500, max_lines_count=500)
+
+// === BASIC SETTINGS ===
+start_date = input.time(timestamp("2025-01-15 09:30"), "Start Date", group="Basic Settings")
+sequence_type = input.string("custom", "Sequence Type", options=["custom", "sequence_7", "sequence_13", "sequence_21", "gann_cardinal"], group="Basic Settings")
+custom_sequence = input.string("7,13,21,31,42", "Custom Sequence", group="Basic Settings")
+max_candles = input.int(100, "Number of Candles", minval=1, maxval=500, group="Basic Settings")
+
+// === BACKWARD-TO-FORWARD CASTING (TDT) ===
+enable_casting = input.bool(false, "Enable Backward-to-Forward Casting", group="TDT Casting")
+casting_sequence_type = input.string("A", "Backward Sequence Type", options=["A", "B"], group="TDT Casting")
+backward_sequence_a = input.string("33,27,21,13,7,3,1", "Backward Sequence A", group="TDT Casting")
+backward_sequence_b = input.string("37,25,17,11,9,5,1", "Backward Sequence B", group="TDT Casting")
+forward_casting_sequence = input.string("1,3,7,13,21,27,33", "Forward Casting Sequence", group="TDT Casting")
+enable_shift_mode = input.bool(false, "Enable Shift Mode", group="TDT Casting")
+shift_seed = input.int(7, "Shift Seed", minval=-100, maxval=100, group="TDT Casting")
+
+// === TIME DISTORTION ===
+freezeOnTD = input.bool(true, "Freeze Count on TD", group="Time Distortion")
+enableAdvancedTD = input.bool(true, "Enhanced TD Detection", group="Time Distortion")
+inside_method = input.string("High/Low", "Inside Detection Method", options=["High/Low", "Open/Close"], group="Time Distortion")
+inside_comparison = input.string("<=", "Inside Comparison", options=["<=", "<"], group="Time Distortion")
+
+// === COUNTING FEATURES ===
+count_outside_double = input.bool(false, "Count Outside Candles Double", group="Counting Features")
+multiple_inside_candles = input.bool(false, "Multiple Inside Candles (vs Last One Only)", group="Counting Features")
+
+// === DISPLAY SETTINGS ===
+display_position = input.string("above_candle", "Display Position", options=["above_candle", "below_candle"], group="Display Settings")
+vertical_shift = input.int(0, "Vertical Shift", group="Display Settings")
+label_size = input.string("normal", "Label Size", options=["tiny", "small", "normal", "large", "huge"], group="Display Settings")
+sequence_color = input.color(#FF0000, "Sequence Number Color", group="Display Settings")
+casting_color = input.color(#FF00FF, "Casting Color", group="Display Settings")
+display_only_sequence = input.bool(true, "Display Only Sequence Numbers", group="Display Settings")
+
+// === ENHANCED SEQUENCES ===
+get_sequence(string seq_type) =>
+    switch seq_type
+        "sequence_7" => "7,13,21,31,42"
+        "sequence_13" => "13,21,25,31,42"
+        "sequence_21" => "21,31,42,63"
+        "gann_cardinal" => "1,2,4,8,16,32,64,128"
+        => custom_sequence
+
+// === SEQUENCE PARSING ===
+parse_sequence(string seq_str) =>
+    sequence = array.new<float>()
+    parts = str.split(seq_str, ",")
+    for part in parts
+        trimmed_part = str.trim(part)
+        if str.length(trimmed_part) > 0
+            num_value = str.tonumber(trimmed_part)
+            if not na(num_value)
+                array.push(sequence, num_value)
+    sequence
+
+// === TDT CASTING FUNCTIONS ===
+get_selected_backward_sequence() =>
+    casting_sequence_type == "A" ? backward_sequence_a : backward_sequence_b
+
+get_highest_backward_number(string seq_str) =>
+    seq_array = parse_sequence(seq_str)
+    highest = 0.0
+    for i = 0 to array.size(seq_array) - 1
+        num = array.get(seq_array, i)
+        if num > highest
+            highest := num
+    highest
+
+// === CANDLE TYPE DETECTION ===
+is_inside_candle(int index) =>
+    if not enableAdvancedTD
+        false
+    else
+        c_high = high[index]
+        c_low = low[index]
+        c_open = open[index]
+        c_close = close[index]
+        
+        prev_high = high[index + 1]
+        prev_low = low[index + 1]
+        prev_open = open[index + 1]
+        prev_close = close[index + 1]
+        
+        // Inside candle detection
+        is_inside = if inside_method == "High/Low"
+            if inside_comparison == "<="
+                c_high <= prev_high and c_low >= prev_low
+            else
+                c_high < prev_high and c_low > prev_low
+        else
+            bodyMax = math.max(c_open, c_close)
+            bodyMin = math.min(c_open, c_close)
+            prevBodyMax = math.max(prev_open, prev_close)
+            prevBodyMin = math.min(prev_open, prev_close)
+            
+            if inside_comparison == "<="
+                bodyMax <= prevBodyMax and bodyMin >= prevBodyMin
+            else
+                bodyMax < prevBodyMax and bodyMin > prevBodyMin
+        
+        is_inside
+
+is_outside_candle(int index) =>
+    if not enableAdvancedTD
+        false
+    else
+        c_high = high[index]
+        c_low = low[index]
+        prev_high = high[index + 1]
+        prev_low = low[index + 1]
+        
+        // Outside candle: high > prev_high AND low < prev_low
+        c_high > prev_high and c_low < prev_low
+
+// === TD DETECTION (Legacy function for compatibility) ===
+is_ultimate_td_candle(int index) =>
+    is_inside_candle(index)
+
+// === VARIABLES ===
+var int anchor_bar_index = na
+var bool counting_started = false
+var int current_count_number = 1
+var bool in_time_distortion = false
+var int td_count = 0
+var bool prev_was_inside = false
+var int inside_candle_streak = 0
+
+// === TDT CASTING VARIABLES ===
+var bool casting_active = false
+var bool forward_cast_active = false
+var int backward_cast_count = 0
+var bool casting_phase_negative = true
+var int cast_forward_count = 0
+var bool casting_initialized = false
+
+// === SEQUENCE ARRAYS ===
+current_sequence_str = get_sequence(sequence_type)
+sequence_array = parse_sequence(current_sequence_str)
+selected_backward_sequence = get_selected_backward_sequence()
+casting_seq_array = parse_sequence(selected_backward_sequence)
+forward_cast_seq_array = parse_sequence(forward_casting_sequence)
+
+// === LABEL SIZE FUNCTION ===
+get_label_size() =>
+    switch label_size
+        "tiny" => size.tiny
+        "small" => size.small
+        "large" => size.large
+        "huge" => size.huge
+        => size.normal
+
+// === ANCHOR POINT LOGIC ===
+if time >= start_date and not counting_started
+    anchor_bar_index := bar_index
+    counting_started := true
+    current_count_number := enable_shift_mode ? (shift_seed - 1) : 0
+    in_time_distortion := false
+
+// === CANDLE ANALYSIS FOR CURRENT BAR ===
+current_is_inside = is_inside_candle(0)
+current_is_outside = is_outside_candle(0)
+current_is_td = current_is_inside
+
+// === INSIDE CANDLE STREAK TRACKING ===
+if current_is_inside
+    if not prev_was_inside
+        inside_candle_streak := 1
+    else
+        inside_candle_streak := inside_candle_streak + 1
+    prev_was_inside := true
+else
+    prev_was_inside := false
+    inside_candle_streak := 0
+
+// === TDT BACKWARD CASTING LOGIC ===
+if enable_casting and counting_started
+    if not casting_initialized and bar_index == anchor_bar_index
+        highest_num = get_highest_backward_number(selected_backward_sequence)
+        backward_cast_count := -int(highest_num)
+        casting_initialized := true
+    
+    if casting_initialized and not (current_is_td and freezeOnTD)
+        if casting_phase_negative
+            if backward_cast_count == -1
+                casting_phase_negative := false
+                casting_active := true
+                forward_cast_active := true
+                cast_forward_count := 1
+            else
+                backward_cast_count := backward_cast_count + 1
+        else
+            if forward_cast_active
+                cast_forward_count := cast_forward_count + 1
+
+// === MAIN COUNTING LOGIC ===
+if counting_started and current_count_number <= max_candles and bar_index >= anchor_bar_index
+    
+    count_increment = 1
+    
+    if count_outside_double and current_is_outside
+        count_increment := 2
+    
+    should_freeze_on_inside = false
+    if current_is_inside and freezeOnTD
+        if multiple_inside_candles
+            should_freeze_on_inside := false
+        else
+            should_freeze_on_inside := true
+    
+    if should_freeze_on_inside
+        in_time_distortion := true
+        td_count := td_count + 1
+    else
+        if in_time_distortion and freezeOnTD and not current_is_inside
+            current_count_number := current_count_number + count_increment
+            in_time_distortion := false
+            td_count := 0
+        else
+            current_count_number := current_count_number + count_increment
+            td_count := 0
+    
+    // === SEQUENCE DETECTION ===
+    is_main_sequence = array.includes(sequence_array, float(current_count_number))
+    
+    range_mult = (high - low) * 0.1
+    y_base = display_position == "above_candle" ? high + range_mult + vertical_shift : low - range_mult - vertical_shift
+    
+    // === MAIN SEQUENCE LABELS ===
+    show_main = not enable_casting or not casting_initialized
+    if show_main and (not display_only_sequence or is_main_sequence)
+        label_text = current_is_td and freezeOnTD ? str.tostring(current_count_number) + "×" : str.tostring(current_count_number)
+        main_color = current_is_td and freezeOnTD ? color.new(sequence_color, 50) : sequence_color
+        
+        if not display_only_sequence or is_main_sequence
+            label.new(bar_index, y_base, label_text, color=color.new(#FFFFFF, 100), textcolor=main_color, size=get_label_size())
+
+// === TDT CASTING DISPLAY ===
+if enable_casting and counting_started and casting_initialized
+    if casting_phase_negative
+        negative_hit = array.includes(casting_seq_array, float(math.abs(backward_cast_count)))
+        if negative_hit
+            casting_offset = (high - low) * 0.12
+            casting_y = display_position == "above_candle" ? high + casting_offset + vertical_shift : low - casting_offset - vertical_shift
+            casting_text = str.tostring(backward_cast_count)
+            label.new(bar_index, casting_y, casting_text, color=color.new(#FFFFFF, 100), textcolor=casting_color, size=get_label_size())
+    else
+        if forward_cast_active
+            forward_cast_hit = array.includes(forward_cast_seq_array, float(cast_forward_count))
+            if forward_cast_hit
+                forward_offset = (high - low) * 0.15
+                forward_y = display_position == "above_candle" ? high + forward_offset + vertical_shift : low - forward_offset - vertical_shift
+                forward_text = str.tostring(cast_forward_count)
+                label.new(bar_index, forward_y, forward_text, color=color.new(#FFFFFF, 100), textcolor=casting_color, size=get_label_size())
+
+// === ALERTS ===
+if counting_started and not in_time_distortion
+    current_count_float = float(current_count_number)
+    if array.includes(sequence_array, current_count_float)
+        alert("IPDA Sequence Number Reached: " + str.tostring(current_count_float), alert.freq_once_per_bar)
+
+if enable_casting and casting_active and not casting_active[1]
+    alert("TDT Casting Activated - Forward Count Started", alert.freq_once_per_bar)
+
+if enable_casting and forward_cast_active
+    forward_cast_hit = array.includes(forward_cast_seq_array, float(cast_forward_count))
+    if forward_cast_hit
+        alert("TDT Forward Cast Hit: " + str.tostring(cast_forward_count), alert.freq_once_per_bar)
+
+// === STATUS TABLE ===
+if barstate.islast
+    var table status_table = table.new(position.top_right, 2, 10, bgcolor=color.new(#FFFFFF, 80), border_width=1)
+    table.cell(status_table, 0, 0, "Status", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 1, 0, "Value", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 0, 1, "Counting", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 1, 1, str.tostring(counting_started), text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 0, 2, "Count", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 1, 2, str.tostring(current_count_number), text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 0, 3, "Shift Mode", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 1, 3, enable_shift_mode ? str.tostring(shift_seed) : "OFF", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 0, 4, "Cast Seq", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 1, 4, enable_casting ? casting_sequence_type : "OFF", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 0, 5, "Cast Phase", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 1, 5, enable_casting ? (casting_phase_negative ? "NEG" : "POS") : "OFF", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 0, 6, "Cast Count", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 1, 6, enable_casting ? (casting_phase_negative ? str.tostring(backward_cast_count) : str.tostring(cast_forward_count)) : "OFF", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 0, 7, "Outside 2x", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 1, 7, count_outside_double ? "ON" : "OFF", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 0, 8, "Multi Inside", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 1, 8, multiple_inside_candles ? "ON" : "OFF", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 0, 9, "Candle Type", text_color=#000000, text_size=size.tiny)
+    candle_type = current_is_inside ? "IN" : (current_is_outside ? "OUT" : "NORMAL")
+    table.cell(status_table, 1, 9, candle_type, text_color=#000000, text_size=size.tiny)
