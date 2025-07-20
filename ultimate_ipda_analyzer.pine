@@ -211,7 +211,8 @@ var bool forward_cast_active = false
 var int cast_pivot_bar = 0
 var array<float> cast_forward_sequence = array.new<float>()
 var int cast_forward_count = 0
-var int backward_cast_count = 1
+var int backward_cast_count = -33  // Start with negative numbers
+var bool casting_phase_negative = true  // Track if in negative phase
 
 // === MTF DATA ===
 mtf_close = enable_mtf ? request.security(syminfo.tickerid, higher_tf, close) : close
@@ -242,7 +243,8 @@ get_label_size() =>
 if use_manual_anchor and manual_anchor_bar >= 0
     anchor_bar_index := bar_index - manual_anchor_bar
     counting_started := true
-    current_count_number := 1
+    // Apply shift mode to initial count
+    current_count_number := enable_shift_mode ? shift_seed : 1
     in_time_distortion := false
     
     if not na(anchor_line)
@@ -252,7 +254,8 @@ if use_manual_anchor and manual_anchor_bar >= 0
 else if time >= start_date and not counting_started
     anchor_bar_index := bar_index
     counting_started := true
-    current_count_number := 1
+    // Apply shift mode to initial count
+    current_count_number := enable_shift_mode ? shift_seed : 1
     in_time_distortion := false
     
     anchor_line := line.new(bar_index, low, bar_index, high, color=#0000FF, width=3, style=line.style_solid)
@@ -265,35 +268,30 @@ bgcolor(highlightTD and current_is_td ? color.new(tdColor, 85) : na, title="TD B
 
 // === TDT BACKWARD CASTING LOGIC ===
 if enable_casting and counting_started
-    // Check for casting trigger (backward count reaches 1)
-    backward_cast_hit = array.includes(casting_seq_array, float(backward_cast_count))
-    if backward_cast_hit and backward_cast_count == 1 and not forward_cast_active
-        // Trigger forward casting
-        casting_active := true
-        forward_cast_active := true
-        cast_pivot_bar := bar_index
-        
-        // Setup forward sequence
-        if enable_shift_mode
-            cast_forward_sequence := get_shifted_sequence(backward_casting_sequence, shift_seed)
-            cast_forward_count := shift_seed
-        else
-            cast_forward_sequence := get_forward_from_backward(backward_casting_sequence)
-            cast_forward_count := 1
-    
-    // Increment backward cast count
     if not (current_is_td and freezeOnTD)
-        backward_cast_count := backward_cast_count + 1
-    
-    // Forward cast counting
-    if forward_cast_active and not (current_is_td and freezeOnTD)
-        cast_forward_count := cast_forward_count + 1
+        if casting_phase_negative
+            // NEGATIVE PHASE: Check if we hit a sequence number (e.g., -33, -27, -21, -13, -7, -3, -1)
+            negative_hit = array.includes(casting_seq_array, float(math.abs(backward_cast_count)))
+            
+            // Check if we reached -1 (trigger point)
+            if backward_cast_count == -1
+                // Switch to positive phase with reversed sequence
+                casting_phase_negative := false
+                casting_active := true
+                forward_cast_active := true
+                cast_pivot_bar := bar_index
+                cast_forward_sequence := get_forward_from_backward(backward_casting_sequence)
+                cast_forward_count := 1  // Always start positive at 1
+            else
+                // Continue negative counting (moving toward -1)
+                backward_cast_count := backward_cast_count + 1
+        else
+            // POSITIVE PHASE: Forward cast counting
+            if forward_cast_active
+                cast_forward_count := cast_forward_count + 1
 
 // === MAIN COUNTING LOGIC WITH TD FREEZE ===
-if counting_started and current_count_number <= max_candles and bar_index >= anchor_bar_index
-    
-    // Determine display count BEFORE updating
-    display_count := current_count_number
+if counting_started and current_count_number <= max_candles and bar_index > anchor_bar_index
     
     // TD Freeze Logic
     if current_is_td and freezeOnTD
@@ -310,6 +308,7 @@ if counting_started and current_count_number <= max_candles and bar_index >= anc
             array.push(all_labels, td_label)
         
         // DON'T increment count - keep frozen
+        display_count := current_count_number
         
     else
         // Normal candle or TD freeze disabled
@@ -385,24 +384,25 @@ if counting_started and current_count_number <= max_candles and bar_index >= anc
 
 // === TDT CASTING DISPLAY ===
 if enable_casting and casting_visual and counting_started
-    // Backward casting display
-    casting_backward_hit = array.includes(casting_seq_array, float(backward_cast_count))
-    if casting_backward_hit
-        casting_offset = (high - low) * 0.12
-        casting_y = display_position == "above_candle" ? high + casting_offset + vertical_shift : low - casting_offset - vertical_shift
-        casting_text = str.tostring(backward_cast_count) + "B"
-        casting_label = label.new(bar_index, casting_y, casting_text, color=color.new(#FFFFFF, 100), textcolor=backward_color, size=get_label_size())
-        array.push(all_labels, casting_label)
-    
-    // Forward casting display
-    if forward_cast_active
-        forward_cast_hit = array.includes(cast_forward_sequence, float(cast_forward_count))
-        if forward_cast_hit
-            forward_offset = (high - low) * 0.15
-            forward_y = display_position == "above_candle" ? high + forward_offset + vertical_shift : low - forward_offset - vertical_shift
-            forward_text = str.tostring(cast_forward_count) + "F" + (enable_shift_mode ? "S" : "")
-            forward_label = label.new(bar_index, forward_y, forward_text, color=color.new(#FFFFFF, 100), textcolor=casting_color, size=get_label_size())
-            array.push(all_labels, forward_label)
+    if casting_phase_negative
+        // NEGATIVE PHASE: Display negative numbers when they hit sequence
+        negative_hit = array.includes(casting_seq_array, float(math.abs(backward_cast_count)))
+        if negative_hit
+            casting_offset = (high - low) * 0.12
+            casting_y = display_position == "above_candle" ? high + casting_offset + vertical_shift : low - casting_offset - vertical_shift
+            casting_text = str.tostring(backward_cast_count) + "B"  // Shows -33B, -27B, etc.
+            casting_label = label.new(bar_index, casting_y, casting_text, color=color.new(#FFFFFF, 100), textcolor=backward_color, size=get_label_size())
+            array.push(all_labels, casting_label)
+    else
+        // POSITIVE PHASE: Display forward casting hits
+        if forward_cast_active
+            forward_cast_hit = array.includes(cast_forward_sequence, float(cast_forward_count))
+            if forward_cast_hit
+                forward_offset = (high - low) * 0.15
+                forward_y = display_position == "above_candle" ? high + forward_offset + vertical_shift : low - forward_offset - vertical_shift
+                forward_text = str.tostring(cast_forward_count) + "F"  // Shows 1F, 3F, 7F, etc.
+                forward_label = label.new(bar_index, forward_y, forward_text, color=color.new(#FFFFFF, 100), textcolor=casting_color, size=get_label_size())
+                array.push(all_labels, forward_label)
 
 // === BACKWARD COUNTING ===
 if enable_backward_count and counting_started and anchor_bar_index > 0
