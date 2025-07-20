@@ -135,6 +135,7 @@ var int backward_cast_count = 0
 var bool casting_phase_negative = true
 var int cast_forward_count = 0
 var bool casting_initialized = false
+var bool on_cycle_candle = false
 
 // === SEQUENCE ARRAYS ===
 current_sequence_str = get_sequence(sequence_type)
@@ -190,17 +191,24 @@ if enable_casting and counting_started
                 casting_active := true
                 forward_cast_active := true
                 if same_candle_transition
-                    // CYCLE: -1 candle IS the 1 candle - next candle will be 2
+                    // CYCLE: -1 candle IS the 1 candle - mark this
                     cast_forward_count := 1
+                    on_cycle_candle := true
                 else
                     // TRADITIONAL: -1 ends, next candle will be 1
                     cast_forward_count := 0
+                    on_cycle_candle := false
             else
                 backward_cast_count := backward_cast_count + 1
         else
             if forward_cast_active
-                // Normal candle counting - increment by 1 each candle
-                cast_forward_count := cast_forward_count + 1
+                if on_cycle_candle
+                    // We're on the -1/1 cycle candle, next candle should be 2
+                    on_cycle_candle := false
+                    cast_forward_count := 2
+                else
+                    // Normal candle counting - increment by 1 each candle
+                    cast_forward_count := cast_forward_count + 1
 
 // === MAIN COUNTING LOGIC ===
 if counting_started and current_count_number <= max_candles and bar_index >= anchor_bar_index
