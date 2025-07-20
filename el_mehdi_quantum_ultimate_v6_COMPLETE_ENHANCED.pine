@@ -520,7 +520,8 @@ var bool active_trade = false
 // Get all analysis results
 neural_inputs = array.new<float>()
 array.push(neural_inputs, ta.rsi(close, 14) / 100)
-array.push(neural_inputs, ta.macd(close, 12, 26, 9)[2] / close * 1000)
+[_, _, macd_hist] = ta.macd(close, 12, 26, 9)
+array.push(neural_inputs, macd_hist / close * 1000)
 array.push(neural_inputs, volume / ta.sma(volume, 20))
 array.push(neural_inputs, ta.mom(close, 10) / close * 100)
 array.push(neural_inputs, ta.atr(14) / close * 100)
@@ -528,10 +529,7 @@ array.push(neural_inputs, (close - ta.sma(close, 20)) / ta.sma(close, 20) * 100)
 array.push(neural_inputs, ta.stoch(close, high, low, 14) / 100)
 array.push(neural_inputs, ta.cci(close, 20) / 100)
 
-neural_prediction = enableQuantum ? enhancedNeuralNetworkPredict(
-    array.get(neural_inputs, 0), array.get(neural_inputs, 1), array.get(neural_inputs, 2), array.get(neural_inputs, 3),
-    array.get(neural_inputs, 4), array.get(neural_inputs, 5), array.get(neural_inputs, 6), array.get(neural_inputs, 7)
-) : 0.5
+neural_prediction = enableQuantum ? enhancedNeuralNetworkPredict(array.get(neural_inputs, 0), array.get(neural_inputs, 1), array.get(neural_inputs, 2), array.get(neural_inputs, 3), array.get(neural_inputs, 4), array.get(neural_inputs, 5), array.get(neural_inputs, 6), array.get(neural_inputs, 7)) : 0.5
 
 [quantum_amplitude, quantum_state, quantum_confidence] = quantumSuperposition()
 [entanglement_strength, entanglement_coherence] = quantumEntanglement()
