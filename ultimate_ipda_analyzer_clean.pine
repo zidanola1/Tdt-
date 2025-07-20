@@ -267,7 +267,7 @@ if enable_casting and counting_started and casting_initialized
                 backward_hit = array.includes(casting_seq_array, 1.0)
                 if backward_hit
                     // Don't show forward label - the -1 label already represents both
-                    // The -1 label shown above represents this cycle point
+                    na  // Empty block placeholder
                 else
                     // Show 1 if -1 is not in backward sequence
                     forward_offset = (high - low) * 0.15
