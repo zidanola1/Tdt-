@@ -191,12 +191,12 @@ if enable_casting and counting_started
                 casting_active := true
                 forward_cast_active := true
                 if same_candle_transition
-                    // CYCLE: -1 candle IS the 1 candle - next candle becomes 2
-                    cast_forward_count := 1  // This -1 candle represents 1
+                    // TOGGLE ON: -1 candle IS the 1 candle - next candle becomes 2
+                    cast_forward_count := 1  // This -1 candle represents 1, next will be 2
                     on_cycle_candle := false
                     // Don't increment backward_cast_count - stay at -1 for display
                 else
-                    // TRADITIONAL: -1 ends, next candle becomes 1
+                    // TOGGLE OFF: -1 ends, next candle becomes 1  
                     cast_forward_count := 0  // Will become 1 on next candle
                     on_cycle_candle := false
                     backward_cast_count := backward_cast_count + 1
@@ -308,5 +308,5 @@ if barstate.islast
     table.cell(status_table, 1, 7, count_outside_double ? "ON" : "OFF", text_color=#000000, text_size=size.tiny)
     table.cell(status_table, 0, 8, "Multi Inside", text_color=#000000, text_size=size.tiny)
     table.cell(status_table, 1, 8, multiple_inside_candles ? "ON" : "OFF", text_color=#000000, text_size=size.tiny)
-    table.cell(status_table, 0, 9, "Cycle Candle", text_color=#000000, text_size=size.tiny)
-    table.cell(status_table, 1, 9, on_cycle_candle ? "YES" : "NO", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 0, 9, "Forward Count", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 1, 9, enable_casting ? str.tostring(cast_forward_count) : "OFF", text_color=#000000, text_size=size.tiny)
