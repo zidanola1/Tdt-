@@ -11,7 +11,7 @@ max_candles = input.int(100, "Number of Candles", minval=1, maxval=500, group="B
 enable_casting = input.bool(false, "Enable Backward-to-Forward Casting", group="TDT Casting")
 backward_casting_sequence = input.string("33,27,21,13,7,3,1", "Backward Casting Sequence", group="TDT Casting")
 enable_shift_mode = input.bool(false, "Enable Shift Mode", group="TDT Casting")
-shift_seed = input.int(7, "Shift Seed", minval=1, maxval=100, group="TDT Casting")
+shift_seed = input.int(7, "Shift Seed", minval=-100, maxval=100, group="TDT Casting")
 
 // === TIME DISTORTION ===
 freezeOnTD = input.bool(true, "Freeze Count on TD", group="Time Distortion")
@@ -145,17 +145,14 @@ if enable_casting and counting_started
     
     if casting_initialized and not (current_is_td and freezeOnTD)
         if casting_phase_negative
-            // NEGATIVE PHASE: Check if we hit a sequence number
-            negative_hit = array.includes(casting_seq_array, float(math.abs(backward_cast_count)))
-            
-            // Check if we reached -1 (trigger point)
+            // Check if we reached -1 (trigger point) BEFORE incrementing
             if backward_cast_count == -1
-                // Switch to positive phase with reversed sequence
+                // Switch to positive phase with reversed sequence on NEXT candle
                 casting_phase_negative := false
                 casting_active := true
                 forward_cast_active := true
                 cast_forward_sequence := get_forward_from_backward(backward_casting_sequence)
-                cast_forward_count := 1  // Start immediately at 1
+                cast_forward_count := 1  // Start at 1 on next candle
             else
                 // Continue negative counting (moving toward -1)
                 backward_cast_count := backward_cast_count + 1
@@ -191,7 +188,9 @@ if counting_started and current_count_number <= max_candles and bar_index >= anc
     y_base = display_position == "above_candle" ? high + range_mult + vertical_shift : low - range_mult - vertical_shift
     
     // === MAIN SEQUENCE LABELS ===
-    if not display_only_sequence or is_main_sequence
+    // Only show main sequence if casting is disabled OR casting is enabled but not in casting phase
+    show_main = not enable_casting or not casting_initialized
+    if show_main and (not display_only_sequence or is_main_sequence)
         label_text = if current_is_td and freezeOnTD
             str.tostring(current_count_number) + "×"
         else
@@ -206,23 +205,23 @@ if counting_started and current_count_number <= max_candles and bar_index >= anc
             label.new(bar_index, y_base, label_text, color=color.new(#FFFFFF, 100), textcolor=main_color, size=get_label_size())
 
 // === TDT CASTING DISPLAY ===
-if enable_casting and counting_started
+if enable_casting and counting_started and casting_initialized
     if casting_phase_negative
-        // NEGATIVE PHASE: Display negative numbers when they hit sequence
+        // NEGATIVE PHASE: Display negative numbers when they hit sequence (including first one)
         negative_hit = array.includes(casting_seq_array, float(math.abs(backward_cast_count)))
         if negative_hit
             casting_offset = (high - low) * 0.12
             casting_y = display_position == "above_candle" ? high + casting_offset + vertical_shift : low - casting_offset - vertical_shift
-            casting_text = str.tostring(backward_cast_count)  // Remove "B" suffix
+            casting_text = str.tostring(backward_cast_count)
             label.new(bar_index, casting_y, casting_text, color=color.new(#FFFFFF, 100), textcolor=casting_color, size=get_label_size())
     else
-        // POSITIVE PHASE: Display forward casting hits
+        // POSITIVE PHASE: Display forward casting hits (including first one)
         if forward_cast_active
             forward_cast_hit = array.includes(cast_forward_sequence, float(cast_forward_count))
             if forward_cast_hit
                 forward_offset = (high - low) * 0.15
                 forward_y = display_position == "above_candle" ? high + forward_offset + vertical_shift : low - forward_offset - vertical_shift
-                forward_text = str.tostring(cast_forward_count)  // Remove "F" suffix
+                forward_text = str.tostring(cast_forward_count)
                 label.new(bar_index, forward_y, forward_text, color=color.new(#FFFFFF, 100), textcolor=casting_color, size=get_label_size())
 
 // === ALERTS ===
