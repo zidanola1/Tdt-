@@ -201,19 +201,16 @@ if show_liquidity and show_eq_highs_lows
     getEqualHighsLows()
 
 // Premium/Discount Arrays
-getPDArrays() =>
-    ema_high = ta.ema(high, 20)
-    ema_low = ta.ema(low, 20)
-    ema_mid = (ema_high + ema_low) / 2
-    
-    // Premium Zone (Above 50%)
-    premium_color = close > ema_mid ? color.new(color.red, 90) : color.new(color.gray, 95)
-    // Discount Zone (Below 50%)
-    discount_color = close < ema_mid ? color.new(color.blue, 90) : color.new(color.gray, 95)
-    
-    bgcolor(show_pd_arrays ? (close > ema_mid ? premium_color : discount_color) : na, title="PD Arrays")
+ema_high = ta.ema(high, 20)
+ema_low = ta.ema(low, 20)
+ema_mid = (ema_high + ema_low) / 2
 
-getPDArrays()
+// Premium Zone (Above 50%)
+premium_color = close > ema_mid ? color.new(color.red, 90) : color.new(color.gray, 95)
+// Discount Zone (Below 50%)
+discount_color = close < ema_mid ? color.new(color.blue, 90) : color.new(color.gray, 95)
+
+bgcolor(show_pd_arrays ? (close > ema_mid ? premium_color : discount_color) : na, title="PD Arrays")
 
 // ═══════════════════════════════════════════════════════════════════════════════════
 // ⚡ FAIR VALUE GAPS (2020-2021 BREAKTHROUGH)
@@ -258,32 +255,28 @@ if show_fvg
 // 🕐 KILL ZONES & SESSIONS (2021-2022 TIMING)
 // ═══════════════════════════════════════════════════════════════════════════════════
 
-// Session Detection
-getKillZones() =>
-    // Time zones (EST)
-    london_kz = time(timeframe.period, "0200-0500:1234567", "America/New_York")
-    ny_kz = time(timeframe.period, "0830-1130:1234567", "America/New_York") 
-    asian_session = time(timeframe.period, "2000-0000:1234567", "America/New_York")
-    lunch_macro = time(timeframe.period, "1200-1300:1234567", "America/New_York")
-    
-    // London Kill Zone
-    london_active = not na(london_kz)
-    bgcolor(show_london_kz and london_active ? color.new(color.yellow, 95) : na, title="London KZ")
-    
-    // New York Kill Zone  
-    ny_active = not na(ny_kz)
-    bgcolor(show_ny_kz and ny_active ? color.new(color.orange, 95) : na, title="NY KZ")
-    
-    // Asian Range
-    asian_active = not na(asian_session)
-    bgcolor(show_asian_range and asian_active ? color.new(color.purple, 95) : na, title="Asian Range")
-    
-    // Lunch Time Macro
-    lunch_active = not na(lunch_macro)
-    bgcolor(show_lunch_time and lunch_active ? color.new(color.gray, 95) : na, title="Lunch Macro")
+// Session Detection - Kill Zones
+// Time zones (EST)
+london_kz = time(timeframe.period, "0200-0500:1234567", "America/New_York")
+ny_kz = time(timeframe.period, "0830-1130:1234567", "America/New_York") 
+asian_session = time(timeframe.period, "2000-0000:1234567", "America/New_York")
+lunch_macro = time(timeframe.period, "1200-1300:1234567", "America/New_York")
 
-if show_killzones
-    getKillZones()
+// London Kill Zone
+london_active = not na(london_kz)
+bgcolor(show_killzones and show_london_kz and london_active ? color.new(color.yellow, 95) : na, title="London KZ")
+
+// New York Kill Zone  
+ny_active = not na(ny_kz)
+bgcolor(show_killzones and show_ny_kz and ny_active ? color.new(color.orange, 95) : na, title="NY KZ")
+
+// Asian Range
+asian_active = not na(asian_session)
+bgcolor(show_killzones and show_asian_range and asian_active ? color.new(color.purple, 95) : na, title="Asian Range")
+
+// Lunch Time Macro
+lunch_active = not na(lunch_macro)
+bgcolor(show_killzones and show_lunch_time and lunch_active ? color.new(color.gray, 95) : na, title="Lunch Macro")
 
 // ═══════════════════════════════════════════════════════════════════════════════════
 // 🧠 SMART MONEY CONCEPTS (2022-2023 EVOLUTION)
@@ -332,43 +325,37 @@ getManipulation()
 // ═══════════════════════════════════════════════════════════════════════════════════
 
 // Silver Bullet Setup (2023 Advanced)
-getSilverBullet() =>
-    // 10:00-10:03 and 14:00-14:03 EST setups
-    sb_morning = time(timeframe.period, "1000-1003:1234567", "America/New_York")
-    sb_afternoon = time(timeframe.period, "1400-1403:1234567", "America/New_York")
-    
-    sb_active = not na(sb_morning) or not na(sb_afternoon)
-    
-    if show_silver_bullet and sb_active
-        bgcolor(color.new(color.lime, 90), title="Silver Bullet")
-        if not sb_active[1]
-            label.new(bar_index, high, "SILVER BULLET 🎯", color=color.lime, textcolor=color.black, 
-                     style=label.style_label_down, size=size.normal)
+// 10:00-10:03 and 14:00-14:03 EST setups
+sb_morning = time(timeframe.period, "1000-1003:1234567", "America/New_York")
+sb_afternoon = time(timeframe.period, "1400-1403:1234567", "America/New_York")
 
-getSilverBullet()
+sb_active = not na(sb_morning) or not na(sb_afternoon)
+
+bgcolor(show_silver_bullet and sb_active ? color.new(color.lime, 90) : na, title="Silver Bullet")
+
+if show_silver_bullet and sb_active and not sb_active[1]
+    label.new(bar_index, high, "SILVER BULLET 🎯", color=color.lime, textcolor=color.black, 
+             style=label.style_label_down, size=size.normal)
 
 // OTE (Optimal Trade Entry) 62-79% Retracement
-getOTE() =>
-    // Calculate swing high and low
-    swing_high = ta.highest(high, 20)
-    swing_low = ta.lowest(low, 20)
-    range_size = swing_high - swing_low
-    
-    // OTE Zone (62-79% retracement)
-    ote_high = swing_high - (range_size * 0.62)
-    ote_low = swing_high - (range_size * 0.79)
-    
-    // Plot OTE zone
-    if show_ote and range_size > 0
-        line.new(bar_index-20, ote_high, bar_index+5, ote_high, 
-                color=color.new(color.purple, 50), width=1, style=line.style_dotted)
-        line.new(bar_index-20, ote_low, bar_index+5, ote_low, 
-                color=color.new(color.purple, 50), width=1, style=line.style_dotted)
-        
-        if close <= ote_high and close >= ote_low
-            bgcolor(color.new(color.purple, 95), title="OTE Zone")
+// Calculate swing high and low
+swing_high = ta.highest(high, 20)
+swing_low = ta.lowest(low, 20)
+range_size = swing_high - swing_low
 
-getOTE()
+// OTE Zone (62-79% retracement)
+ote_high = swing_high - (range_size * 0.62)
+ote_low = swing_high - (range_size * 0.79)
+
+// Plot OTE zone
+if show_ote and range_size > 0
+    line.new(bar_index-20, ote_high, bar_index+5, ote_high, 
+            color=color.new(color.purple, 50), width=1, style=line.style_dotted)
+    line.new(bar_index-20, ote_low, bar_index+5, ote_low, 
+            color=color.new(color.purple, 50), width=1, style=line.style_dotted)
+
+// OTE Zone background
+bgcolor(show_ote and range_size > 0 and close <= ote_high and close >= ote_low ? color.new(color.purple, 95) : na, title="OTE Zone")
 
 // Time & Price Theory (2024 Latest)
 getTimePriceTheory() =>
