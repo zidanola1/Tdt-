@@ -205,9 +205,9 @@ if enable_casting and counting_started
         else
             if forward_cast_active
                 if on_cycle_candle and same_candle_transition
-                    // We're leaving the -1/1 cycle candle, next candle should be 2
+                    // We're on the cycle candle, don't increment yet
+                    // Next candle will get incremented normally
                     on_cycle_candle := false
-                    cast_forward_count := 2
                 else
                     // Normal candle counting - increment by 1 each candle
                     cast_forward_count := cast_forward_count + 1
