@@ -191,12 +191,12 @@ if enable_casting and counting_started
                 casting_active := true
                 forward_cast_active := true
                 if same_candle_transition
-                    // CYCLE: -1 candle IS the 1 candle - don't increment this candle
-                    cast_forward_count := 1
-                    on_cycle_candle := true
+                    // CYCLE: -1 candle IS the 1 candle - start from 2 on NEXT candle
+                    cast_forward_count := 2
+                    on_cycle_candle := false
                     // Don't increment backward_cast_count - stay at -1 for display
                 else
-                    // TRADITIONAL: -1 ends, start forward count
+                    // TRADITIONAL: -1 ends, start from 1 on NEXT candle
                     cast_forward_count := 1
                     on_cycle_candle := false
                     backward_cast_count := backward_cast_count + 1
@@ -265,10 +265,8 @@ if enable_casting and counting_started and casting_initialized
         // Check if current count matches any number in the forward sequence
         forward_cast_hit = array.includes(forward_cast_seq_array, float(cast_forward_count))
         if forward_cast_hit and cast_forward_count > 0
-            // Skip showing "1" when toggle is ON (because -1 represents it)
-            should_skip = same_candle_transition and cast_forward_count == 1 and backward_cast_count == -1
-            
-            if not should_skip
+            // Normal display - no skipping needed now
+            if true
                 // NORMAL FORWARD CASTING - show the sequence number
                 forward_offset = (high - low) * 0.15
                 forward_y = display_position == "above_candle" ? high + forward_offset + vertical_shift : low - forward_offset - vertical_shift
