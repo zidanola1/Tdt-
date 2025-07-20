@@ -204,8 +204,8 @@ if enable_casting and counting_started
                 backward_cast_count := backward_cast_count + 1
         else
             if forward_cast_active
-                if on_cycle_candle
-                    // We're on the -1/1 cycle candle, next candle should be 2
+                if on_cycle_candle and same_candle_transition
+                    // We're leaving the -1/1 cycle candle, next candle should be 2
                     on_cycle_candle := false
                     cast_forward_count := 2
                 else
@@ -270,8 +270,8 @@ if enable_casting and counting_started and casting_initialized
         // Check if current count matches any number in the forward sequence
         forward_cast_hit = array.includes(forward_cast_seq_array, float(cast_forward_count))
         if forward_cast_hit and cast_forward_count > 0
-            // Check if this is the cycle transition candle (-1 candle that also represents 1)
-            is_cycle_candle = same_candle_transition and cast_forward_count == 1 and backward_cast_count == -1
+            // Check if this is the cycle transition candle
+            is_cycle_candle = same_candle_transition and on_cycle_candle and cast_forward_count == 1 and backward_cast_count == -1
             
             if not is_cycle_candle
                 // NORMAL FORWARD CASTING - show the sequence number
@@ -279,7 +279,7 @@ if enable_casting and counting_started and casting_initialized
                 forward_y = display_position == "above_candle" ? high + forward_offset + vertical_shift : low - forward_offset - vertical_shift
                 forward_text = str.tostring(cast_forward_count)
                 label.new(bar_index, forward_y, forward_text, color=color.new(#FFFFFF, 100), textcolor=casting_color, size=get_label_size())
-            // If is_cycle_candle, don't show anything - the -1 label already represents both
+            // If is_cycle_candle, don't show forward label - the -1 label represents both
 
 // === ALERTS ===
 if counting_started and not in_time_distortion
@@ -316,5 +316,5 @@ if barstate.islast
     table.cell(status_table, 1, 7, count_outside_double ? "ON" : "OFF", text_color=#000000, text_size=size.tiny)
     table.cell(status_table, 0, 8, "Multi Inside", text_color=#000000, text_size=size.tiny)
     table.cell(status_table, 1, 8, multiple_inside_candles ? "ON" : "OFF", text_color=#000000, text_size=size.tiny)
-    table.cell(status_table, 0, 9, "Cast Count", text_color=#000000, text_size=size.tiny)
-    table.cell(status_table, 1, 9, enable_casting ? str.tostring(cast_forward_count) : "OFF", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 0, 9, "Cycle Candle", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 1, 9, on_cycle_candle ? "YES" : "NO", text_color=#000000, text_size=size.tiny)
