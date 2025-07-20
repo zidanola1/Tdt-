@@ -164,7 +164,7 @@ is_ultimate_td_candle(int index) =>
         is_inside or is_small_range or is_doji
 
 // === VARIABLES ===
-var int bar_index = 0
+var int candle_count = 0
 var int current_count = 1
 var int backward_count = 0
 var int future_count = 0
@@ -183,7 +183,7 @@ var int cast_forward_count = 0
 
 // === UPDATE VARIABLES ===
 if time >= start_date
-    bar_index := bar_index + 1
+    candle_count := candle_count + 1
     is_counting := true
 
 // Detect current TD
@@ -215,7 +215,7 @@ if is_counting
                 // Trigger forward casting
                 casting_active := true
                 forward_cast_active := true
-                cast_pivot_bar := bar_index
+                cast_pivot_bar := candle_count
                 
                 // Setup forward sequence
                 if enable_shift_mode
@@ -264,26 +264,27 @@ get_label_size() =>
 var string display_count = ""
 current_count_float = float(current_count)
 
-if show_sequence_labels and is_counting and array.includes(main_seq_array, current_count_float)
+// Always show count labels for debugging
+if show_sequence_labels and is_counting
     candle_range = high - low
     offset = candle_range * 0.1
     y_position = display_position == "above_candle" ? high + offset : low - offset
     
+    // Show all counts, highlight sequence hits
     label_text = str.tostring(current_count)
-    if inputs_in_status
-        label_text := label_text + " [Main]"
+    label_color = array.includes(main_seq_array, current_count_float) ? label_color_main : color.gray
     
-    label.new(bar_index, y_position, label_text, color=label_color_main, 
+    if inputs_in_status
+        label_text := label_text + (array.includes(main_seq_array, current_count_float) ? " [HIT]" : " [Main]")
+    
+    label.new(bar_index, y_position, label_text, color=label_color, 
               textcolor=color.white, size=get_label_size())
 
 // === BACKWARD DISPLAY ===
 if enable_backward and show_backward_labels and is_backward_counting
-    back_bar_index = bar_index
+    is_backward_sequence = array.includes(backward_seq_array, float(backward_count))
     
-    if back_bar_index >= 0
-        is_backward_sequence = array.includes(backward_seq_array, float(backward_count))
-        
-        if is_backward_sequence
+    if is_backward_sequence
             candle_range = high - low
             offset = candle_range * 0.15
             y_position = display_position == "above_candle" ? high + offset : low - offset
@@ -315,12 +316,9 @@ if forward_cast_active and casting_visual
 
 // === FUTURE DISPLAY ===
 if enable_future and show_future_labels and is_future_counting
-    future_bar_index = bar_index
+    is_future_sequence = array.includes(future_seq_array, float(future_count))
     
-    if future_bar_index >= 0
-        is_future_sequence = array.includes(future_seq_array, float(future_count))
-        
-        if is_future_sequence
+    if is_future_sequence
             candle_range = high - low
             offset = candle_range * 0.25
             y_position = display_position == "above_candle" ? high + offset : low - offset
@@ -376,7 +374,7 @@ if forward_cast_active and array.includes(cast_forward_sequence, float(cast_forw
 
 // TD-specific alerts
 if enableAdvancedTD
-    prev_is_td = ta.valuewhen(bar_index > 0, current_is_td, 1)
+    prev_is_td = ta.valuewhen(candle_count > 0, current_is_td, 1)
     if current_is_td and not prev_is_td
         alert("Time Distortion Detected", alert.freq_once_per_bar)
     
