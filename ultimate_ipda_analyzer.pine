@@ -248,15 +248,9 @@ if counting_started and current_count_number <= max_candles and bar_index >= anc
     // Only show main sequence if casting is disabled OR casting is enabled but not in casting phase
     show_main = not enable_casting or not casting_initialized
     if show_main and (not display_only_sequence or is_main_sequence)
-        label_text = if current_is_td and freezeOnTD
-            str.tostring(current_count_number) + "×"
-        else
-            str.tostring(current_count_number)
+        label_text = current_is_td and freezeOnTD ? str.tostring(current_count_number) + "×" : str.tostring(current_count_number)
         
-        main_color = if current_is_td and freezeOnTD
-            color.new(sequence_color, 50)
-        else
-            sequence_color
+        main_color = current_is_td and freezeOnTD ? color.new(sequence_color, 50) : sequence_color
         
         if not display_only_sequence or is_main_sequence
             label.new(bar_index, y_base, label_text, color=color.new(#FFFFFF, 100), textcolor=main_color, size=get_label_size())
