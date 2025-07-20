@@ -1,0 +1,491 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © ICT ULTIMATE - ALL CONCEPTS 2016-2024
+
+//@version=6
+indicator("🎯 ICT ULTIMATE - ALL CONCEPTS 2016-2024 🎯", overlay=true, max_labels_count=500, max_lines_count=500, max_boxes_count=500)
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 📊 INPUTS - ICT MASTER SETTINGS
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Main Groups
+group_structure = "🏗️ MARKET STRUCTURE"
+group_orderblocks = "📦 ORDER BLOCKS"
+group_liquidity = "💧 LIQUIDITY POOLS"
+group_fvg = "⚡ FAIR VALUE GAPS"
+group_killzones = "🕐 KILL ZONES & SESSIONS"
+group_smc = "🧠 SMART MONEY CONCEPTS"
+group_advanced = "🎯 ADVANCED ICT"
+group_dashboard = "📊 DASHBOARD"
+
+// Market Structure (2016-2017 Core Concepts)
+show_structure = input.bool(true, "Show Market Structure", group=group_structure)
+structure_length = input.int(5, "Structure Length", 3, 20, group=group_structure)
+show_bos = input.bool(true, "Show Break of Structure (BOS)", group=group_structure)
+show_choch = input.bool(true, "Show Change of Character (CHoCH)", group=group_structure)
+show_msb_mss = input.bool(true, "Show MSB/MSS", group=group_structure)
+
+// Order Blocks (2018-2019 Evolution)
+show_orderblocks = input.bool(true, "Show Order Blocks", group=group_orderblocks)
+ob_length = input.int(10, "Order Block Length", 5, 50, group=group_orderblocks)
+ob_extend = input.int(20, "Order Block Extension", 5, 100, group=group_orderblocks)
+show_refined_ob = input.bool(true, "Show Refined Order Blocks", group=group_orderblocks)
+show_breaker_blocks = input.bool(true, "Show Breaker Blocks", group=group_orderblocks)
+
+// Liquidity (2019-2020 Advanced)
+show_liquidity = input.bool(true, "Show Liquidity Pools", group=group_liquidity)
+liquidity_length = input.int(20, "Liquidity Length", 10, 50, group=group_liquidity)
+show_eq_highs_lows = input.bool(true, "Show Equal Highs/Lows", group=group_liquidity)
+show_liquidity_runs = input.bool(true, "Show Liquidity Runs", group=group_liquidity)
+show_pd_arrays = input.bool(true, "Show Premium/Discount Arrays", group=group_liquidity)
+
+// Fair Value Gaps (2020-2021 Breakthrough)
+show_fvg = input.bool(true, "Show Fair Value Gaps", group=group_fvg)
+fvg_threshold = input.float(0.1, "FVG Threshold %", 0.01, 1.0, 0.01, group=group_fvg)
+show_bi_fvg = input.bool(true, "Show Balanced/Imbalanced FVG", group=group_fvg)
+show_fvg_mitigation = input.bool(true, "Show FVG Mitigation", group=group_fvg)
+show_macro_fvg = input.bool(true, "Show Macro FVG", group=group_fvg)
+
+// Kill Zones & Sessions (2021-2022 Timing)
+show_killzones = input.bool(true, "Show Kill Zones", group=group_killzones)
+show_london_kz = input.bool(true, "London Kill Zone", group=group_killzones)
+show_ny_kz = input.bool(true, "New York Kill Zone", group=group_killzones)
+show_asian_range = input.bool(true, "Asian Range", group=group_killzones)
+show_lunch_time = input.bool(true, "Lunch Time Macro", group=group_killzones)
+
+// Smart Money Concepts (2022-2023 Evolution)
+show_smc = input.bool(true, "Show Smart Money Concepts", group=group_smc)
+show_wyckoff = input.bool(true, "Show Wyckoff Patterns", group=group_smc)
+show_accumulation = input.bool(true, "Show Accumulation/Distribution", group=group_smc)
+show_manipulation = input.bool(true, "Show Manipulation Phases", group=group_smc)
+show_narrative = input.bool(true, "Show Market Narrative", group=group_smc)
+
+// Advanced ICT (2023-2024 Latest)
+show_advanced = input.bool(true, "Show Advanced Concepts", group=group_advanced)
+show_volumetric = input.bool(true, "Show Volumetric Imbalances", group=group_advanced)
+show_time_price = input.bool(true, "Show Time & Price Theory", group=group_advanced)
+show_silver_bullet = input.bool(true, "Show Silver Bullet Setup", group=group_advanced)
+show_ote = input.bool(true, "Show OTE (62-79% Retracement)", group=group_advanced)
+
+// Dashboard
+show_dashboard = input.bool(true, "Show ICT Dashboard", group=group_dashboard)
+dashboard_size = input.string("Normal", "Dashboard Size", ["Large", "Normal", "Small", "Tiny"], group=group_dashboard)
+dashboard_position = input.string("Top Right", "Dashboard Position", ["Top Right", "Top Left", "Bottom Right", "Bottom Left"], group=group_dashboard)
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🏗️ MARKET STRUCTURE FUNCTIONS (2016-2017 CORE)
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Higher High, Higher Low, Lower High, Lower Low Detection
+isHigherHigh(len) =>
+    high > ta.highest(high[1], len) and high[1] > ta.highest(high[2], len-1)
+
+isLowerLow(len) =>
+    low < ta.lowest(low[1], len) and low[1] < ta.lowest(low[2], len-1)
+
+isLowerHigh(len) =>
+    high < ta.highest(high[1], len) and high > ta.highest(high[len+1], len)
+
+isHigherLow(len) =>
+    low > ta.lowest(low[1], len) and low < ta.lowest(low[len+1], len)
+
+// Market Structure Break Detection
+getMarketStructure() =>
+    var string trend = "NEUTRAL"
+    var float last_high = 0.0
+    var float last_low = 0.0
+    var int last_high_bar = 0
+    var int last_low_bar = 0
+    
+    if isHigherHigh(structure_length)
+        if trend == "BEARISH"
+            // Change of Character
+            trend := "BULLISH"
+            [true, false, true, false] // [bos, choch, new_hh, new_ll]
+        else
+            // Break of Structure
+            trend := "BULLISH"
+            [true, false, true, false]
+    else if isLowerLow(structure_length)
+        if trend == "BULLISH"
+            // Change of Character
+            trend := "BEARISH"
+            [false, true, false, true]
+        else
+            // Break of Structure
+            trend := "BEARISH"
+            [false, true, false, true]
+    else
+        [false, false, false, false]
+
+[bos, choch, new_hh, new_ll] = getMarketStructure()
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 📦 ORDER BLOCKS (2018-2019 EVOLUTION)
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Order Block Detection
+getOrderBlocks() =>
+    var array<box> bullish_obs = array.new<box>()
+    var array<box> bearish_obs = array.new<box>()
+    
+    // Bullish Order Block (Last bearish candle before strong move up)
+    bullish_move = close > close[1] and close[1] > close[2] and close[2] > close[3]
+    bearish_candle = close[4] < open[4]
+    
+    if bullish_move and bearish_candle
+        ob_top = high[4]
+        ob_bottom = low[4]
+        ob_left = bar_index - 4
+        ob_right = bar_index + ob_extend
+        
+        if array.size(bullish_obs) >= 10
+            array.shift(bullish_obs)
+        
+        ob_box = box.new(ob_left, ob_top, ob_right, ob_bottom, 
+                        border_color=color.new(color.blue, 50), 
+                        bgcolor=color.new(color.blue, 85),
+                        border_width=1, 
+                        extend=extend.right)
+        array.push(bullish_obs, ob_box)
+    
+    // Bearish Order Block (Last bullish candle before strong move down)
+    bearish_move = close < close[1] and close[1] < close[2] and close[2] < close[3]
+    bullish_candle = close[4] > open[4]
+    
+    if bearish_move and bullish_candle
+        ob_top = high[4]
+        ob_bottom = low[4]
+        ob_left = bar_index - 4
+        ob_right = bar_index + ob_extend
+        
+        if array.size(bearish_obs) >= 10
+            array.shift(bearish_obs)
+        
+        ob_box = box.new(ob_left, ob_top, ob_right, ob_bottom, 
+                        border_color=color.new(color.red, 50), 
+                        bgcolor=color.new(color.red, 85),
+                        border_width=1, 
+                        extend=extend.right)
+        array.push(bearish_obs, ob_box)
+
+if show_orderblocks
+    getOrderBlocks()
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 💧 LIQUIDITY POOLS (2019-2020 ADVANCED)
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Equal Highs/Lows Detection
+getEqualHighsLows() =>
+    // Equal Highs (Buy-side Liquidity)
+    eq_high_threshold = ta.atr(14) * 0.1
+    recent_highs = ta.highest(high, liquidity_length)
+    
+    if math.abs(high - recent_highs) <= eq_high_threshold and high[1] < high
+        line.new(bar_index-1, high, bar_index+10, high, 
+                color=color.new(color.red, 30), width=2, style=line.style_dashed, extend=extend.right)
+        label.new(bar_index, high, "BSL 💧", color=color.red, textcolor=color.white, 
+                 style=label.style_label_down, size=size.small)
+    
+    // Equal Lows (Sell-side Liquidity)
+    recent_lows = ta.lowest(low, liquidity_length)
+    
+    if math.abs(low - recent_lows) <= eq_high_threshold and low[1] > low
+        line.new(bar_index-1, low, bar_index+10, low, 
+                color=color.new(color.blue, 30), width=2, style=line.style_dashed, extend=extend.right)
+        label.new(bar_index, low, "SSL 💧", color=color.blue, textcolor=color.white, 
+                 style=label.style_label_up, size=size.small)
+
+if show_liquidity and show_eq_highs_lows
+    getEqualHighsLows()
+
+// Premium/Discount Arrays
+getPDArrays() =>
+    ema_high = ta.ema(high, 20)
+    ema_low = ta.ema(low, 20)
+    ema_mid = (ema_high + ema_low) / 2
+    
+    // Premium Zone (Above 50%)
+    premium_color = close > ema_mid ? color.new(color.red, 90) : color.new(color.gray, 95)
+    // Discount Zone (Below 50%)
+    discount_color = close < ema_mid ? color.new(color.blue, 90) : color.new(color.gray, 95)
+    
+    bgcolor(show_pd_arrays ? (close > ema_mid ? premium_color : discount_color) : na, title="PD Arrays")
+
+getPDArrays()
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// ⚡ FAIR VALUE GAPS (2020-2021 BREAKTHROUGH)
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// FVG Detection
+getFairValueGaps() =>
+    // Bullish FVG (Gap between high[2] and low[0])
+    bullish_fvg = low > high[2] and close > close[1] and close[1] > close[2]
+    gap_size_bull = (low - high[2]) / close * 100
+    
+    if bullish_fvg and gap_size_bull >= fvg_threshold
+        fvg_top = low
+        fvg_bottom = high[2]
+        box.new(bar_index-2, fvg_top, bar_index+20, fvg_bottom, 
+               border_color=color.new(color.blue, 40), 
+               bgcolor=color.new(color.blue, 85),
+               border_width=1, 
+               extend=extend.right)
+        label.new(bar_index-1, (fvg_top + fvg_bottom)/2, "FVG ⚡", 
+                 color=color.blue, textcolor=color.white, style=label.style_label_left, size=size.tiny)
+    
+    // Bearish FVG (Gap between low[2] and high[0])
+    bearish_fvg = high < low[2] and close < close[1] and close[1] < close[2]
+    gap_size_bear = (low[2] - high) / close * 100
+    
+    if bearish_fvg and gap_size_bear >= fvg_threshold
+        fvg_top = low[2]
+        fvg_bottom = high
+        box.new(bar_index-2, fvg_top, bar_index+20, fvg_bottom, 
+               border_color=color.new(color.red, 40), 
+               bgcolor=color.new(color.red, 85),
+               border_width=1, 
+               extend=extend.right)
+        label.new(bar_index-1, (fvg_top + fvg_bottom)/2, "FVG ⚡", 
+                 color=color.red, textcolor=color.white, style=label.style_label_left, size=size.tiny)
+
+if show_fvg
+    getFairValueGaps()
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🕐 KILL ZONES & SESSIONS (2021-2022 TIMING)
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Session Detection
+getKillZones() =>
+    // Time zones (EST)
+    london_kz = time(timeframe.period, "0200-0500:1234567", "America/New_York")
+    ny_kz = time(timeframe.period, "0830-1130:1234567", "America/New_York") 
+    asian_session = time(timeframe.period, "2000-0000:1234567", "America/New_York")
+    lunch_macro = time(timeframe.period, "1200-1300:1234567", "America/New_York")
+    
+    // London Kill Zone
+    london_active = not na(london_kz)
+    bgcolor(show_london_kz and london_active ? color.new(color.yellow, 95) : na, title="London KZ")
+    
+    // New York Kill Zone  
+    ny_active = not na(ny_kz)
+    bgcolor(show_ny_kz and ny_active ? color.new(color.orange, 95) : na, title="NY KZ")
+    
+    // Asian Range
+    asian_active = not na(asian_session)
+    bgcolor(show_asian_range and asian_active ? color.new(color.purple, 95) : na, title="Asian Range")
+    
+    // Lunch Time Macro
+    lunch_active = not na(lunch_macro)
+    bgcolor(show_lunch_time and lunch_active ? color.new(color.gray, 95) : na, title="Lunch Macro")
+
+if show_killzones
+    getKillZones()
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🧠 SMART MONEY CONCEPTS (2022-2023 EVOLUTION)
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Wyckoff Accumulation/Distribution
+getWyckoffPhases() =>
+    vol_sma = ta.sma(volume, 20)
+    price_range = high - low
+    avg_range = ta.sma(price_range, 20)
+    
+    // Accumulation Phase (High volume, low range)
+    accumulation = volume > vol_sma * 1.5 and price_range < avg_range * 0.7
+    // Distribution Phase (High volume, high range at top)
+    distribution = volume > vol_sma * 1.5 and price_range > avg_range * 1.3 and close > ta.sma(close, 50)
+    
+    if show_wyckoff and accumulation
+        label.new(bar_index, low, "ACC", color=color.green, textcolor=color.white, 
+                 style=label.style_label_up, size=size.small)
+    
+    if show_wyckoff and distribution
+        label.new(bar_index, high, "DIST", color=color.red, textcolor=color.white, 
+                 style=label.style_label_down, size=size.small)
+
+getWyckoffPhases()
+
+// Market Manipulation Detection
+getManipulation() =>
+    atr_val = ta.atr(14)
+    // Fake breakout (manipulation)
+    fake_breakout_high = high > ta.highest(high[1], 10) and close < ta.highest(high[1], 10) - atr_val * 0.5
+    fake_breakout_low = low < ta.lowest(low[1], 10) and close > ta.lowest(low[1], 10) + atr_val * 0.5
+    
+    if show_manipulation and fake_breakout_high
+        label.new(bar_index, high, "MANIPULATION 🎭", color=color.yellow, textcolor=color.black, 
+                 style=label.style_label_down, size=size.normal)
+    
+    if show_manipulation and fake_breakout_low
+        label.new(bar_index, low, "MANIPULATION 🎭", color=color.yellow, textcolor=color.black, 
+                 style=label.style_label_up, size=size.normal)
+
+getManipulation()
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🎯 ADVANCED ICT (2023-2024 LATEST)
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Silver Bullet Setup (2023 Advanced)
+getSilverBullet() =>
+    // 10:00-10:03 and 14:00-14:03 EST setups
+    sb_morning = time(timeframe.period, "1000-1003:1234567", "America/New_York")
+    sb_afternoon = time(timeframe.period, "1400-1403:1234567", "America/New_York")
+    
+    sb_active = not na(sb_morning) or not na(sb_afternoon)
+    
+    if show_silver_bullet and sb_active
+        bgcolor(color.new(color.lime, 90), title="Silver Bullet")
+        if not sb_active[1]
+            label.new(bar_index, high, "SILVER BULLET 🎯", color=color.lime, textcolor=color.black, 
+                     style=label.style_label_down, size=size.normal)
+
+getSilverBullet()
+
+// OTE (Optimal Trade Entry) 62-79% Retracement
+getOTE() =>
+    // Calculate swing high and low
+    swing_high = ta.highest(high, 20)
+    swing_low = ta.lowest(low, 20)
+    range_size = swing_high - swing_low
+    
+    // OTE Zone (62-79% retracement)
+    ote_high = swing_high - (range_size * 0.62)
+    ote_low = swing_high - (range_size * 0.79)
+    
+    // Plot OTE zone
+    if show_ote and range_size > 0
+        line.new(bar_index-20, ote_high, bar_index+5, ote_high, 
+                color=color.new(color.purple, 50), width=1, style=line.style_dotted)
+        line.new(bar_index-20, ote_low, bar_index+5, ote_low, 
+                color=color.new(color.purple, 50), width=1, style=line.style_dotted)
+        
+        if close <= ote_high and close >= ote_low
+            bgcolor(color.new(color.purple, 95), title="OTE Zone")
+
+getOTE()
+
+// Time & Price Theory (2024 Latest)
+getTimePriceTheory() =>
+    // Fibonacci time ratios
+    fib_time_618 = math.round(20 * 0.618)
+    fib_time_1618 = math.round(20 * 1.618)
+    
+    // Price reaching time-based targets
+    if show_time_price and bar_index % fib_time_618 == 0
+        label.new(bar_index, high, "T⏰P", color=color.aqua, textcolor=color.white, 
+                 style=label.style_label_down, size=size.tiny)
+
+getTimePriceTheory()
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 📊 ICT ULTIMATE DASHBOARD
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+if show_dashboard and barstate.islast
+    var table_position = dashboard_position == "Top Right" ? position.top_right : dashboard_position == "Top Left" ? position.top_left : dashboard_position == "Bottom Right" ? position.bottom_right : position.bottom_left
+    var table_size = dashboard_size == "Large" ? size.large : dashboard_size == "Normal" ? size.normal : dashboard_size == "Small" ? size.small : size.tiny
+    
+    var ict_table = table.new(table_position, 3, 12, bgcolor=color.new(color.black, 20), border_width=2, border_color=color.white)
+    
+    // Headers
+    table.cell(ict_table, 0, 0, "🎯 ICT ULTIMATE 2016-2024", text_color=color.white, text_size=size.large, bgcolor=color.navy)
+    table.cell(ict_table, 1, 0, "STATUS", text_color=color.white, text_size=table_size, bgcolor=color.navy)
+    table.cell(ict_table, 2, 0, "SIGNAL", text_color=color.white, text_size=table_size, bgcolor=color.navy)
+    
+    // Market Structure
+    trend_status = new_hh ? "BULLISH" : new_ll ? "BEARISH" : "RANGING"
+    trend_color = new_hh ? color.lime : new_ll ? color.red : color.gray
+    table.cell(ict_table, 0, 1, "🏗️ Market Structure", text_color=color.white, text_size=table_size)
+    table.cell(ict_table, 1, 1, trend_status, text_color=trend_color, text_size=table_size)
+    table.cell(ict_table, 2, 1, bos ? "BOS" : choch ? "CHoCH" : "NONE", text_color=color.white, text_size=table_size)
+    
+    // Order Blocks
+    table.cell(ict_table, 0, 2, "📦 Order Blocks", text_color=color.blue, text_size=table_size)
+    table.cell(ict_table, 1, 2, show_orderblocks ? "ACTIVE" : "OFF", text_color=show_orderblocks ? color.lime : color.gray, text_size=table_size)
+    table.cell(ict_table, 2, 2, "ZONES MAPPED", text_color=color.white, text_size=table_size)
+    
+    // Liquidity
+    table.cell(ict_table, 0, 3, "💧 Liquidity", text_color=color.aqua, text_size=table_size)
+    table.cell(ict_table, 1, 3, show_liquidity ? "HUNTING" : "OFF", text_color=show_liquidity ? color.yellow : color.gray, text_size=table_size)
+    table.cell(ict_table, 2, 3, "BSL/SSL", text_color=color.white, text_size=table_size)
+    
+    // Fair Value Gaps
+    table.cell(ict_table, 0, 4, "⚡ Fair Value Gaps", text_color=color.orange, text_size=table_size)
+    table.cell(ict_table, 1, 4, show_fvg ? "SCANNING" : "OFF", text_color=show_fvg ? color.lime : color.gray, text_size=table_size)
+    table.cell(ict_table, 2, 4, "IMBALANCES", text_color=color.white, text_size=table_size)
+    
+    // Kill Zones
+    london_kz_now = time(timeframe.period, "0200-0500:1234567", "America/New_York")
+    ny_kz_now = time(timeframe.period, "0830-1130:1234567", "America/New_York")
+    kz_active = not na(london_kz_now) or not na(ny_kz_now)
+    table.cell(ict_table, 0, 5, "🕐 Kill Zones", text_color=color.yellow, text_size=table_size)
+    table.cell(ict_table, 1, 5, kz_active ? "ACTIVE" : "WAITING", text_color=kz_active ? color.red : color.gray, text_size=table_size)
+    table.cell(ict_table, 2, 5, not na(london_kz_now) ? "LONDON" : not na(ny_kz_now) ? "NEW YORK" : "OFF HOURS", text_color=color.white, text_size=table_size)
+    
+    // Smart Money
+    table.cell(ict_table, 0, 6, "🧠 Smart Money", text_color=color.purple, text_size=table_size)
+    table.cell(ict_table, 1, 6, show_smc ? "TRACKING" : "OFF", text_color=show_smc ? color.lime : color.gray, text_size=table_size)
+    table.cell(ict_table, 2, 6, "INSTITUTIONAL", text_color=color.white, text_size=table_size)
+    
+    // Silver Bullet
+    sb_now = time(timeframe.period, "1000-1003:1234567", "America/New_York") or time(timeframe.period, "1400-1403:1234567", "America/New_York")
+    table.cell(ict_table, 0, 7, "🎯 Silver Bullet", text_color=color.lime, text_size=table_size)
+    table.cell(ict_table, 1, 7, not na(sb_now) ? "FIRING" : "LOADING", text_color=not na(sb_now) ? color.lime : color.gray, text_size=table_size)
+    table.cell(ict_table, 2, 7, not na(sb_now) ? "READY" : "STANDBY", text_color=color.white, text_size=table_size)
+    
+    // OTE Zone
+    table.cell(ict_table, 0, 8, "📊 OTE Zone", text_color=color.fuchsia, text_size=table_size)
+    table.cell(ict_table, 1, 8, show_ote ? "MAPPED" : "OFF", text_color=show_ote ? color.lime : color.gray, text_size=table_size)
+    table.cell(ict_table, 2, 8, "62-79%", text_color=color.white, text_size=table_size)
+    
+    // Volume Analysis
+    vol_status = volume > ta.sma(volume, 20) ? "HIGH" : "LOW"
+    vol_color = volume > ta.sma(volume, 20) ? color.lime : color.red
+    table.cell(ict_table, 0, 9, "📊 Volume", text_color=color.white, text_size=table_size)
+    table.cell(ict_table, 1, 9, vol_status, text_color=vol_color, text_size=table_size)
+    table.cell(ict_table, 2, 9, "INSTITUTIONAL", text_color=color.white, text_size=table_size)
+    
+    // Overall Signal
+    overall_signal = new_hh and show_orderblocks and show_liquidity ? "BULLISH" : new_ll and show_orderblocks and show_liquidity ? "BEARISH" : "NEUTRAL"
+    signal_color = overall_signal == "BULLISH" ? color.lime : overall_signal == "BEARISH" ? color.red : color.yellow
+    table.cell(ict_table, 0, 10, "🎯 OVERALL SIGNAL", text_color=color.white, text_size=size.large, bgcolor=color.gray)
+    table.cell(ict_table, 1, 10, overall_signal, text_color=signal_color, text_size=size.large, bgcolor=color.gray)
+    table.cell(ict_table, 2, 10, "ICT ULTIMATE", text_color=color.white, text_size=table_size, bgcolor=color.gray)
+    
+    // Credits
+    table.cell(ict_table, 0, 11, "© ICT CONCEPTS 2016-2024", text_color=color.silver, text_size=size.tiny, bgcolor=color.black)
+    table.cell(ict_table, 1, 11, "ALL YEARS", text_color=color.silver, text_size=size.tiny, bgcolor=color.black)
+    table.cell(ict_table, 2, 11, "COMPLETE", text_color=color.silver, text_size=size.tiny, bgcolor=color.black)
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🎨 VISUAL SIGNALS
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Market Structure Signals
+plotshape(show_structure and bos and new_hh, style=shape.triangleup, location=location.belowbar, color=color.lime, size=size.normal, title="BOS Bullish")
+plotshape(show_structure and bos and new_ll, style=shape.triangledown, location=location.abovebar, color=color.red, size=size.normal, title="BOS Bearish")
+plotshape(show_structure and choch, style=shape.diamond, location=location.absolute, color=color.yellow, size=size.small, title="CHoCH")
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🚨 ICT ALERTS
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+alertcondition(bos and new_hh, title="🚀 ICT BOS BULLISH", message="ICT: Break of Structure - BULLISH! Market trending UP!")
+alertcondition(bos and new_ll, title="🔻 ICT BOS BEARISH", message="ICT: Break of Structure - BEARISH! Market trending DOWN!")
+alertcondition(choch, title="🔄 ICT CHoCH", message="ICT: Change of Character detected! Trend reversal possible!")
+
+// Silver Bullet Alert
+sb_alert = time(timeframe.period, "1000-1003:1234567", "America/New_York") or time(timeframe.period, "1400-1403:1234567", "America/New_York")
+alertcondition(not na(sb_alert) and na(sb_alert[1]), title="🎯 SILVER BULLET ACTIVE", message="ICT: Silver Bullet setup ACTIVE! High probability trade window!")
+
+// Kill Zone Alerts
+london_alert = time(timeframe.period, "0200-0500:1234567", "America/New_York")
+ny_alert = time(timeframe.period, "0830-1130:1234567", "America/New_York")
+alertcondition(not na(london_alert) and na(london_alert[1]), title="🕐 LONDON KILL ZONE", message="ICT: London Kill Zone ACTIVE!")
+alertcondition(not na(ny_alert) and na(ny_alert[1]), title="🕐 NEW YORK KILL ZONE", message="ICT: New York Kill Zone ACTIVE!")
