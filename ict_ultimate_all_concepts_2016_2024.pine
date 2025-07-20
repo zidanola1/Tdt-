@@ -126,8 +126,8 @@ getMarketStructure() =>
 
 // Order Block Detection
 getOrderBlocks() =>
-    var array<box> bullish_obs = array.new<box>()
-    var array<box> bearish_obs = array.new<box>()
+    var bullish_obs = array.new<box>()
+    var bearish_obs = array.new<box>()
     
     // Bullish Order Block (Last bearish candle before strong move up)
     bullish_move = close > close[1] and close[1] > close[2] and close[2] > close[3]
