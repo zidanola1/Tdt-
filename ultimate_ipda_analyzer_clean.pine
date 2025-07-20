@@ -258,7 +258,7 @@ if enable_casting and counting_started and casting_initialized
             casting_text = str.tostring(backward_cast_count)
             label.new(bar_index, casting_y, casting_text, color=color.new(#FFFFFF, 100), textcolor=casting_color, size=get_label_size())
     
-            // FORWARD CASTING DISPLAY
+    // FORWARD CASTING DISPLAY
     if not casting_phase_negative and forward_cast_active
         forward_cast_hit = array.includes(forward_cast_seq_array, float(cast_forward_count))
         if forward_cast_hit and cast_forward_count > 0
