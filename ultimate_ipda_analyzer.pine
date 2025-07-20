@@ -101,10 +101,11 @@ var int td_count = 0
 // === TDT CASTING VARIABLES ===
 var bool casting_active = false
 var bool forward_cast_active = false
-var int backward_cast_count = -33
+var int backward_cast_count = 0  // Will start at first negative number
 var bool casting_phase_negative = true
 var array<float> cast_forward_sequence = array.new<float>()
 var int cast_forward_count = 0
+var bool casting_initialized = false
 
 // === SEQUENCE ARRAYS ===
 current_sequence_str = get_sequence(sequence_type)
@@ -115,8 +116,8 @@ casting_seq_array = enable_casting ? parse_sequence(backward_casting_sequence) :
 if time >= start_date and not counting_started
     anchor_bar_index := bar_index
     counting_started := true
-    // Apply shift mode to initial count
-    current_count_number := enable_shift_mode ? shift_seed : 1
+    // Apply shift mode to initial count - start BEFORE incrementing
+    current_count_number := enable_shift_mode ? (shift_seed - 1) : 0
     in_time_distortion := false
 
 // === TD DETECTION FOR CURRENT BAR ===
@@ -124,7 +125,14 @@ current_is_td = is_ultimate_td_candle(0)
 
 // === TDT BACKWARD CASTING LOGIC ===
 if enable_casting and counting_started
-    if not (current_is_td and freezeOnTD)
+    // Initialize casting on first bar of start_date
+    if not casting_initialized and bar_index == anchor_bar_index
+        // Start with the largest negative number from sequence
+        if array.size(casting_seq_array) > 0
+            backward_cast_count := -int(array.get(casting_seq_array, 0))  // -33
+        casting_initialized := true
+    
+    if casting_initialized and not (current_is_td and freezeOnTD)
         if casting_phase_negative
             // NEGATIVE PHASE: Check if we hit a sequence number
             negative_hit = array.includes(casting_seq_array, float(math.abs(backward_cast_count)))
@@ -136,7 +144,7 @@ if enable_casting and counting_started
                 casting_active := true
                 forward_cast_active := true
                 cast_forward_sequence := get_forward_from_backward(backward_casting_sequence)
-                cast_forward_count := 1
+                cast_forward_count := 0  // Will increment to 1 on next bar
             else
                 // Continue negative counting (moving toward -1)
                 backward_cast_count := backward_cast_count + 1
@@ -146,7 +154,7 @@ if enable_casting and counting_started
                 cast_forward_count := cast_forward_count + 1
 
 // === MAIN COUNTING LOGIC ===
-if counting_started and current_count_number <= max_candles and bar_index > anchor_bar_index
+if counting_started and current_count_number <= max_candles and bar_index >= anchor_bar_index
     
     // TD Freeze Logic
     if current_is_td and freezeOnTD
@@ -223,16 +231,18 @@ if enable_casting and forward_cast_active
 
 // === STATUS TABLE ===
 if barstate.islast
-    var table status_table = table.new(position.top_right, 2, 6, bgcolor=color.new(#FFFFFF, 80), border_width=1)
+    var table status_table = table.new(position.top_right, 2, 7, bgcolor=color.new(#FFFFFF, 80), border_width=1)
     table.cell(status_table, 0, 0, "Status", text_color=#000000, text_size=size.tiny)
     table.cell(status_table, 1, 0, "Value", text_color=#000000, text_size=size.tiny)
     table.cell(status_table, 0, 1, "Counting", text_color=#000000, text_size=size.tiny)
     table.cell(status_table, 1, 1, str.tostring(counting_started), text_color=#000000, text_size=size.tiny)
     table.cell(status_table, 0, 2, "Count", text_color=#000000, text_size=size.tiny)
     table.cell(status_table, 1, 2, str.tostring(current_count_number), text_color=#000000, text_size=size.tiny)
-    table.cell(status_table, 0, 3, "Cast Phase", text_color=#000000, text_size=size.tiny)
-    table.cell(status_table, 1, 3, casting_phase_negative ? "NEG" : "POS", text_color=#000000, text_size=size.tiny)
-    table.cell(status_table, 0, 4, "Cast Count", text_color=#000000, text_size=size.tiny)
-    table.cell(status_table, 1, 4, casting_phase_negative ? str.tostring(backward_cast_count) : str.tostring(cast_forward_count), text_color=#000000, text_size=size.tiny)
-    table.cell(status_table, 0, 5, "TD", text_color=#000000, text_size=size.tiny)
-    table.cell(status_table, 1, 5, str.tostring(current_is_td), text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 0, 3, "Shift Mode", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 1, 3, enable_shift_mode ? str.tostring(shift_seed) : "OFF", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 0, 4, "Cast Phase", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 1, 4, enable_casting ? (casting_phase_negative ? "NEG" : "POS") : "OFF", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 0, 5, "Cast Count", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 1, 5, enable_casting ? (casting_phase_negative ? str.tostring(backward_cast_count) : str.tostring(cast_forward_count)) : "OFF", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 0, 6, "TD", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 1, 6, str.tostring(current_is_td), text_color=#000000, text_size=size.tiny)
