@@ -266,6 +266,15 @@ if enable_future and is_counting and bar_index >= anchor_bar
             else
                 future_count := future_count + 1
 
+// === LABEL SIZE FUNCTION ===
+get_label_size() =>
+    switch label_size
+        "tiny" => size.tiny
+        "small" => size.small
+        "large" => size.large
+        "huge" => size.huge
+        => size.normal
+
 // === DISPLAY LOGIC ===
 var string display_count = ""
 current_count_float = float(current_count)
@@ -280,7 +289,7 @@ if show_sequence_labels and is_counting and array.includes(main_seq_array, curre
         label_text := label_text + " [Main]"
     
     label.new(bar_index, y_position, label_text, color=label_color_main, 
-              textcolor=color.white, size=label_size, style=label.style_circle)
+              textcolor=color.white, size=get_label_size(), style=label.style_circle)
 
 // === BACKWARD DISPLAY ===
 if enable_backward and show_backward_labels and is_backward_counting
@@ -299,7 +308,7 @@ if enable_backward and show_backward_labels and is_backward_counting
                 label_text := label_text + " [Back]"
             
             label.new(bar_index, y_position, label_text, color=label_color_backward, 
-                      textcolor=color.white, size=label_size, style=label.style_triangle_down)
+                      textcolor=color.white, size=get_label_size(), style=label.style_triangle_down)
 
 // === FORWARD CAST DISPLAY ===
 if forward_cast_active and casting_visual
@@ -317,7 +326,7 @@ if forward_cast_active and casting_visual
             label_text := label_text + " [Cast]"
         
         label.new(bar_index, y_position, label_text, color=label_color_casting, 
-                  textcolor=color.white, size=label_size, style=label.style_diamond)
+                  textcolor=color.white, size=get_label_size(), style=label.style_diamond)
 
 // === FUTURE DISPLAY ===
 if enable_future and show_future_labels and is_future_counting
@@ -336,11 +345,10 @@ if enable_future and show_future_labels and is_future_counting
                 label_text := label_text + " [Future]"
             
             label.new(bar_index, y_position, label_text, color=label_color_future, 
-                      textcolor=color.white, size=label_size, style=label.style_square)
+                      textcolor=color.white, size=get_label_size(), style=label.style_square)
 
 // === TD BACKGROUND ===
-if show_td_background and current_is_td
-    bgcolor(td_bg_color, title="TD Background")
+bgcolor(show_td_background and current_is_td ? td_bg_color : na, title="TD Background")
 
 // === EMA OVERLAYS ===
 ema8 = ta.ema(close, 8)
