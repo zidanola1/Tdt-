@@ -204,13 +204,8 @@ if enable_casting and counting_started
                 backward_cast_count := backward_cast_count + 1
         else
             if forward_cast_active
-                if on_cycle_candle and same_candle_transition
-                    // We're on the cycle candle, don't increment yet
-                    // Next candle will get incremented normally
-                    on_cycle_candle := false
-                else
-                    // Normal candle counting - increment by 1 each candle
-                    cast_forward_count := cast_forward_count + 1
+                // Normal candle counting - increment by 1 each candle
+                cast_forward_count := cast_forward_count + 1
 
 // === MAIN COUNTING LOGIC ===
 if counting_started and current_count_number <= max_candles and bar_index >= anchor_bar_index
@@ -270,16 +265,15 @@ if enable_casting and counting_started and casting_initialized
         // Check if current count matches any number in the forward sequence
         forward_cast_hit = array.includes(forward_cast_seq_array, float(cast_forward_count))
         if forward_cast_hit and cast_forward_count > 0
-            // Check if this is the cycle transition candle
-            is_cycle_candle = same_candle_transition and on_cycle_candle and cast_forward_count == 1 and backward_cast_count == -1
+            // Skip showing "1" when toggle is ON (because -1 represents it)
+            should_skip = same_candle_transition and cast_forward_count == 1 and backward_cast_count == -1
             
-            if not is_cycle_candle
+            if not should_skip
                 // NORMAL FORWARD CASTING - show the sequence number
                 forward_offset = (high - low) * 0.15
                 forward_y = display_position == "above_candle" ? high + forward_offset + vertical_shift : low - forward_offset - vertical_shift
                 forward_text = str.tostring(cast_forward_count)
                 label.new(bar_index, forward_y, forward_text, color=color.new(#FFFFFF, 100), textcolor=casting_color, size=get_label_size())
-            // If is_cycle_candle, don't show forward label - the -1 label represents both
 
 // === ALERTS ===
 if counting_started and not in_time_distortion
