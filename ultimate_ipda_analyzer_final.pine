@@ -190,40 +190,26 @@ if enable_casting and counting_started
                 casting_active := true
                 forward_cast_active := true
                 if same_candle_transition
-                    // CYCLE: -1 candle IS the 1 candle (same point) - DON'T increment yet
-                    cast_forward_count := 0  // Will become 1 on this same candle
+                    // CYCLE: -1 candle IS the 1 candle - start from next sequence number after 1
+                    cast_forward_count := 3  // Skip 1, start from 3 (next in sequence 1,3,7,13...)
                 else
-                    // TRADITIONAL: separate candles
-                    cast_forward_count := 0  // Will become 1 on next candle
+                    // TRADITIONAL: separate candles - start with 1
+                    cast_forward_count := 1
             else
                 backward_cast_count := backward_cast_count + 1
         else
             if forward_cast_active
-                if same_candle_transition and cast_forward_count == 0 and casting_active
-                    // CYCLE MODE: This -1 candle becomes 1, then skip to next sequence number
-                    cast_forward_count := 1
-                    // Check if 1 is in forward sequence, if not go to next number
-                    if not array.includes(forward_cast_seq_array, 1.0)
-                        // Find next number in sequence after 1
-                        for i = 0 to array.size(forward_cast_seq_array) - 1
-                            seq_num = array.get(forward_cast_seq_array, i)
-                            if seq_num > 1
-                                cast_forward_count := int(seq_num)
-                                break
-                else
-                    // Normal increment, but find next sequence number
-                    next_count = cast_forward_count + 1
-                    found_next = false
-                    // Look for next number in forward sequence
-                    for i = 0 to array.size(forward_cast_seq_array) - 1
-                        seq_num = array.get(forward_cast_seq_array, i)
-                        if seq_num > cast_forward_count and not found_next
-                            cast_forward_count := int(seq_num)
-                            found_next := true
-                            break
-                    
-                    if not found_next
-                        cast_forward_count := cast_forward_count + 1
+                // Find next number in forward sequence
+                found_next = false
+                for i = 0 to array.size(forward_cast_seq_array) - 1
+                    seq_num = array.get(forward_cast_seq_array, i)
+                    if seq_num > cast_forward_count and not found_next
+                        cast_forward_count := int(seq_num)
+                        found_next := true
+                        break
+                
+                if not found_next
+                    cast_forward_count := cast_forward_count + 1
 
 // === MAIN COUNTING LOGIC ===
 if counting_started and current_count_number <= max_candles and bar_index >= anchor_bar_index
@@ -282,20 +268,11 @@ if enable_casting and counting_started and casting_initialized
     if not casting_phase_negative and forward_cast_active
         forward_cast_hit = array.includes(forward_cast_seq_array, float(cast_forward_count))
         if forward_cast_hit and cast_forward_count > 0
-            // Check if this is the cycle candle (-1 becomes 1)
-            is_cycle_candle = same_candle_transition and cast_forward_count == 1 and backward_cast_count == -1
-            backward_has_one = array.includes(casting_seq_array, 1.0)
-            
-            if is_cycle_candle and backward_has_one
-                // CYCLE MODE: Don't show forward label, -1 already shown represents both
-                // The -1 represents both backward end and forward start (1)
-                na
-            else
-                // NORMAL FORWARD CASTING - only show if it's in the sequence
-                forward_offset = (high - low) * 0.15
-                forward_y = display_position == "above_candle" ? high + forward_offset + vertical_shift : low - forward_offset - vertical_shift
-                forward_text = str.tostring(cast_forward_count)
-                label.new(bar_index, forward_y, forward_text, color=color.new(#FFFFFF, 100), textcolor=casting_color, size=get_label_size())
+            // NORMAL FORWARD CASTING - show all sequence numbers
+            forward_offset = (high - low) * 0.15
+            forward_y = display_position == "above_candle" ? high + forward_offset + vertical_shift : low - forward_offset - vertical_shift
+            forward_text = str.tostring(cast_forward_count)
+            label.new(bar_index, forward_y, forward_text, color=color.new(#FFFFFF, 100), textcolor=casting_color, size=get_label_size())
 
 // === ALERTS ===
 if counting_started and not in_time_distortion
