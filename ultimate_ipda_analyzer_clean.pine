@@ -185,20 +185,16 @@ if enable_casting and counting_started
     if casting_initialized and not (current_is_td and freezeOnTD)
         if casting_phase_negative
             if backward_cast_count == -1
+                // Transition from -1 (backward end) to 1 (forward start)
+                casting_phase_negative := false
+                casting_active := true
+                forward_cast_active := true
                 if same_candle_transition
-                    // SHARED CANDLE: -1 candle is both end of backward AND start of forward
-                    casting_phase_negative := false
-                    casting_active := true
-                    forward_cast_active := true
+                    // CYCLE: -1 candle IS the 1 candle (same point)
                     cast_forward_count := 1  // This -1 candle counts as 1 in forward sequence
-                    // Don't increment backward_cast_count, keep at -1 for this candle
                 else
-                    // TRADITIONAL: -1 ends backward, next candle starts forward at 1
-                    casting_phase_negative := false
-                    casting_active := true
-                    forward_cast_active := true
-                    cast_forward_count := 0  // Will increment to 1 on next candle
-                    backward_cast_count := backward_cast_count + 1  // Move past -1
+                    // TRADITIONAL: separate candles
+                    cast_forward_count := 1  // Next candle will be 1
             else
                 backward_cast_count := backward_cast_count + 1
         else
