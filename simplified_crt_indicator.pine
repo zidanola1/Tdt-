@@ -1,0 +1,270 @@
+//@version=5
+indicator("Simplified CRT Indicator", overlay=true)
+
+// ===== SETTINGS =====
+higherTF = input.timeframe("240", "Higher Timeframe")
+bulkyCandleATR = input.float(1.6, "Bulky Candle ATR Multiplier", minval=1.0, maxval=3.0)
+entryMode = input.string("FVGs", "Entry Mode", ["FVGs", "Order Blocks"])
+requireRetracement = input.bool(false, "Require Retracement")
+showHTFLines = input.bool(true, "Show HTF Lines")
+
+// Risk Management
+tpslMethod = input.string("Dynamic", "TP/SL Method", ["Dynamic", "Fixed"])
+riskAmount = input.string("Normal", "Risk Level", ["Highest", "High", "Normal", "Low", "Lowest"])
+tpPercent = input.float(0.3, "Fixed Take Profit %", step=0.1)
+slPercent = input.float(0.4, "Fixed Stop Loss %", step=0.1)
+
+// Colors
+bullColor = input.color(#089981, "Bullish")
+bearColor = input.color(#f23646, "Bearish")
+textColor = input.color(#ffffff, "Text")
+
+// ===== VARIABLES =====
+atr = ta.atr(10)
+atrCRT = ta.atr(50)
+
+// Higher timeframe data
+curBar = [open, high, low, close, ta.tr, atr]
+higherTFBar = request.security(syminfo.tickerid, higherTF, curBar)
+oldHigherTFBar = higherTFBar[1]
+
+var float lastHigh = na
+var float lastLow = na
+bool newBulkyCandle = false
+
+// ===== BULKY CANDLE DETECTION =====
+if not na(oldHigherTFBar)
+    if oldHigherTFBar[1] != higherTFBar[1] and (higherTFBar[4] > higherTFBar[5] * bulkyCandleATR)
+        newBulkyCandle := true
+        lastHigh := higherTFBar[1]
+        lastLow := higherTFBar[2]
+
+// ===== FVG DETECTION =====
+bearFVG = high < low[2] and close[1] < low[2]
+bullFVG = low > high[2] and close[1] > high[2]
+
+// ===== ORDER BLOCK DETECTION =====
+swingLength = 10
+upper = ta.highest(swingLength)
+lower = ta.lowest(swingLength)
+
+var int swingType = 0
+var float swingHigh = na
+var float swingLow = na
+var int swingHighTime = na
+var int swingLowTime = na
+
+li = low[swingLength]
+hi = high[swingLength]
+
+swingType := hi > upper ? 0 : li < lower ? 1 : swingType
+
+if swingType == 0 and swingType[1] != 0
+    swingHigh := hi
+    swingHighTime := time[swingLength]
+
+if swingType == 1 and swingType[1] != 1
+    swingLow := li
+    swingLowTime := time[swingLength]
+
+// Order block formation
+bullOB = close > swingHigh and not na(swingHigh)
+bearOB = close < swingLow and not na(swingLow)
+
+// ===== CRT STATE MACHINE =====
+type CRT
+    string state
+    int startTime
+    string overlapDirection
+    float bulkyHigh
+    float bulkyLow
+    int breakTime
+    float entryPrice
+    float slTarget
+    float tpTarget
+    string entryType
+    int entryTime
+    int exitTime
+    float exitPrice
+
+var CRT currentCRT = na
+var bool buySignal = false
+var bool sellSignal = false
+var bool tpSignal = false
+var bool slSignal = false
+
+// Initialize new CRT
+if newBulkyCandle and na(currentCRT)
+    currentCRT := CRT.new("Waiting For Side Retest", time)
+    currentCRT.bulkyHigh := lastHigh
+    currentCRT.bulkyLow := lastLow
+
+// State machine logic
+if not na(currentCRT)
+    // Waiting For Side Retest
+    if currentCRT.state == "Waiting For Side Retest"
+        if close > currentCRT.bulkyHigh or close < currentCRT.bulkyLow
+            currentCRT.state := "Aborted"
+        else
+            // Check for overlap
+            bearOverlap = high > currentCRT.bulkyHigh and close <= currentCRT.bulkyHigh
+            bullOverlap = low < currentCRT.bulkyLow and close >= currentCRT.bulkyLow
+            
+            if bearOverlap and not bullOverlap
+                currentCRT.overlapDirection := "Bear"
+                currentCRT.breakTime := time
+                currentCRT.state := "Waiting For Entry"
+            else if bullOverlap and not bearOverlap
+                currentCRT.overlapDirection := "Bull"
+                currentCRT.breakTime := time
+                currentCRT.state := "Waiting For Entry"
+    
+    // Waiting For Entry
+    if currentCRT.state == "Waiting For Entry"
+        entryFound = false
+        
+        if entryMode == "FVGs"
+            if currentCRT.overlapDirection == "Bear" and bearFVG
+                entryFound := true
+            else if currentCRT.overlapDirection == "Bull" and bullFVG
+                entryFound := true
+        else if entryMode == "Order Blocks"
+            if currentCRT.overlapDirection == "Bear" and bearOB
+                entryFound := true
+            else if currentCRT.overlapDirection == "Bull" and bullOB
+                entryFound := true
+        
+        if entryFound
+            if not requireRetracement
+                currentCRT.state := "Enter Position"
+            else
+                currentCRT.state := "Waiting For Retracement"
+    
+    // Waiting For Retracement
+    if currentCRT.state == "Waiting For Retracement"
+        retestComplete = false
+        
+        if currentCRT.overlapDirection == "Bear"
+            retestComplete := low <= currentCRT.bulkyHigh
+        else
+            retestComplete := high >= currentCRT.bulkyLow
+        
+        if retestComplete
+            currentCRT.state := "Enter Position"
+    
+    // Enter Position
+    if currentCRT.state == "Enter Position"
+        currentCRT.entryTime := time
+        currentCRT.entryPrice := close
+        
+        if currentCRT.overlapDirection == "Bull"
+            currentCRT.entryType := "Long"
+            buySignal := true
+            
+            if tpslMethod == "Fixed"
+                currentCRT.slTarget := currentCRT.entryPrice * (1 - slPercent / 100.0)
+                currentCRT.tpTarget := currentCRT.entryPrice * (1 + tpPercent / 100.0)
+            else
+                slATRMult = riskAmount == "Highest" ? 10 : riskAmount == "High" ? 8 : 
+                            riskAmount == "Normal" ? 6.5 : riskAmount == "Low" ? 5 : 3
+                currentCRT.slTarget := currentCRT.entryPrice - atrCRT * slATRMult
+                currentCRT.tpTarget := currentCRT.entryPrice + (math.abs(currentCRT.entryPrice - currentCRT.slTarget) * 0.39)
+        else
+            currentCRT.entryType := "Short"
+            sellSignal := true
+            
+            if tpslMethod == "Fixed"
+                currentCRT.slTarget := currentCRT.entryPrice * (1 + slPercent / 100.0)
+                currentCRT.tpTarget := currentCRT.entryPrice * (1 - tpPercent / 100.0)
+            else
+                slATRMult = riskAmount == "Highest" ? 10 : riskAmount == "High" ? 8 : 
+                            riskAmount == "Normal" ? 6.5 : riskAmount == "Low" ? 5 : 3
+                currentCRT.slTarget := currentCRT.entryPrice + atrCRT * slATRMult
+                currentCRT.tpTarget := currentCRT.entryPrice - (math.abs(currentCRT.entryPrice - currentCRT.slTarget) * 0.39)
+        
+        currentCRT.state := "Position Active"
+    
+    // Position Active - Check TP/SL
+    if currentCRT.state == "Position Active"
+        if currentCRT.entryType == "Long"
+            if high >= currentCRT.tpTarget
+                tpSignal := true
+                currentCRT.exitPrice := currentCRT.tpTarget
+                currentCRT.exitTime := time
+                currentCRT.state := "Take Profit"
+            else if low <= currentCRT.slTarget
+                slSignal := true
+                currentCRT.exitPrice := currentCRT.slTarget
+                currentCRT.exitTime := time
+                currentCRT.state := "Stop Loss"
+        else
+            if low <= currentCRT.tpTarget
+                tpSignal := true
+                currentCRT.exitPrice := currentCRT.tpTarget
+                currentCRT.exitTime := time
+                currentCRT.state := "Take Profit"
+            else if high >= currentCRT.slTarget
+                slSignal := true
+                currentCRT.exitPrice := currentCRT.slTarget
+                currentCRT.exitTime := time
+                currentCRT.state := "Stop Loss"
+
+// ===== PLOTTING =====
+// Bulky candle lines
+if showHTFLines and not na(currentCRT)
+    line.new(currentCRT.startTime, currentCRT.bulkyLow, time, currentCRT.bulkyLow, 
+             color=currentCRT.overlapDirection == "Bull" ? bullColor : bearColor, 
+             style=line.style_dashed)
+    line.new(currentCRT.startTime, currentCRT.bulkyHigh, time, currentCRT.bulkyHigh, 
+             color=currentCRT.overlapDirection == "Bull" ? bullColor : bearColor, 
+             style=line.style_dashed)
+
+// Entry signals
+plotshape(buySignal, "Buy", shape.triangleup, location.belowbar, bullColor, textcolor=textColor, size=size.small)
+plotshape(sellSignal, "Sell", shape.triangledown, location.abovebar, bearColor, textcolor=textColor, size=size.small)
+
+// TP/SL signals
+plotshape(tpSignal, "TP", shape.xcross, location.abovebar, color.blue, textcolor=textColor, size=size.tiny)
+plotshape(slSignal, "SL", shape.circle, location.belowbar, color.red, textcolor=textColor, size=size.tiny)
+
+// FVG visualization
+plotshape(bullFVG, "Bull FVG", shape.square, location.belowbar, bullColor, textcolor=textColor, size=size.tiny)
+plotshape(bearFVG, "Bear FVG", shape.square, location.abovebar, bearColor, textcolor=textColor, size=size.tiny)
+
+// Order blocks
+plotshape(bullOB, "Bull OB", shape.diamond, location.belowbar, bullColor, textcolor=textColor, size=size.tiny)
+plotshape(bearOB, "Bear OB", shape.diamond, location.abovebar, bearColor, textcolor=textColor, size=size.tiny)
+
+// ===== ALERTS =====
+alertcondition(buySignal, "Buy Signal", "CRT Buy Signal")
+alertcondition(sellSignal, "Sell Signal", "CRT Sell Signal")
+alertcondition(tpSignal, "Take Profit", "CRT Take Profit")
+alertcondition(slSignal, "Stop Loss", "CRT Stop Loss")
+
+// ===== DASHBOARD =====
+if barstate.islast
+    var table dashboard = table.new(position.top_right, 2, 6, bgcolor=color.new(color.black, 80))
+    
+    table.cell(dashboard, 0, 0, "CRT Status", text_color=textColor, bgcolor=color.new(color.black, 100))
+    table.cell(dashboard, 1, 0, not na(currentCRT) ? currentCRT.state : "No CRT", 
+               text_color=not na(currentCRT) ? (currentCRT.state == "Position Active" ? color.green : color.yellow) : color.gray, 
+               bgcolor=color.new(color.black, 100))
+    
+    if not na(currentCRT) and currentCRT.state == "Position Active"
+        table.cell(dashboard, 0, 1, "Entry Price", text_color=textColor, bgcolor=color.new(color.black, 100))
+        table.cell(dashboard, 1, 1, str.tostring(currentCRT.entryPrice, "#.####"), text_color=textColor, bgcolor=color.new(color.black, 100))
+        
+        table.cell(dashboard, 0, 2, "Take Profit", text_color=color.blue, bgcolor=color.new(color.black, 100))
+        table.cell(dashboard, 1, 2, str.tostring(currentCRT.tpTarget, "#.####"), text_color=color.blue, bgcolor=color.new(color.black, 100))
+        
+        table.cell(dashboard, 0, 3, "Stop Loss", text_color=color.red, bgcolor=color.new(color.black, 100))
+        table.cell(dashboard, 1, 3, str.tostring(currentCRT.slTarget, "#.####"), text_color=color.red, bgcolor=color.new(color.black, 100))
+        
+        riskPercent = math.abs(currentCRT.entryPrice - currentCRT.slTarget) / currentCRT.entryPrice * 100
+        rewardPercent = math.abs(currentCRT.tpTarget - currentCRT.entryPrice) / currentCRT.entryPrice * 100
+        rrRatio = rewardPercent / riskPercent
+        
+        table.cell(dashboard, 0, 4, "Risk/Reward", text_color=textColor, bgcolor=color.new(color.black, 100))
+        table.cell(dashboard, 1, 4, str.tostring(rrRatio, "#.##"), 
+                   text_color=rrRatio >= 2 ? color.green : rrRatio >= 1.5 ? color.yellow : color.red, 
+                   bgcolor=color.new(color.black, 100))
