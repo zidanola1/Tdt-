@@ -1,0 +1,196 @@
+//@version=5
+indicator("Signal Diagnostic Tool", overlay=true)
+
+// =============================================================================
+// SIGNAL DIAGNOSTIC TOOL
+// =============================================================================
+
+// This tool helps diagnose why signals aren't being generated
+// by showing the values of all signal components
+
+// =============================================================================
+// SIMPLE SIGNAL COMPONENTS
+// =============================================================================
+
+// Basic technical indicators
+rsi_value = ta.rsi(close, 14)
+sma_50 = ta.sma(close, 50)
+atr_14 = ta.atr(14)
+volume_sma = ta.sma(volume, 20)
+
+// Normalized inputs
+input1 = rsi_value / 100
+input2 = (close - sma_50) / atr_14
+input3 = volume / volume_sma
+
+// Simple neural network
+sigmoid(x) => 1 / (1 + math.exp(-x))
+neural_prediction = sigmoid(input1 * 0.5 + input2 * 0.3 + input3 * 0.2)
+
+// Quantum simulation
+quantum_prob = math.sin(rsi_value * math.pi / 100)
+quantum_confidence = math.cos(rsi_value * math.pi / 100)
+
+// Pattern detection
+pivot_high = ta.pivothigh(high, 5, 5)
+pivot_low = ta.pivotlow(low, 5, 5)
+elliott_direction = not na(pivot_high) ? 1 : not na(pivot_low) ? -1 : 0
+elliott_strength = not na(pivot_high) or not na(pivot_low) ? 60.0 : 0.0
+
+// Volume analysis
+volume_ratio = volume / volume_sma
+volume_bias = close > ta.vwap(close) ? 1 : -1
+
+// =============================================================================
+// SIGNAL CALCULATION
+// =============================================================================
+
+// Combine signals
+ultimate_signal = 
+    neural_prediction * 0.4 +
+    quantum_prob * 0.3 +
+    (elliott_strength / 100) * 0.2 +
+    (volume_ratio / 3) * 0.1
+
+// Direction consensus
+direction_signals = 
+    (neural_prediction > 0.5 ? 1 : -1) +
+    elliott_direction +
+    volume_bias
+
+final_direction = direction_signals > 0 ? 1 : -1
+final_confidence = (quantum_confidence + (elliott_strength / 100) + (volume_ratio / 3)) / 3
+
+// =============================================================================
+// SIGNAL CONDITIONS
+// =============================================================================
+
+// Original conditions (very strict)
+original_buy = ultimate_signal > 0.65 and final_direction > 0 and final_confidence > 0.6
+original_sell = ultimate_signal < 0.35 and final_direction < 0 and final_confidence > 0.6
+
+// Relaxed conditions
+relaxed_buy = ultimate_signal > 0.55 and final_direction > 0
+relaxed_sell = ultimate_signal < 0.45 and final_direction < 0
+
+// Very relaxed conditions
+very_relaxed_buy = ultimate_signal > 0.51 and final_direction > 0
+very_relaxed_sell = ultimate_signal < 0.49 and final_direction < 0
+
+// =============================================================================
+// DIAGNOSTIC DASHBOARD
+// =============================================================================
+
+if barstate.islast
+    var table diagnostic = table.new(position.top_left, 3, 15, bgcolor=color.black, border_width=1)
+    
+    // Headers
+    table.cell(diagnostic, 0, 0, "COMPONENT", text_color=color.yellow, text_size=size.normal, bgcolor=color.navy)
+    table.cell(diagnostic, 1, 0, "VALUE", text_color=color.yellow, text_size=size.normal, bgcolor=color.navy)
+    table.cell(diagnostic, 2, 0, "STATUS", text_color=color.yellow, text_size=size.normal, bgcolor=color.navy)
+    
+    // Input values
+    table.cell(diagnostic, 0, 1, "RSI (14)", text_color=color.white)
+    table.cell(diagnostic, 1, 1, str.tostring(math.round(rsi_value, 1)), text_color=color.white)
+    table.cell(diagnostic, 2, 1, rsi_value > 70 ? "🔴 OVERBOUGHT" : rsi_value < 30 ? "🟢 OVERSOLD" : "🟡 NEUTRAL", 
+               text_color=rsi_value > 70 ? color.red : rsi_value < 30 ? color.green : color.yellow)
+    
+    table.cell(diagnostic, 0, 2, "Price vs SMA50", text_color=color.white)
+    table.cell(diagnostic, 1, 2, str.tostring(math.round((close - sma_50) / close * 100, 2)) + "%", text_color=color.white)
+    table.cell(diagnostic, 2, 2, close > sma_50 ? "🟢 ABOVE" : "🔴 BELOW", 
+               text_color=close > sma_50 ? color.green : color.red)
+    
+    table.cell(diagnostic, 0, 3, "Volume Ratio", text_color=color.white)
+    table.cell(diagnostic, 1, 3, str.tostring(math.round(volume_ratio, 2)) + "x", text_color=color.white)
+    table.cell(diagnostic, 2, 3, volume_ratio > 1.5 ? "🟢 HIGH" : volume_ratio < 0.5 ? "🔴 LOW" : "🟡 NORMAL", 
+               text_color=volume_ratio > 1.5 ? color.green : volume_ratio < 0.5 ? color.red : color.yellow)
+    
+    // Neural network
+    table.cell(diagnostic, 0, 4, "Neural Prediction", text_color=color.purple)
+    table.cell(diagnostic, 1, 4, str.tostring(math.round(neural_prediction * 100, 1)) + "%", text_color=color.white)
+    table.cell(diagnostic, 2, 4, neural_prediction > 0.6 ? "🟢 BULLISH" : neural_prediction < 0.4 ? "🔴 BEARISH" : "🟡 NEUTRAL", 
+               text_color=neural_prediction > 0.6 ? color.green : neural_prediction < 0.4 ? color.red : color.yellow)
+    
+    // Quantum
+    table.cell(diagnostic, 0, 5, "Quantum Probability", text_color=color.blue)
+    table.cell(diagnostic, 1, 5, str.tostring(math.round(quantum_prob * 100, 1)) + "%", text_color=color.white)
+    table.cell(diagnostic, 2, 5, quantum_prob > 0.7 ? "🟢 STRONG" : quantum_prob < 0.3 ? "🔴 WEAK" : "🟡 MODERATE", 
+               text_color=quantum_prob > 0.7 ? color.green : quantum_prob < 0.3 ? color.red : color.yellow)
+    
+    // Elliott Wave
+    table.cell(diagnostic, 0, 6, "Elliott Direction", text_color=color.orange)
+    table.cell(diagnostic, 1, 6, elliott_direction > 0 ? "UP" : elliott_direction < 0 ? "DOWN" : "NEUTRAL", text_color=color.white)
+    table.cell(diagnostic, 2, 6, elliott_direction > 0 ? "🟢 UP" : elliott_direction < 0 ? "🔴 DOWN" : "🟡 NEUTRAL", 
+               text_color=elliott_direction > 0 ? color.green : elliott_direction < 0 ? color.red : color.yellow)
+    
+    // Ultimate Signal
+    table.cell(diagnostic, 0, 7, "Ultimate Signal", text_color=color.white, bgcolor=color.gray)
+    table.cell(diagnostic, 1, 7, str.tostring(math.round(ultimate_signal * 100, 1)) + "%", text_color=color.white, bgcolor=color.gray)
+    table.cell(diagnostic, 2, 7, ultimate_signal > 0.6 ? "🟢 BULLISH" : ultimate_signal < 0.4 ? "🔴 BEARISH" : "🟡 NEUTRAL", 
+               text_color=ultimate_signal > 0.6 ? color.green : ultimate_signal < 0.4 ? color.red : color.yellow, bgcolor=color.gray)
+    
+    // Direction
+    table.cell(diagnostic, 0, 8, "Final Direction", text_color=color.white, bgcolor=color.gray)
+    table.cell(diagnostic, 1, 8, final_direction > 0 ? "BULLISH" : "BEARISH", text_color=color.white, bgcolor=color.gray)
+    table.cell(diagnostic, 2, 8, final_direction > 0 ? "🟢 BULLISH" : "🔴 BEARISH", 
+               text_color=final_direction > 0 ? color.green : color.red, bgcolor=color.gray)
+    
+    // Confidence
+    table.cell(diagnostic, 0, 9, "Confidence", text_color=color.white, bgcolor=color.gray)
+    table.cell(diagnostic, 1, 9, str.tostring(math.round(final_confidence * 100, 1)) + "%", text_color=color.white, bgcolor=color.gray)
+    table.cell(diagnostic, 2, 9, final_confidence > 0.6 ? "🟢 HIGH" : final_confidence < 0.4 ? "🔴 LOW" : "🟡 MEDIUM", 
+               text_color=final_confidence > 0.6 ? color.green : final_confidence < 0.4 ? color.red : color.yellow, bgcolor=color.gray)
+    
+    // Signal conditions
+    table.cell(diagnostic, 0, 10, "Original Buy", text_color=color.white, bgcolor=color.gray)
+    table.cell(diagnostic, 1, 10, original_buy ? "YES" : "NO", text_color=color.white, bgcolor=color.gray)
+    table.cell(diagnostic, 2, 10, original_buy ? "🟢 SIGNAL" : "🔴 NO SIGNAL", 
+               text_color=original_buy ? color.green : color.red, bgcolor=color.gray)
+    
+    table.cell(diagnostic, 0, 11, "Original Sell", text_color=color.white, bgcolor=color.gray)
+    table.cell(diagnostic, 1, 11, original_sell ? "YES" : "NO", text_color=color.white, bgcolor=color.gray)
+    table.cell(diagnostic, 2, 11, original_sell ? "🔴 SIGNAL" : "🟢 NO SIGNAL", 
+               text_color=original_sell ? color.red : color.green, bgcolor=color.gray)
+    
+    table.cell(diagnostic, 0, 12, "Relaxed Buy", text_color=color.white, bgcolor=color.gray)
+    table.cell(diagnostic, 1, 12, relaxed_buy ? "YES" : "NO", text_color=color.white, bgcolor=color.gray)
+    table.cell(diagnostic, 2, 12, relaxed_buy ? "🟢 SIGNAL" : "🔴 NO SIGNAL", 
+               text_color=relaxed_buy ? color.green : color.red, bgcolor=color.gray)
+    
+    table.cell(diagnostic, 0, 13, "Relaxed Sell", text_color=color.white, bgcolor=color.gray)
+    table.cell(diagnostic, 1, 13, relaxed_sell ? "YES" : "NO", text_color=color.white, bgcolor=color.gray)
+    table.cell(diagnostic, 2, 13, relaxed_sell ? "🔴 SIGNAL" : "🟢 NO SIGNAL", 
+               text_color=relaxed_sell ? color.red : color.green, bgcolor=color.gray)
+    
+    table.cell(diagnostic, 0, 14, "Very Relaxed Buy", text_color=color.white, bgcolor=color.gray)
+    table.cell(diagnostic, 1, 14, very_relaxed_buy ? "YES" : "NO", text_color=color.white, bgcolor=color.gray)
+    table.cell(diagnostic, 2, 14, very_relaxed_buy ? "🟢 SIGNAL" : "🔴 NO SIGNAL", 
+               text_color=very_relaxed_buy ? color.green : color.red, bgcolor=color.gray)
+
+// =============================================================================
+// VISUALIZATION
+// =============================================================================
+
+// Plot the ultimate signal
+plot(ultimate_signal, title="Ultimate Signal", color=color.blue, linewidth=2)
+
+// Plot signal thresholds
+hline(0.65, title="Strong Buy Threshold", color=color.green, linestyle=hline.style_dashed)
+hline(0.55, title="Weak Buy Threshold", color=color.lime, linestyle=hline.style_dotted)
+hline(0.45, title="Weak Sell Threshold", color=color.orange, linestyle=hline.style_dotted)
+hline(0.35, title="Strong Sell Threshold", color=color.red, linestyle=hline.style_dashed)
+
+// Plot signals
+plotshape(original_buy, title="Original Buy", style=shape.triangleup, location=location.belowbar, color=color.green, size=size.normal)
+plotshape(original_sell, title="Original Sell", style=shape.triangledown, location=location.abovebar, color=color.red, size=size.normal)
+plotshape(relaxed_buy and not original_buy, title="Relaxed Buy", style=shape.circle, location=location.belowbar, color=color.lime, size=size.small)
+plotshape(relaxed_sell and not original_sell, title="Relaxed Sell", style=shape.circle, location=location.abovebar, color=color.maroon, size=size.small)
+
+// =============================================================================
+// ALERTS
+// =============================================================================
+
+alertcondition(original_buy, title="Original Buy Signal", message="Diagnostic: Original BUY signal detected!")
+alertcondition(original_sell, title="Original Sell Signal", message="Diagnostic: Original SELL signal detected!")
+alertcondition(relaxed_buy, title="Relaxed Buy Signal", message="Diagnostic: Relaxed BUY signal detected!")
+alertcondition(relaxed_sell, title="Relaxed Sell Signal", message="Diagnostic: Relaxed SELL signal detected!")
