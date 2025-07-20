@@ -266,12 +266,12 @@ if enable_casting and counting_started and casting_initialized
                     casting_offset = (high - low) * 0.12
                     casting_y = display_position == "above_candle" ? high + casting_offset + vertical_shift : low - casting_offset - vertical_shift
                     label.new(bar_index, casting_y, "-1", color=color.new(#FFFFFF, 100), textcolor=casting_color, size=get_label_size())
-                else
+                                else
                     // Show 1 if not in backward sequence
                     forward_offset = (high - low) * 0.15
                     forward_y = display_position == "above_candle" ? high + forward_offset + vertical_shift : low - forward_offset - vertical_shift
                     label.new(bar_index, forward_y, "1", color=color.new(#FFFFFF, 100), textcolor=casting_color, size=get_label_size())
-                        else
+            else
                 // NORMAL FORWARD CASTING (after cycle point) or TRADITIONAL MODE  
                 forward_offset = (high - low) * 0.15
                 forward_y = display_position == "above_candle" ? high + forward_offset + vertical_shift : low - forward_offset - vertical_shift
