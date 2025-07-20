@@ -1,0 +1,570 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © EL MEHDI QUANTUM ULTIMATE WORKING VERSION
+
+//@version=6
+indicator("🌟 EL MEHDI QUANTUM ULTIMATE V6 - WORKING 🌟", overlay=true, max_labels_count=500, max_lines_count=500, max_boxes_count=500)
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🧠 INPUTS AND CONFIGURATION
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+group_quantum = "⚡ QUANTUM AI ENGINE"
+enableQuantum = input.bool(true, "🧠 Quantum Neural Network", group=group_quantum)
+quantumSensitivity = input.float(3.0, "Quantum Sensitivity", 0.1, 10.0, 0.1, group=group_quantum)
+enableMultiverse = input.bool(true, "🌌 Multiverse Analysis", group=group_quantum)
+enableQuantumTunneling = input.bool(true, "⚛️ Quantum Tunneling", group=group_quantum)
+
+group_patterns = "🎯 PATTERN RECOGNITION"
+enableElliottWave = input.bool(true, "🌊 Elliott Wave Detection", group=group_patterns)
+enableHarmonicPatterns = input.bool(true, "🎵 Harmonic Pattern Analysis", group=group_patterns)
+enableVolumeProfile = input.bool(true, "📊 Volume Profile AI", group=group_patterns)
+enableOrderFlow = input.bool(true, "💹 Order Flow Analysis", group=group_patterns)
+enableLiquidityMapping = input.bool(true, "💧 Liquidity Pool Mapping", group=group_patterns)
+
+group_signals = "🎯 SIGNAL SETTINGS"
+signalThreshold = input.float(65.0, "Signal Threshold %", 50.0, 90.0, 1.0, group=group_signals)
+confidenceThreshold = input.float(60.0, "Confidence Threshold %", 40.0, 90.0, 1.0, group=group_signals)
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 📊 VOLUME PROFILE ANALYSIS - WORKING VERSION
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+analyzeVolumeProfile() =>
+    // VWAP and volume analysis
+    vwap_current = ta.vwap(close)
+    volume_sma = ta.sma(volume, 20)
+    volume_ratio = volume / volume_sma
+    
+    // High volume detection
+    high_volume_node = volume_ratio > 1.5
+    volume_spike = volume_ratio > 2.0
+    
+    // Volume bias based on price position relative to VWAP
+    volume_bias = close > vwap_current ? 1 : -1
+    volume_strength = math.min(volume_ratio, 5.0)
+    
+    // POC significance (simplified)
+    poc_distance = math.abs(close - vwap_current) / close
+    poc_significance = volume_ratio * (1 - poc_distance)
+    
+    [volume_bias, volume_strength, poc_significance, high_volume_node]
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🌊 ELLIOTT WAVE DETECTION - WORKING VERSION
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+detectElliottWave() =>
+    // Simplified Elliott Wave using ZigZag-like approach
+    atr_current = ta.atr(14)
+    
+    // Find significant highs and lows
+    pivot_high = ta.pivothigh(high, 5, 5)
+    pivot_low = ta.pivotlow(low, 5, 5)
+    
+    var float[] wave_points = array.new<float>()
+    var int wave_count = 0
+    
+    // Track wave points
+    if not na(pivot_high)
+        if array.size(wave_points) >= 5
+            array.shift(wave_points)
+        array.push(wave_points, pivot_high)
+        wave_count += 1
+    
+    if not na(pivot_low)
+        if array.size(wave_points) >= 5
+            array.shift(wave_points)
+        array.push(wave_points, pivot_low)
+        wave_count += 1
+    
+    // Elliott Wave confidence based on momentum and structure
+    rsi_val = ta.rsi(close, 14)
+    momentum = ta.mom(close, 10)
+    trend_strength = math.abs(momentum) / atr_current
+    
+    elliott_confidence = 0.0
+    elliott_direction = 0.0
+    
+    if array.size(wave_points) >= 3
+        recent_trend = array.get(wave_points, array.size(wave_points) - 1) > array.get(wave_points, array.size(wave_points) - 3) ? 1 : -1
+        elliott_confidence := math.min(trend_strength * 20 + (wave_count % 5 == 0 ? 20 : 0), 100)
+        elliott_direction := recent_trend
+    else
+        elliott_confidence := math.min(trend_strength * 15, 75)
+        elliott_direction := momentum > 0 ? 1 : -1
+    
+    [elliott_confidence, elliott_direction]
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🎵 HARMONIC PATTERN DETECTION - WORKING VERSION
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+detectHarmonicPatterns() =>
+    // Simplified harmonic pattern detection
+    atr_val = ta.atr(14)
+    
+    // Get recent price action
+    high_5 = ta.highest(high, 5)
+    low_5 = ta.lowest(low, 5)
+    high_10 = ta.highest(high, 10)
+    low_10 = ta.lowest(low, 10)
+    high_20 = ta.highest(high, 20)
+    low_20 = ta.lowest(low, 20)
+    
+    // Calculate retracement ratios
+    range_recent = high_5 - low_5
+    range_medium = high_10 - low_10
+    range_long = high_20 - low_20
+    
+    retracement_1 = range_recent / range_medium
+    retracement_2 = range_medium / range_long
+    
+    // Pattern detection based on Fibonacci ratios
+    fibonacci_618 = math.abs(retracement_1 - 0.618) < 0.1
+    fibonacci_382 = math.abs(retracement_1 - 0.382) < 0.1
+    fibonacci_786 = math.abs(retracement_2 - 0.786) < 0.1
+    
+    pattern_strength = 0.0
+    pattern_direction = 0.0
+    pattern_type = "NONE"
+    
+    if fibonacci_618 and fibonacci_786
+        pattern_strength := 75.0
+        pattern_type := "GARTLEY"
+        pattern_direction := close > ta.sma(close, 20) ? 1 : -1
+    else if fibonacci_382 and fibonacci_618
+        pattern_strength := 65.0
+        pattern_type := "BAT"
+        pattern_direction := close > ta.sma(close, 20) ? 1 : -1
+    else if fibonacci_786
+        pattern_strength := 55.0
+        pattern_type := "BUTTERFLY"
+        pattern_direction := close > ta.sma(close, 20) ? 1 : -1
+    else
+        // Basic pattern based on momentum
+        momentum = ta.mom(close, 14)
+        pattern_strength := math.min(math.abs(momentum) / atr_val * 20, 50)
+        pattern_direction := momentum > 0 ? 1 : -1
+    
+    [pattern_strength, pattern_direction, pattern_type]
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 💧 LIQUIDITY POOL MAPPING - WORKING VERSION
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+mapLiquidityPools() =>
+    atr_current = ta.atr(14)
+    
+    // Support and resistance levels
+    support_level = ta.lowest(low, 20)
+    resistance_level = ta.highest(high, 20)
+    
+    // Stop hunt detection (price spikes beyond levels then reverses)
+    stop_hunt_below = low < support_level and close > support_level + atr_current * 0.3
+    stop_hunt_above = high > resistance_level and close < resistance_level - atr_current * 0.3
+    liquidity_grab = stop_hunt_below or stop_hunt_above
+    
+    // Fair Value Gap detection
+    gap_up = low > high[2] + atr_current * 0.1
+    gap_down = high < low[2] - atr_current * 0.1
+    fair_value_gap = gap_up or gap_down
+    
+    // Institutional zone (high volume + low volatility)
+    volume_avg = ta.sma(volume, 50)
+    volatility = ta.atr(5) / ta.atr(20)
+    institutional_zone = volume > volume_avg * 1.2 and volatility < 0.8
+    
+    // Liquidity score
+    liquidity_score = 0.0
+    if liquidity_grab
+        liquidity_score += 40.0
+    if fair_value_gap
+        liquidity_score += 30.0
+    if institutional_zone
+        liquidity_score += 20.0
+    
+    // Add base liquidity based on volume
+    liquidity_score += math.min(volume / volume_avg * 10, 30)
+    
+    [liquidity_score, liquidity_grab, institutional_zone, fair_value_gap]
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 💹 ORDER FLOW ANALYSIS - WORKING VERSION
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+analyzeOrderFlow() =>
+    // Delta calculation (buying vs selling pressure)
+    uptick = close > close[1]
+    downtick = close < close[1]
+    
+    delta = uptick ? volume : downtick ? -volume : 0
+    volume_avg = ta.sma(volume, 20)
+    
+    // Order flow direction and strength
+    flow_direction = delta > 0 ? 1 : delta < 0 ? -1 : 0
+    flow_strength = math.abs(delta) / volume_avg
+    
+    // Absorption (high volume, small price movement)
+    price_change = math.abs(close - close[1])
+    atr_current = ta.atr(14)
+    volume_spike = volume > volume_avg * 1.5
+    absorption_detected = volume_spike and price_change < atr_current * 0.2
+    
+    // Iceberg orders (repeated large volume at levels)
+    iceberg_threshold = volume_avg * 2
+    near_high = close >= ta.highest(close, 3) * 0.995
+    near_low = close <= ta.lowest(close, 3) * 1.005
+    
+    iceberg_buy = volume > iceberg_threshold and near_low
+    iceberg_sell = volume > iceberg_threshold and near_high
+    
+    [flow_direction, flow_strength, absorption_detected, iceberg_buy, iceberg_sell]
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// ⚛️ QUANTUM MECHANICS SIMULATION - WORKING VERSION
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+quantumSuperposition() =>
+    rsi_val = ta.rsi(close, 14)
+    
+    // Wave function components
+    bullish_amplitude = math.sin(rsi_val * math.pi / 100)
+    bearish_amplitude = math.cos(rsi_val * math.pi / 100)
+    
+    // Quantum interference
+    interference = bullish_amplitude * bearish_amplitude
+    
+    // Probability amplitude
+    probability_amplitude = math.sqrt(bullish_amplitude * bullish_amplitude + bearish_amplitude * bearish_amplitude)
+    
+    // Observed state with noise
+    quantum_noise = (math.random() - 0.5) * 0.1
+    observed_state = probability_amplitude + quantum_noise
+    
+    // Quantum confidence (coherence)
+    quantum_confidence = 1 - math.abs(interference)
+    
+    [probability_amplitude, observed_state, quantum_confidence]
+
+quantumTunneling(price, barrier_height) =>
+    wave_function = math.sin(price * 0.01)
+    momentum = ta.mom(close, 14)
+    
+    // Transmission coefficient
+    transmission_coefficient = math.exp(-2 * barrier_height * math.sqrt(2 * math.abs(momentum) + 1))
+    tunneling_probability = math.abs(wave_function) * transmission_coefficient
+    
+    // Reflection probability
+    reflection_probability = 1 - tunneling_probability
+    
+    [tunneling_probability, reflection_probability]
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🧠 NEURAL NETWORK SIMULATION - WORKING VERSION
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+neuralNetworkPredict() =>
+    // Input features
+    rsi_val = ta.rsi(close, 14) / 100
+    macd_hist = ta.macd(close, 12, 26, 9)[2] / close * 1000
+    volume_ratio = volume / ta.sma(volume, 20)
+    price_momentum = ta.mom(close, 10) / close * 100
+    atr_norm = ta.atr(14) / close * 100
+    
+    // Simple neural network simulation
+    // Hidden layer 1
+    h1_1 = math.tanh(rsi_val * 0.8 + macd_hist * 0.1 + 0.2)
+    h1_2 = math.tanh(volume_ratio * 0.3 + price_momentum * 0.5 - 0.1)
+    h1_3 = math.tanh(atr_norm * 0.4 + rsi_val * 0.3 + 0.1)
+    
+    // Hidden layer 2
+    h2_1 = math.tanh(h1_1 * 0.6 + h1_2 * 0.4 + 0.1)
+    h2_2 = math.tanh(h1_2 * 0.5 + h1_3 * 0.5 - 0.2)
+    
+    // Output layer
+    output = math.tanh(h2_1 * 0.7 + h2_2 * 0.3 + 0.05)
+    
+    // Normalize to 0-1 range
+    prediction = (output + 1) / 2
+    prediction
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🌌 MULTIVERSE CONSENSUS - WORKING VERSION
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+multiverseConsensus() =>
+    // Different timeframe analysis
+    rsi_14 = ta.rsi(close, 14)
+    rsi_21 = ta.rsi(close, 21)
+    rsi_28 = ta.rsi(close, 28)
+    
+    [macd_12_26, _, hist_12_26] = ta.macd(close, 12, 26, 9)
+    [macd_19_39, _, hist_19_39] = ta.macd(close, 19, 39, 9)
+    
+    sma_20 = ta.sma(close, 20)
+    sma_50 = ta.sma(close, 50)
+    ema_20 = ta.ema(close, 20)
+    
+    // Universe predictions
+    universe1 = rsi_14 > 50 ? 0.7 : 0.3  // RSI universe
+    universe2 = hist_12_26 > 0 ? 0.8 : 0.2  // MACD universe
+    universe3 = close > sma_20 ? 0.75 : 0.25  // SMA universe
+    universe4 = close > ema_20 ? 0.65 : 0.35  // EMA universe
+    universe5 = (rsi_21 + rsi_28) / 2 > 50 ? 0.6 : 0.4  // Multi-RSI universe
+    
+    // Weighted consensus
+    consensus_strength = (universe1 * 0.25 + universe2 * 0.25 + universe3 * 0.2 + universe4 * 0.15 + universe5 * 0.15)
+    
+    // Direction and certainty
+    consensus_direction = consensus_strength > 0.5 ? 1 : -1
+    consensus_certainty = math.abs(consensus_strength - 0.5) * 2
+    
+    [consensus_strength, consensus_direction, consensus_certainty]
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🎯 MAIN SIGNAL CALCULATION
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Get all analysis results
+neural_prediction = enableQuantum ? neuralNetworkPredict() : 0.5
+[quantum_amplitude, quantum_state, quantum_confidence] = quantumSuperposition()
+
+// Quantum tunneling
+tunneling_prob = 0.0
+reflection_prob = 0.0
+if enableQuantumTunneling
+    [tunneling_prob, reflection_prob] = quantumTunneling(close, ta.atr(14))
+
+// Pattern analysis
+elliott_confidence = 0.0
+elliott_direction = 0.0
+if enableElliottWave
+    [elliott_confidence, elliott_direction] = detectElliottWave()
+
+harmonic_strength = 0.0
+harmonic_direction = 0.0
+harmonic_type = "NONE"
+if enableHarmonicPatterns
+    [harmonic_strength, harmonic_direction, harmonic_type] = detectHarmonicPatterns()
+
+volume_bias = 0.0
+volume_strength = 0.0
+poc_significance = 0.0
+high_volume_node = false
+if enableVolumeProfile
+    [volume_bias, volume_strength, poc_significance, high_volume_node] = analyzeVolumeProfile()
+
+flow_direction = 0.0
+flow_strength = 0.0
+absorption_detected = false
+iceberg_buy = false
+iceberg_sell = false
+if enableOrderFlow
+    [flow_direction, flow_strength, absorption_detected, iceberg_buy, iceberg_sell] = analyzeOrderFlow()
+
+liquidity_score = 0.0
+liquidity_grab = false
+institutional_zone = false
+fair_value_gap = false
+if enableLiquidityMapping
+    [liquidity_score, liquidity_grab, institutional_zone, fair_value_gap] = mapLiquidityPools()
+
+// Multiverse consensus
+consensus_strength = 0.5
+consensus_direction = 0.0
+consensus_certainty = 0.5
+if enableMultiverse
+    [consensus_strength, consensus_direction, consensus_certainty] = multiverseConsensus()
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🎯 ULTIMATE SIGNAL COMBINATION
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Combine all signals with proper weighting
+ultimate_signal = 
+  neural_prediction * 0.25 +
+  quantum_confidence * 0.20 +
+  (elliott_confidence / 100) * 0.15 +
+  (harmonic_strength / 100) * 0.12 +
+  (volume_strength / 3) * 0.10 +
+  (flow_strength / 2) * 0.08 +
+  (liquidity_score / 100) * 0.05 +
+  consensus_strength * 0.05
+
+// Direction consensus
+direction_signals = 
+  (neural_prediction > 0.5 ? 1 : -1) +
+  elliott_direction +
+  harmonic_direction +
+  volume_bias +
+  flow_direction +
+  consensus_direction
+
+final_direction = direction_signals > 0 ? 1 : -1
+
+// Enhanced confidence calculation
+confidence_factors = quantum_confidence + consensus_certainty + (elliott_confidence / 100) + (harmonic_strength / 100)
+final_confidence = math.min(confidence_factors / 4 * 100, 100)
+
+// Buy/Sell signals
+buy_signal = ultimate_signal * 100 > signalThreshold and final_direction > 0 and final_confidence > confidenceThreshold
+sell_signal = ultimate_signal * 100 < (100 - signalThreshold) and final_direction < 0 and final_confidence > confidenceThreshold
+
+// Special signals
+quantum_breakthrough = tunneling_prob > 0.7 and quantum_confidence > 0.8
+multiverse_alignment = consensus_certainty > 0.8 and math.abs(consensus_direction) > 0
+pattern_confluence = (elliott_confidence > 70 or harmonic_strength > 70) and volume_strength > 2
+liquidity_event = liquidity_grab and institutional_zone
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 📊 PERFORMANCE TRACKING
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+var int total_signals = 0
+var int correct_predictions = 0
+var float last_signal_price = 0.0
+var int last_signal_direction = 0
+
+// Track signals
+if buy_signal and not buy_signal[1]
+    total_signals += 1
+    last_signal_price := close
+    last_signal_direction := 1
+
+if sell_signal and not sell_signal[1]
+    total_signals += 1
+    last_signal_price := close
+    last_signal_direction := -1
+
+// Check prediction accuracy after 10 bars
+if bar_index % 10 == 0 and last_signal_price > 0
+    price_change = (close - last_signal_price) / last_signal_price
+    if (last_signal_direction == 1 and price_change > 0.001) or (last_signal_direction == -1 and price_change < -0.001)
+        correct_predictions += 1
+
+accuracy_rate = total_signals > 0 ? correct_predictions / total_signals * 100 : 0
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 📊 DASHBOARD
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+if barstate.islast
+    var table dashboard = table.new(position.top_right, 3, 13, bgcolor=color.black, border_width=2, border_color=color.white)
+    
+    // Clear and rebuild table
+    table.clear(dashboard, 0, 0, 2, 12)
+    
+    // Headers
+    table.cell(dashboard, 0, 0, "🌟 EL MEHDI QUANTUM ULTIMATE", text_color=color.yellow, text_size=size.large, bgcolor=color.navy)
+    table.cell(dashboard, 1, 0, "VALUE", text_color=color.white, text_size=size.normal, bgcolor=color.navy)
+    table.cell(dashboard, 2, 0, "STATUS", text_color=color.white, text_size=size.normal, bgcolor=color.navy)
+    
+    // Neural Network
+    table.cell(dashboard, 0, 1, "🧠 Neural Network", text_color=color.aqua, text_size=size.normal)
+    table.cell(dashboard, 1, 1, str.tostring(math.round(neural_prediction * 100, 1)) + "%", text_color=color.white, text_size=size.normal)
+    table.cell(dashboard, 2, 1, neural_prediction > 0.6 ? "🟢 BULLISH" : neural_prediction < 0.4 ? "🔴 BEARISH" : "🟡 NEUTRAL", 
+               text_color=neural_prediction > 0.6 ? color.lime : neural_prediction < 0.4 ? color.red : color.yellow, text_size=size.normal)
+    
+    // Quantum State
+    table.cell(dashboard, 0, 2, "⚛️ Quantum State", text_color=color.purple, text_size=size.normal)
+    table.cell(dashboard, 1, 2, str.tostring(math.round(quantum_confidence * 100, 1)) + "%", text_color=color.white, text_size=size.normal)
+    table.cell(dashboard, 2, 2, quantum_breakthrough ? "💥 BREAKTHROUGH" : quantum_confidence > 0.7 ? "🟢 COHERENT" : "🟡 UNSTABLE", 
+               text_color=quantum_breakthrough ? color.orange : quantum_confidence > 0.7 ? color.lime : color.yellow, text_size=size.normal)
+    
+    // Elliott Wave
+    table.cell(dashboard, 0, 3, "🌊 Elliott Wave", text_color=color.blue, text_size=size.normal)
+    table.cell(dashboard, 1, 3, str.tostring(math.round(elliott_confidence, 1)) + "%", text_color=color.white, text_size=size.normal)
+    table.cell(dashboard, 2, 3, elliott_confidence > 60 ? "🟢 STRONG" : elliott_confidence > 30 ? "🟡 WEAK" : "🔴 NONE", 
+               text_color=elliott_confidence > 60 ? color.lime : elliott_confidence > 30 ? color.yellow : color.red, text_size=size.normal)
+    
+    // Harmonic Patterns
+    table.cell(dashboard, 0, 4, "🎵 Harmonic", text_color=color.fuchsia, text_size=size.normal)
+    table.cell(dashboard, 1, 4, harmonic_type + " " + str.tostring(math.round(harmonic_strength, 1)), text_color=color.white, text_size=size.normal)
+    table.cell(dashboard, 2, 4, harmonic_strength > 50 ? "🟢 STRONG" : harmonic_strength > 20 ? "🟡 WEAK" : "🔴 NONE", 
+               text_color=harmonic_strength > 50 ? color.lime : harmonic_strength > 20 ? color.yellow : color.red, text_size=size.normal)
+    
+    // Volume Profile
+    table.cell(dashboard, 0, 5, "📊 Volume Profile", text_color=color.orange, text_size=size.normal)
+    table.cell(dashboard, 1, 5, str.tostring(math.round(volume_strength, 2)) + "x", text_color=color.white, text_size=size.normal)
+    table.cell(dashboard, 2, 5, high_volume_node ? "🟢 HIGH NODE" : volume_strength > 1.5 ? "🟡 ACTIVE" : "🔴 LOW", 
+               text_color=high_volume_node ? color.lime : volume_strength > 1.5 ? color.yellow : color.red, text_size=size.normal)
+    
+    // Order Flow
+    table.cell(dashboard, 0, 6, "💹 Order Flow", text_color=color.teal, text_size=size.normal)
+    table.cell(dashboard, 1, 6, str.tostring(math.round(flow_strength, 2)), text_color=color.white, text_size=size.normal)
+    table.cell(dashboard, 2, 6, absorption_detected ? "🔵 ABSORPTION" : iceberg_buy ? "🟢 ICEBERG BUY" : iceberg_sell ? "🔴 ICEBERG SELL" : "🟡 NORMAL", 
+               text_color=absorption_detected ? color.blue : iceberg_buy ? color.lime : iceberg_sell ? color.red : color.yellow, text_size=size.normal)
+    
+    // Liquidity
+    table.cell(dashboard, 0, 7, "💧 Liquidity", text_color=color.aqua, text_size=size.normal)
+    table.cell(dashboard, 1, 7, str.tostring(math.round(liquidity_score, 1)), text_color=color.white, text_size=size.normal)
+    table.cell(dashboard, 2, 7, liquidity_grab ? "🚨 GRAB DETECTED" : institutional_zone ? "🏛️ INSTITUTION" : fair_value_gap ? "📊 FVG" : "🟡 NORMAL", 
+               text_color=liquidity_grab ? color.red : institutional_zone ? color.purple : fair_value_gap ? color.orange : color.yellow, text_size=size.normal)
+    
+    // Multiverse
+    table.cell(dashboard, 0, 8, "🌌 Multiverse", text_color=color.silver, text_size=size.normal)
+    table.cell(dashboard, 1, 8, str.tostring(math.round(consensus_strength * 100, 1)) + "%", text_color=color.white, text_size=size.normal)
+    table.cell(dashboard, 2, 8, multiverse_alignment ? "🌟 ALIGNED" : consensus_certainty > 0.6 ? "🟢 CONSENSUS" : "🟡 DIVERGED", 
+               text_color=multiverse_alignment ? color.yellow : consensus_certainty > 0.6 ? color.lime : color.orange, text_size=size.normal)
+    
+    // Performance
+    table.cell(dashboard, 0, 9, "🎯 Performance", text_color=color.white, text_size=size.normal)
+    table.cell(dashboard, 1, 9, str.tostring(math.round(accuracy_rate, 1)) + "%", text_color=color.white, text_size=size.normal)
+    table.cell(dashboard, 2, 9, accuracy_rate > 70 ? "🟢 EXCELLENT" : accuracy_rate > 50 ? "🟡 GOOD" : "🔴 LEARNING", 
+               text_color=accuracy_rate > 70 ? color.lime : accuracy_rate > 50 ? color.yellow : color.red, text_size=size.normal)
+    
+    // Total Signals
+    table.cell(dashboard, 0, 10, "📊 Total Signals", text_color=color.gray, text_size=size.normal)
+    table.cell(dashboard, 1, 10, str.tostring(total_signals), text_color=color.white, text_size=size.normal)
+    table.cell(dashboard, 2, 10, total_signals > 10 ? "🟢 ACTIVE" : total_signals > 5 ? "🟡 MODERATE" : "🔴 LOW", 
+               text_color=total_signals > 10 ? color.lime : total_signals > 5 ? color.yellow : color.red, text_size=size.normal)
+    
+    // Final Signal
+    table.cell(dashboard, 0, 11, "🎯 FINAL SIGNAL", text_color=color.white, text_size=size.large, bgcolor=color.gray)
+    table.cell(dashboard, 1, 11, str.tostring(math.round(ultimate_signal * 100, 1)) + "%", text_color=color.white, text_size=size.large, bgcolor=color.gray)
+    table.cell(dashboard, 2, 11, buy_signal ? "🚀 STRONG BUY" : sell_signal ? "🔻 STRONG SELL" : ultimate_signal > 0.55 ? "🟢 BUY" : ultimate_signal < 0.45 ? "🔴 SELL" : "🟡 HOLD", 
+               text_color=buy_signal ? color.lime : sell_signal ? color.red : ultimate_signal > 0.55 ? color.green : ultimate_signal < 0.45 ? color.maroon : color.yellow, 
+               text_size=size.large, bgcolor=color.gray)
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🎨 VISUAL SIGNALS
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+// Buy/Sell signals
+plotshape(buy_signal and not buy_signal[1], style=shape.triangleup, location=location.belowbar, color=color.lime, size=size.normal, title="Buy Signal")
+plotshape(sell_signal and not sell_signal[1], style=shape.triangledown, location=location.abovebar, color=color.red, size=size.normal, title="Sell Signal")
+
+// Elliott Wave signals
+plotshape(elliott_confidence > 70 and elliott_direction > 0, style=shape.circle, location=location.belowbar, color=color.blue, size=size.small, title="Elliott Wave Up")
+plotshape(elliott_confidence > 70 and elliott_direction < 0, style=shape.circle, location=location.abovebar, color=color.blue, size=size.small, title="Elliott Wave Down")
+
+// Harmonic patterns
+plotshape(harmonic_strength > 60 and harmonic_direction > 0, style=shape.diamond, location=location.belowbar, color=color.purple, size=size.small, title="Harmonic Pattern Up")
+plotshape(harmonic_strength > 60 and harmonic_direction < 0, style=shape.diamond, location=location.abovebar, color=color.purple, size=size.small, title="Harmonic Pattern Down")
+
+// Volume nodes
+plotshape(high_volume_node, style=shape.square, location=location.bottom, color=color.orange, size=size.tiny, title="High Volume Node")
+
+// Liquidity events
+plotshape(liquidity_grab, style=shape.xcross, location=location.top, color=color.red, size=size.small, title="Liquidity Grab")
+
+// Order flow
+plotshape(iceberg_buy, style=shape.arrowup, location=location.belowbar, color=color.aqua, size=size.small, title="Iceberg Buy")
+plotshape(iceberg_sell, style=shape.arrowdown, location=location.abovebar, color=color.red, size=size.small, title="Iceberg Sell")
+
+// Background color for quantum breakthrough
+bgcolor(quantum_breakthrough ? color.new(color.orange, 85) : na, title="Quantum Breakthrough")
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// 🚨 ALERTS
+// ═══════════════════════════════════════════════════════════════════════════════════
+
+alertcondition(buy_signal, title="🚀 QUANTUM BUY SIGNAL", message="🌟 EL MEHDI QUANTUM: Strong BUY signal!\nSignal: {{plot_0}}%\nConfidence: {{plot_1}}%")
+alertcondition(sell_signal, title="🔻 QUANTUM SELL SIGNAL", message="🌟 EL MEHDI QUANTUM: Strong SELL signal!\nSignal: {{plot_0}}%\nConfidence: {{plot_1}}%")
+alertcondition(quantum_breakthrough, title="💥 QUANTUM BREAKTHROUGH", message="⚛️ Quantum breakthrough detected!")
+alertcondition(pattern_confluence, title="📐 PATTERN CONFLUENCE", message="🎯 Multiple patterns converging!")
+alertcondition(liquidity_event, title="💧 LIQUIDITY EVENT", message="🚨 Liquidity event detected!")
+
+// Plot for alerts
+plot(ultimate_signal * 100, title="Ultimate Signal", color=color.new(color.purple, 100))
+plot(final_confidence, title="Final Confidence", color=color.new(color.blue, 100))
