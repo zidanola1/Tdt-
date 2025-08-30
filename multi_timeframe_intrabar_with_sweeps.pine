@@ -416,20 +416,24 @@ var int tf7_last_h_start = na
 var int tf7_last_l_start = na
 
 draw_sweep_boxes(_use, _tf, _hs, _ls, _hslev, _lslev, _hh0, _hl0, _ht0, _hc0, _hBox, _lBox, _lastHStart, _lastLStart) =>
+    box hBox = _hBox
+    box lBox = _lBox
+    int lastHStart = _lastHStart
+    int lastLStart = _lastLStart
     if show_sweeps and _use and chart_under_tf(_tf)
         // High sweep zone (close back below selected reference level)
         if _hh0 > _hslev and _hc0 < _hslev and _hs
-            _hBox := box.new(left=_ht0, top=_hh0, right=time, bottom=_hslev, xloc=xloc.bar_time, border_color=sweep_border_color, bgcolor=sweep_fill_color, border_width=1)
-            if _lastHStart == _ht0
-                box.delete(_hBox[1])
-            _lastHStart := _ht0
+            hBox := box.new(left=_ht0, top=_hh0, right=time, bottom=_hslev, xloc=xloc.bar_time, border_color=sweep_border_color, bgcolor=sweep_fill_color, border_width=1)
+            if lastHStart == _ht0
+                box.delete(hBox[1])
+            lastHStart := _ht0
         // Low sweep zone (close back above selected reference level)
         if _hl0 < _lslev and _hc0 > _lslev and _ls
-            _lBox := box.new(left=_ht0, top=_lslev, right=time, bottom=_hl0, xloc=xloc.bar_time, border_color=sweep_border_color, bgcolor=sweep_fill_color, border_width=1)
-            if _lastLStart == _ht0
-                box.delete(_lBox[1])
-            _lastLStart := _ht0
-    [_hBox, _lBox, _lastHStart, _lastLStart]
+            lBox := box.new(left=_ht0, top=_lslev, right=time, bottom=_hl0, xloc=xloc.bar_time, border_color=sweep_border_color, bgcolor=sweep_fill_color, border_width=1)
+            if lastLStart == _ht0
+                box.delete(lBox[1])
+            lastLStart := _ht0
+    [hBox, lBox, lastHStart, lastLStart]
 
 [tf1_h_box, tf1_l_box, tf1_last_h_start, tf1_last_l_start] := draw_sweep_boxes(use_tf1, tf1, hs1, ls1, hslev1, lslev1, hh0_1, hl0_1, ht0_1, hc0_1, tf1_h_box, tf1_l_box, tf1_last_h_start, tf1_last_l_start)
 [tf2_h_box, tf2_l_box, tf2_last_h_start, tf2_last_l_start] := draw_sweep_boxes(use_tf2, tf2, hs2, ls2, hslev2, lslev2, hh0_2, hl0_2, ht0_2, hc0_2, tf2_h_box, tf2_l_box, tf2_last_h_start, tf2_last_l_start)
