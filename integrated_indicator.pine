@@ -179,6 +179,8 @@ var h0 = high
 var l0 = low
 var h0bar = bar_index
 var l0bar = bar_index
+var h1bar = bar_index
+var l1bar = bar_index
 var h0t = time
 var l0t = time
 var t0 = time
@@ -215,6 +217,8 @@ if timeframe.change(htf)
     l1 := l0[1]
     t1 := t0[1]
     c1 := close[1]
+    h1bar := h0bar[1]
+    l1bar := l0bar[1]
 
 // Process multi-timeframe consolidation
 [high1, low1, mid1, start1, inRange1, newBar1, bullishTouch1, bearishTouch1] = process_tf(tf1)
@@ -448,6 +452,7 @@ add_to_array(arr, value) =>
     array.unshift(arr, value)
     if array.size(arr) > 100
         array.pop(arr)
+    arr
 
 f_text(string _tf) =>
     _text = str.tonumber(_tf) < 59 ? _tf + 'm' : str.tonumber(_tf) > 59 ? 'h' + str.tostring(math.floor(str.tonumber(_tf)/60)) : _tf
