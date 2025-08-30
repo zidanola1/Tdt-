@@ -262,29 +262,20 @@ if l0 < l1 and math.min(o0, c0) > l1
 if showhtf
     if time == t0 and timeframe.period != htf
         htf_box_color = c1 > o1 ? bull_color : c1 < o1 ? bear_color : range_color 
-        boxhtf1 = box.new(left=t1, top=h1, right=t0, bottom=l1, xloc=xloc.bar_time, 
-                         border_width=width_box, border_style=style_box, 
-                         bgcolor=color.rgb(255, 255, 255, 100), border_color=htf_box_color)
+        boxhtf1 = box.new(left=t1, top=h1, right=t0, bottom=l1, xloc=xloc.bar_time, border_width=width_box, border_style=style_box, bgcolor=color.rgb(255, 255, 255, 100), border_color=htf_box_color)
     
     if timeframe.period != htf
         htf_box_color = c0 > o0 ? bull_color : c0 < o0 ? bear_color : range_color         
-        boxhtf = box.new(left=t0, top=high > h0 ? high : h0, right=time+1, 
-                        bottom=low < l0 ? low : l0, xloc=xloc.bar_time,
-                        border_width=width_box, border_style=style_box,
-                        bgcolor=color.rgb(255, 255, 255, 100), border_color=htf_box_color)
+        boxhtf = box.new(left=t0, top=high > h0 ? high : h0, right=time+1, bottom=low < l0 ? low : l0, xloc=xloc.bar_time, border_width=width_box, border_style=style_box, bgcolor=color.rgb(255, 255, 255, 100), border_color=htf_box_color)
         box.delete(boxhtf[1])
 
 // Plot sweep boxes on consolidation levels
 if h_swept and inRange1
-    sweep_box_high = box.new(left=bar_index-5, top=high1, right=bar_index, bottom=high1-0.001, 
-                             xloc=xloc.bar_index, border_width=2, border_style=line.style_dotted, 
-                             bgcolor=swept_color, border_color=bear_color)
+    sweep_box_high = box.new(left=bar_index-5, top=high1, right=bar_index, bottom=high1-0.001, xloc=xloc.bar_index, border_width=2, border_style=line.style_dotted, bgcolor=swept_color, border_color=bear_color)
     box.delete(sweep_box_high[1])
 
 if l_swept and inRange1
-    sweep_box_low = box.new(left=bar_index-5, top=low1+0.001, right=bar_index, bottom=low1, 
-                            xloc=xloc.bar_index, border_width=2, border_style=line.style_dotted, 
-                            bgcolor=swept_color, border_color=bull_color)
+    sweep_box_low = box.new(left=bar_index-5, top=low1+0.001, right=bar_index, bottom=low1, xloc=xloc.bar_index, border_width=2, border_style=line.style_dotted, bgcolor=swept_color, border_color=bull_color)
     box.delete(sweep_box_low[1])
 
 // ===== CISD ANALYSIS =====
@@ -399,9 +390,7 @@ if bullcisd and xcisd[1] == false
 xbull = xcisd and saybull == 0 and bull_cisd_ara and ((l_swept[1]) or (l_swept[1] and l1 < l0))
 
 if xbull
-    bucisd = box.new(left=bull_index[1], top=bull_level[1], right=mm-1, bottom=bull_level[1], 
-                     border_color=bull_color, border_width=1, text="cisd+", text_color=bull_color, 
-                     text_size=size.tiny, text_halign=text.align_center, text_valign=text.align_bottom)
+    bucisd = box.new(left=bull_index[1], top=bull_level[1], right=mm-1, bottom=bull_level[1], border_color=bull_color, border_width=1, text="cisd+", text_color=bull_color, text_size=size.tiny, text_halign=text.align_center, text_valign=text.align_bottom)
     bull_alarm := true
     if bull_alarm and saybull == 0
         alert(syminfo.tickerid + ',' + timeframe.period + ',🟢 Long Alarm', alert.freq_once_per_bar)
@@ -432,9 +421,7 @@ if bearcisd and ycisd[1] == false
 xbear = ycisd and ((h_swept[1]) or (h_swept[1] and h1 > h0)) and saybear == 0 and bear_cisd_ara
 
 if xbear
-    becisd = box.new(left=bear_index[1], top=bear_level[1], right=nn-1, bottom=bear_level[1], 
-                     border_color=bear_color, border_width=1, text="cisd-", text_color=bear_color, 
-                     text_size=size.tiny, text_halign=text.align_center, text_valign=text.align_top)
+    becisd = box.new(left=bear_index[1], top=bear_level[1], right=nn-1, bottom=bear_level[1], border_color=bear_color, border_width=1, text="cisd-", text_color=bear_color, text_size=size.tiny, text_halign=text.align_center, text_valign=text.align_top)
     bear_alarm := true
     if bear_alarm and saybear == 0
         alert(syminfo.tickerid + ',' + timeframe.period + ',🔴 Short Alarm', alert.freq_once_per_bar)
@@ -454,10 +441,8 @@ if array.size(becisdg) > 1
         array.remove(becisdg, i)
 
 // Plot CISD signals
-plotshape(bull_alarm, title="Bullish CISD", style=shape.arrowup, location=location.belowbar, 
-          color=bull_color, size=size.tiny, text="", textcolor=color.green, offset=-1)
-plotshape(bear_alarm, title="Bearish CISD", style=shape.arrowdown, location=location.abovebar, 
-          color=bear_color, size=size.tiny, text="", textcolor=color.red, offset=-1)
+plotshape(bull_alarm, title="Bullish CISD", style=shape.arrowup, location=location.belowbar, color=bull_color, size=size.tiny, text="", textcolor=color.green, offset=-1)
+plotshape(bear_alarm, title="Bearish CISD", style=shape.arrowdown, location=location.abovebar, color=bear_color, size=size.tiny, text="", textcolor=color.red, offset=-1)
 
 // Reset alarms
 bull_alarm := false
@@ -470,8 +455,7 @@ add_to_array(arr, value) =>
         array.pop(arr)
 
 f_text(string _tf) =>
-    _text = str.tonumber(_tf) < 59 ? _tf + 'm' :
-     str.tonumber(_tf) > 59 ? 'h' + str.tostring(math.floor(str.tonumber(_tf)/60)) : _tf
+    _text = str.tonumber(_tf) < 59 ? _tf + 'm' : str.tonumber(_tf) > 59 ? 'h' + str.tostring(math.floor(str.tonumber(_tf)/60)) : _tf
     _text := _tf == "1D" ? "D" : _tf == "1W" ? "W" : _tf == "1M" ? "M" : _text
 
 // ===== ALERTS =====
