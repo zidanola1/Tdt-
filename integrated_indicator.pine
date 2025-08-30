@@ -174,15 +174,6 @@ plot_lines(tfColor, midColor, high, low, mid, start, inRange, newBar, useMid, bu
     
     [bullishTouch, bearishTouch]
 
-// Sweep Detection Function
-f_hswept(_sym, _tf) =>
-    if h0 > h1 and math.max(o0, c0) <= h1
-        _h_swept = true    
-
-f_lswept(_sym, _tf) =>
-    if l0 < l1 and math.min(o0, c0) >= l1
-        _l_swept = true
-
 // ===== VARIABLES =====
 var o0 = open
 var h0 = high
@@ -251,14 +242,25 @@ if use_tf6
 if use_tf7
     [bullishTouch7, bearishTouch7] = plot_lines(tf7_color, tf7_mid_color, high7, low7, mid7, start7, inRange7, newBar7, use_tf7_mid, bullishTouch7, bearishTouch7, "M")
 
-// Sweep detection
-h_swept = h0 > h1 and math.max(o0, c0) < h1
-l_swept = l0 < l1 and math.min(o0, c0) > l1
+// ===== SWEEP DETECTION (INTEGRATED WITH CONSOLIDATION) =====
+// Detect sweeps using consolidation levels
+h_swept = false
+l_swept = false
+
+// Check if current price sweeps above/below consolidation levels
+if inRange1 and high > high1 and close < high1
+    h_swept := true
+if inRange1 and low < low1 and close > low1
+    l_swept := true
+
+// Also check HTF sweeps
+if h0 > h1 and math.max(o0, c0) < h1
+    h_swept := true
+if l0 < l1 and math.min(o0, c0) > l1
+    l_swept := true
 
 // Plot HTF boxes
 if showhtf
-    xcolor = swept_color
-    
     if time == t0 and timeframe.period != htf
         htf_box_color = c1 > o1 ? bull_color : c1 < o1 ? bear_color : range_color 
         boxhtf1 = box.new(left=t1, top=h1, right=t0, bottom=l1, xloc=xloc.bar_time, 
@@ -273,21 +275,18 @@ if showhtf
                         bgcolor=color.rgb(255, 255, 255, 100), border_color=htf_box_color)
         box.delete(boxhtf[1])
 
-// Alerts
-if alert_on_m30 and (bullishTouch1 or bearishTouch1)
-    alert("M30 touch detected", alert.freq_once_per_bar_close)
-if alert_on_h1 and (bullishTouch2 or bearishTouch2)
-    alert("H1 touch detected", alert.freq_once_per_bar_close)
-if alert_on_h2 and (bullishTouch3 or bearishTouch3)
-    alert("H2 touch detected", alert.freq_once_per_bar_close)
-if alert_on_h4 and (bullishTouch4 or bearishTouch4)
-    alert("H4 touch detected", alert.freq_once_per_bar_close)
-if alert_on_daily and (bullishTouch5 or bearishTouch5)
-    alert("Daily touch detected", alert.freq_once_per_bar_close)
-if alert_on_weekly and (bullishTouch6 or bearishTouch6)
-    alert("Weekly touch detected", alert.freq_once_per_bar_close)
-if alert_on_monthly and (bullishTouch7 or bearishTouch7)
-    alert("Monthly touch detected", alert.freq_once_per_bar_close)
+// Plot sweep boxes on consolidation levels
+if h_swept and inRange1
+    sweep_box_high = box.new(left=bar_index-5, top=high1, right=bar_index, bottom=high1-0.001, 
+                             xloc=xloc.bar_index, border_width=2, border_style=line.style_dotted, 
+                             bgcolor=swept_color, border_color=bear_color)
+    box.delete(sweep_box_high[1])
+
+if l_swept and inRange1
+    sweep_box_low = box.new(left=bar_index-5, top=low1+0.001, right=bar_index, bottom=low1, 
+                            xloc=xloc.bar_index, border_width=2, border_style=line.style_dotted, 
+                            bgcolor=swept_color, border_color=bull_color)
+    box.delete(sweep_box_low[1])
 
 // ===== CISD ANALYSIS =====
 var bull_level = high
@@ -476,13 +475,18 @@ f_text(string _tf) =>
      str.tonumber(_tf) > 59 ? 'h' + str.tostring(math.floor(str.tonumber(_tf)/60)) : _tf
     _text := _tf == "1D" ? "D" : _tf == "1W" ? "W" : _tf == "1M" ? "M" : _text
 
-// ===== SWEEP BOXES =====
-if showhtf and h0 > h1 and close < h1 and o0 < h1
-    boxhtf4 = box.new(left=t0, top=h0, right=time, bottom=h1, xloc=xloc.bar_time, 
-                      border_width=1, border_style=line.style_dotted, bgcolor=swept_color, 
-                      border_color=color.new(color.gray, 70))
-
-if showhtf and l0 < l1 and close > l1 and o0 > l1
-    boxhtf5 = box.new(left=t0, top=l1, right=time, bottom=l0, xloc=xloc.bar_time, 
-                      border_width=1, border_style=line.style_dotted, bgcolor=swept_color, 
-                      border_color=color.new(color.gray, 70))
+// ===== ALERTS =====
+if alert_on_m30 and (bullishTouch1 or bearishTouch1)
+    alert("M30 touch detected", alert.freq_once_per_bar_close)
+if alert_on_h1 and (bullishTouch2 or bearishTouch2)
+    alert("H1 touch detected", alert.freq_once_per_bar_close)
+if alert_on_h2 and (bullishTouch3 or bearishTouch3)
+    alert("H2 touch detected", alert.freq_once_per_bar_close)
+if alert_on_h4 and (bullishTouch4 or bearishTouch4)
+    alert("H4 touch detected", alert.freq_once_per_bar_close)
+if alert_on_daily and (bullishTouch5 or bearishTouch5)
+    alert("Daily touch detected", alert.freq_once_per_bar_close)
+if alert_on_weekly and (bullishTouch6 or bearishTouch6)
+    alert("Weekly touch detected", alert.freq_once_per_bar_close)
+if alert_on_monthly and (bullishTouch7 or bearishTouch7)
+    alert("Monthly touch detected", alert.freq_once_per_bar_close)
