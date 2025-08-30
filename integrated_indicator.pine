@@ -81,16 +81,7 @@ alert_on_monthly = input.bool(false, "Alert on Monthly touch", group=g_ALERT)
 // ===== FUNCTIONS =====
 // HTF Selection Function
 f_look_tf(_tf) =>
-    dtf = _tf == "1" ? "15" : 
-          _tf == "2" ? "60" : 
-          _tf == "3" ? "30" : 
-          _tf == "5" ? "60" : 
-          _tf == "15" ? "240" : 
-          _tf == "30" ? "720" : 
-          _tf == "60" ? "1D" : 
-          _tf == "240" ? "1W" : 
-          _tf == "D" ? "1M" : 
-          _tf == "W" ? "3M" : _tf
+    dtf = _tf == "1" ? "15" : _tf == "2" ? "60" : _tf == "3" ? "30" : _tf == "5" ? "60" : _tf == "15" ? "240" : _tf == "30" ? "720" : _tf == "60" ? "1D" : _tf == "240" ? "1W" : _tf == "D" ? "1M" : _tf == "W" ? "3M" : _tf
     dtf
 
 htf = htf_opt == "Auto" ? f_look_tf(timeframe.period) : htf_
@@ -172,6 +163,18 @@ plot_lines(tfColor, midColor, high, low, mid, start, inRange, newBar, useMid, bu
             line.set_x2(midLine, bar_index)
     
     [bullishTouch, bearishTouch]
+
+// Helper function to add to array
+add_to_array(arr, value) =>
+    array.unshift(arr, value)
+    if array.size(arr) > 100
+        array.pop(arr)
+    arr
+
+// Text formatting function
+f_text(string _tf) =>
+    _text = str.tonumber(_tf) < 59 ? _tf + 'm' : str.tonumber(_tf) > 59 ? 'h' + str.tostring(math.floor(str.tonumber(_tf)/60)) : _tf
+    _text := _tf == "1D" ? "D" : _tf == "1W" ? "W" : _tf == "1M" ? "M" : _text
 
 // ===== VARIABLES =====
 var o0 = open
@@ -379,8 +382,7 @@ if low <= l0[1]
 
 // CISD intersection detection
 m = l0 < l1 ? bar_index - l0bar : bar_index - l1bar
-bullcisd = (close[1] > bull_level[1] and close[2] <= bull_level[1] and bar_index - bull_index[1] > 1 and l0 < l1 and m < 30) or 
-           (close[1] > bull_level[1] and close[2] <= bull_level[1] and bar_index - bull_index[1] > 1 and l1 < l0 and m < 30 and l_swept[1])
+bullcisd = (close[1] > bull_level[1] and close[2] <= bull_level[1] and bar_index - bull_index[1] > 1 and l0 < l1 and m < 30) or (close[1] > bull_level[1] and close[2] <= bull_level[1] and bar_index - bull_index[1] > 1 and l1 < l0 and m < 30 and l_swept[1])
 
 if bullcisd and xcisd[1] == false
     xcisd := true
@@ -410,8 +412,7 @@ if array.size(bucisdg) > 1
 
 // Bearish CISD intersection
 n = h0 > h1 ? bar_index - h0bar : bar_index - h1bar
-bearcisd = (close[1] < bear_level[1] and close[2] >= bear_level[1] and bar_index - bear_index[1] > 1 and h0 > h1 and n < 30) or 
-           (close[1] < bear_level[1] and close[2] >= bear_level[1] and bar_index - bear_index[1] > 1 and h1 > h0 and n < 30 and h_swept[1])
+bearcisd = (close[1] < bear_level[1] and close[2] >= bear_level[1] and bar_index - bear_index[1] > 1 and h0 > h1 and n < 30) or (close[1] < bear_level[1] and close[2] >= bear_level[1] and bar_index - bear_index[1] > 1 and h1 > h0 and n < 30 and h_swept[1])
 
 if bearcisd and ycisd[1] == false
     ycisd := true
@@ -446,17 +447,6 @@ plotshape(bear_alarm, title="Bearish CISD", style=shape.arrowdown, location=loca
 // Reset alarms
 bull_alarm := false
 bear_alarm := false
-
-// ===== HELPER FUNCTIONS =====
-add_to_array(arr, value) =>
-    array.unshift(arr, value)
-    if array.size(arr) > 100
-        array.pop(arr)
-    arr
-
-f_text(string _tf) =>
-    _text = str.tonumber(_tf) < 59 ? _tf + 'm' : str.tonumber(_tf) > 59 ? 'h' + str.tostring(math.floor(str.tonumber(_tf)/60)) : _tf
-    _text := _tf == "1D" ? "D" : _tf == "1W" ? "W" : _tf == "1M" ? "M" : _text
 
 // ===== ALERTS =====
 if alert_on_m30 and (bullishTouch1 or bearishTouch1)
