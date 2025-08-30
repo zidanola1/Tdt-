@@ -95,6 +95,8 @@ process_tf(tf) =>
     var bool inConsolidation = true
     var bool bullishTouch = false
     var bool bearishTouch = false
+    var bool highSwept = false
+    var bool lowSwept = false
     
     [tfOpen, tfHigh, tfLow, tfClose, tfTime] = request.security(syminfo.tickerid, tf, [open, high, low, close, time], barmerge.gaps_off, barmerge.lookahead_on)
     
@@ -119,6 +121,8 @@ process_tf(tf) =>
             rangeLow := tfLow
             rangeStart := bar_index
             inConsolidation := true
+            highSwept := false
+            lowSwept := false
         
         if not inConsolidation and (bar_index - rangeStart > maxbars or bar_index - rangeStart < minbars)
             inConsolidation := true
@@ -128,6 +132,13 @@ process_tf(tf) =>
         bearishTouch := false
     
     if inConsolidation
+        // Check for sweeps on consolidation levels
+        if high > rangeHigh and close < rangeHigh
+            highSwept := true
+        if low < rangeLow and close > rangeLow
+            lowSwept := true
+        
+        // Check for touches
         bullishWickTouch = low < rangeLow and close > rangeLow and high < rangeHigh
         bullishBodyTouch = open < rangeLow and close > rangeLow
         bearishWickTouch = high > rangeHigh and close < rangeHigh and low > rangeLow
@@ -136,7 +147,7 @@ process_tf(tf) =>
         bullishTouch := bullishWickTouch or bullishBodyTouch
         bearishTouch := bearishWickTouch or bearishBodyTouch
     
-    [rangeHigh, rangeLow, rangeMid, rangeStart, inConsolidation, newBar, bullishTouch, bearishTouch]
+    [rangeHigh, rangeLow, rangeMid, rangeStart, inConsolidation, newBar, bullishTouch, bearishTouch, highSwept, lowSwept]
 
 // Plot Lines Function
 plot_lines(tfColor, midColor, high, low, mid, start, inRange, newBar, useMid, bullishTouch, bearishTouch, tfName) =>
@@ -223,14 +234,14 @@ if timeframe.change(htf)
     h1bar := h0bar[1]
     l1bar := l0bar[1]
 
-// Process multi-timeframe consolidation
-[high1, low1, mid1, start1, inRange1, newBar1, bullishTouch1, bearishTouch1] = process_tf(tf1)
-[high2, low2, mid2, start2, inRange2, newBar2, bullishTouch2, bearishTouch2] = process_tf(tf2)
-[high3, low3, mid3, start3, inRange3, newBar3, bullishTouch3, bearishTouch3] = process_tf(tf3)
-[high4, low4, mid4, start4, inRange4, newBar4, bullishTouch4, bearishTouch4] = process_tf(tf4)
-[high5, low5, mid5, start5, inRange5, newBar5, bullishTouch5, bearishTouch5] = process_tf(tf5)
-[high6, low6, mid6, start6, inRange6, newBar6, bullishTouch6, bearishTouch6] = process_tf(tf6)
-[high7, low7, mid7, start7, inRange7, newBar7, bullishTouch7, bearishTouch7] = process_tf(tf7)
+// Process multi-timeframe consolidation with sweep detection
+[high1, low1, mid1, start1, inRange1, newBar1, bullishTouch1, bearishTouch1, highSwept1, lowSwept1] = process_tf(tf1)
+[high2, low2, mid2, start2, inRange2, newBar2, bullishTouch2, bearishTouch2, highSwept2, lowSwept2] = process_tf(tf2)
+[high3, low3, mid3, start3, inRange3, newBar3, bullishTouch3, bearishTouch3, highSwept3, lowSwept3] = process_tf(tf3)
+[high4, low4, mid4, start4, inRange4, newBar4, bullishTouch4, bearishTouch4, highSwept4, lowSwept4] = process_tf(tf4)
+[high5, low5, mid5, start5, inRange5, newBar5, bullishTouch5, bearishTouch5, highSwept5, lowSwept5] = process_tf(tf5)
+[high6, low6, mid6, start6, inRange6, newBar6, bullishTouch6, bearishTouch6, highSwept6, lowSwept6] = process_tf(tf6)
+[high7, low7, mid7, start7, inRange7, newBar7, bullishTouch7, bearishTouch7, highSwept7, lowSwept7] = process_tf(tf7)
 
 // Plot consolidation lines
 if use_tf1
@@ -248,18 +259,18 @@ if use_tf6
 if use_tf7
     [bullishTouch7, bearishTouch7] = plot_lines(tf7_color, tf7_mid_color, high7, low7, mid7, start7, inRange7, newBar7, use_tf7_mid, bullishTouch7, bearishTouch7, "M")
 
-// ===== SWEEP DETECTION (INTEGRATED WITH CONSOLIDATION) =====
-// Detect sweeps using consolidation levels
+// ===== INTEGRATED SWEEP DETECTION =====
+// Global sweep variables
 h_swept = false
 l_swept = false
 
-// Check if current price sweeps above/below consolidation levels
-if inRange1 and high > high1 and close < high1
+// Check consolidation level sweeps (highest priority)
+if highSwept1 or highSwept2 or highSwept3 or highSwept4 or highSwept5 or highSwept6 or highSwept7
     h_swept := true
-if inRange1 and low < low1 and close > low1
+if lowSwept1 or lowSwept2 or lowSwept3 or lowSwept4 or lowSwept5 or lowSwept6 or lowSwept7
     l_swept := true
 
-// Also check HTF sweeps
+// Also check HTF sweeps as backup
 if h0 > h1 and math.max(o0, c0) < h1
     h_swept := true
 if l0 < l1 and math.min(o0, c0) > l1
@@ -277,15 +288,24 @@ if showhtf
         box.delete(boxhtf[1])
 
 // Plot sweep boxes on consolidation levels
-if h_swept and inRange1
-    sweep_box_high = box.new(left=bar_index-5, top=high1, right=bar_index, bottom=high1-0.001, xloc=xloc.bar_index, border_width=2, border_style=line.style_dotted, bgcolor=swept_color, border_color=bear_color)
-    box.delete(sweep_box_high[1])
+if highSwept1 and inRange1
+    sweep_box_high1 = box.new(left=bar_index-5, top=high1, right=bar_index, bottom=high1-0.001, xloc=xloc.bar_index, border_width=2, border_style=line.style_dotted, bgcolor=swept_color, border_color=bear_color)
+    box.delete(sweep_box_high1[1])
 
-if l_swept and inRange1
-    sweep_box_low = box.new(left=bar_index-5, top=low1+0.001, right=bar_index, bottom=low1, xloc=xloc.bar_index, border_width=2, border_style=line.style_dotted, bgcolor=swept_color, border_color=bull_color)
-    box.delete(sweep_box_low[1])
+if lowSwept1 and inRange1
+    sweep_box_low1 = box.new(left=bar_index-5, top=low1+0.001, right=bar_index, bottom=low1, xloc=xloc.bar_index, border_width=2, border_style=line.style_dotted, bgcolor=swept_color, border_color=bull_color)
+    box.delete(sweep_box_low1[1])
 
-// ===== CISD ANALYSIS =====
+// ===== CISD ANALYSIS WITH INTEGRATED TIMEFRAMES =====
+// CISD Timeframe Pairs (as requested)
+var g_CISD = "CISD Timeframe Pairs"
+use_cisd_30_3 = input.bool(true, "30min - 3min CISD", group=g_CISD)
+use_cisd_1h_5 = input.bool(true, "1h - 5min CISD", group=g_CISD)
+use_cisd_4h_15 = input.bool(true, "4h - 15min CISD", group=g_CISD)
+use_cisd_day_1h = input.bool(true, "Day - 1h CISD", group=g_CISD)
+use_cisd_week_4h = input.bool(true, "Week - 4h CISD", group=g_CISD)
+use_cisd_month_day = input.bool(true, "Month - Day CISD", group=g_CISD)
+
 var bull_level = high
 var bear_level = low
 var bull_index = bar_index
@@ -303,11 +323,54 @@ var ycisd = false
 var mm = bar_index
 var nn = bar_index
 
-// CISD detection logic
+// CISD detection logic - now integrated with consolidation sweeps
 if l_swept
     bull_cisd_ara := true
 if h_swept
     bear_cisd_ara := true
+
+// Specific CISD timeframe logic
+// 30min - 3min CISD
+if use_cisd_30_3 and timeframe.period == "3" and (highSwept1 or lowSwept1)
+    if highSwept1
+        bear_cisd_ara := true
+    if lowSwept1
+        bull_cisd_ara := true
+
+// 1h - 5min CISD
+if use_cisd_1h_5 and timeframe.period == "5" and (highSwept2 or lowSwept2)
+    if highSwept2
+        bear_cisd_ara := true
+    if lowSwept2
+        bull_cisd_ara := true
+
+// 4h - 15min CISD
+if use_cisd_4h_15 and timeframe.period == "15" and (highSwept4 or lowSwept4)
+    if highSwept4
+        bear_cisd_ara := true
+    if lowSwept4
+        bull_cisd_ara := true
+
+// Day - 1h CISD
+if use_cisd_day_1h and timeframe.period == "60" and (highSwept5 or lowSwept5)
+    if highSwept5
+        bear_cisd_ara := true
+    if lowSwept5
+        bull_cisd_ara := true
+
+// Week - 4h CISD
+if use_cisd_week_4h and timeframe.period == "240" and (highSwept6 or lowSwept6)
+    if highSwept6
+        bear_cisd_ara := true
+    if lowSwept6
+        bull_cisd_ara := true
+
+// Month - Day CISD
+if use_cisd_month_day and timeframe.period == "D" and (highSwept7 or lowSwept7)
+    if highSwept7
+        bear_cisd_ara := true
+    if lowSwept7
+        bull_cisd_ara := true
 
 up = close > open
 dw = close < open
@@ -380,7 +443,7 @@ if low <= l0[1]
     bull_cisd_ara := true
     xcisd := false
 
-// CISD intersection detection
+// CISD intersection detection - now using integrated sweep logic
 m = l0 < l1 ? bar_index - l0bar : bar_index - l1bar
 bullcisd = (close[1] > bull_level[1] and close[2] <= bull_level[1] and bar_index - bull_index[1] > 1 and l0 < l1 and m < 30) or (close[1] > bull_level[1] and close[2] <= bull_level[1] and bar_index - bull_index[1] > 1 and l1 < l0 and m < 30 and l_swept[1])
 
