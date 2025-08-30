@@ -81,17 +81,7 @@ alert_on_monthly = input.bool(false, "Alert on Monthly touch", group=g_ALERT)
 // ===== FUNCTIONS =====
 // HTF Selection Function
 f_look_tf(_tf) =>
-    dtf = 
-     _tf == "1"  ? "15" :
-     _tf == "2"  ? "60" :    
-     _tf == "3"  ? "30" :
-     _tf == "5"  ? "60" :
-     _tf == "15" ? "240": 
-     _tf == "30" ? "720":
-     _tf == "60" ? "1D" :
-     _tf == "240"? "1W" :
-     _tf == "D" ? "1M" : 
-     _tf == "W" ? "3M" : _tf
+    dtf = _tf == "1" ? "15" : _tf == "2" ? "60" : _tf == "3" ? "30" : _tf == "5" ? "60" : _tf == "15" ? "240" : _tf == "30" ? "720" : _tf == "60" ? "1D" : _tf == "240" ? "1W" : _tf == "D" ? "1M" : _tf == "W" ? "3M" : _tf
     dtf
 
 htf = htf_opt == "Auto" ? f_look_tf(timeframe.period) : htf_
