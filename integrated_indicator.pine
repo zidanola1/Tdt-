@@ -570,17 +570,19 @@ var bool last_bull_signal = false
 var bool last_bear_signal = false
 
 if bull_cisd_ara and volume_confirmed and not last_bull_signal
+    // BULLISH SIGNAL (LONG TRADE) - Targets ABOVE current price
     bull_target_1 = close + (high - low) * 1.5  // 1.5:1 RR
     bull_target_2 = close + (high - low) * 2.0  // 2:1 RR
-    bull_stop = low - (high - low) * 0.5        // 0.5:1 risk
-    label.new(bar_index, high, text="🎯 BULL TARGETS:\n1.5R: " + str.tostring(bull_target_1, "#.##") + "\n2.0R: " + str.tostring(bull_target_2, "#.##") + "\nSTOP: " + str.tostring(bull_stop, "#.##"), style=label.style_label_down, color=color.green, textcolor=color.white, size=size.small)
+    bull_stop = low - (high - low) * 0.5        // Stop below current low
+    label.new(bar_index, high, text="🟢 BULL SIGNAL (LONG):\n🎯 1.5R: " + str.tostring(bull_target_1, "#.##") + "\n🎯 2.0R: " + str.tostring(bull_target_2, "#.##") + "\n🛑 STOP: " + str.tostring(bull_stop, "#.##"), style=label.style_label_down, color=color.green, textcolor=color.white, size=size.small)
     last_bull_signal := true
 
 if bear_cisd_ara and volume_confirmed and not last_bear_signal
+    // BEARISH SIGNAL (SHORT TRADE) - Targets BELOW current price
     bear_target_1 = close - (high - low) * 1.5  // 1.5:1 RR
     bear_target_2 = close - (high - low) * 2.0  // 2:1 RR
-    bear_stop = high + (high - low) * 0.5       // 0.5:1 risk
-    label.new(bar_index, low, text="🎯 BEAR TARGETS:\n1.5R: " + str.tostring(bear_target_1, "#.##") + "\n2.0R: " + str.tostring(bear_target_2, "#.##") + "\nSTOP: " + str.tostring(bear_stop, "#.##"), style=label.style_label_up, color=color.red, textcolor=color.white, size=size.small)
+    bear_stop = high + (high - low) * 0.5       // Stop above current high
+    label.new(bar_index, low, text="🔴 BEAR SIGNAL (SHORT):\n🎯 1.5R: " + str.tostring(bear_target_1, "#.##") + "\n🎯 2.0R: " + str.tostring(bear_target_2, "#.##") + "\n🛑 STOP: " + str.tostring(bear_stop, "#.##"), style=label.style_label_up, color=color.red, textcolor=color.white, size=size.small)
     last_bear_signal := true
 
 // Reset signals when conditions change
