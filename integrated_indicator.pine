@@ -332,44 +332,44 @@ if h_swept
 // Specific CISD timeframe logic
 // 30min - 3min CISD
 if use_cisd_30_3 and timeframe.period == "3" and (highSwept1 or lowSwept1)
-    if highSwept1
+    if highSwept1 and close >= low[1] and close <= high[1]
         bear_cisd_ara := true
-    if lowSwept1
+    if lowSwept1 and close >= low[1] and close <= high[1]
         bull_cisd_ara := true
 
 // 1h - 5min CISD
 if use_cisd_1h_5 and timeframe.period == "5" and (highSwept2 or lowSwept2)
-    if highSwept2
+    if highSwept2 and close >= low[1] and close <= high[1]
         bear_cisd_ara := true
-    if lowSwept2
+    if lowSwept2 and close >= low[1] and close <= high[1]
         bull_cisd_ara := true
 
 // 4h - 15min CISD
 if use_cisd_4h_15 and timeframe.period == "15" and (highSwept4 or lowSwept4)
-    if highSwept4
+    if highSwept4 and close >= low[1] and close <= high[1]
         bear_cisd_ara := true
-    if lowSwept4
+    if lowSwept4 and close >= low[1] and close <= high[1]
         bull_cisd_ara := true
 
 // Day - 1h CISD
 if use_cisd_day_1h and timeframe.period == "60" and (highSwept5 or lowSwept5)
-    if highSwept5
+    if highSwept5 and close >= low[1] and close <= high[1]
         bear_cisd_ara := true
-    if lowSwept5
+    if lowSwept5 and close >= low[1] and close <= high[1]
         bull_cisd_ara := true
 
 // Week - 4h CISD
 if use_cisd_week_4h and timeframe.period == "240" and (highSwept6 or lowSwept6)
-    if highSwept6
+    if highSwept6 and close >= low[1] and close <= high[1]
         bear_cisd_ara := true
-    if lowSwept6
+    if lowSwept6 and close >= low[1] and close <= high[1]
         bull_cisd_ara := true
 
 // Month - Day CISD
 if use_cisd_month_day and timeframe.period == "D" and (highSwept7 or lowSwept7)
-    if highSwept7
+    if highSwept7 and close >= low[1] and close <= high[1]
         bear_cisd_ara := true
-    if lowSwept7
+    if lowSwept7 and close >= low[1] and close <= high[1]
         bull_cisd_ara := true
 
 up = close > open
