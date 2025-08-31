@@ -306,6 +306,16 @@ use_cisd_day_1h = input.bool(true, "Day - 1h CISD", group=g_CISD)
 use_cisd_week_4h = input.bool(true, "Week - 4h CISD", group=g_CISD)
 use_cisd_month_day = input.bool(true, "Month - Day CISD", group=g_CISD)
 
+// Volume Confirmation Settings
+var g_VOLUME = "Smart Money Detection"
+use_volume_confirmation = input.bool(true, "Volume Confirmation", group=g_VOLUME)
+volume_multiplier = input.float(1.5, "Volume Spike Multiplier", minval=1.0, maxval=5.0, step=0.1, group=g_VOLUME)
+volume_period = input.int(20, "Volume SMA Period", minval=10, maxval=100, group=g_VOLUME)
+
+// Smart Money Trap Detection
+use_smart_money_traps = input.bool(true, "Smart Money Traps", group=g_VOLUME)
+trap_confirmation = input.bool(true, "Trap Confirmation", group=g_VOLUME)
+
 var bull_level = high
 var bear_level = low
 var bull_index = bar_index
@@ -323,53 +333,68 @@ var ycisd = false
 var mm = bar_index
 var nn = bar_index
 
-// CISD detection logic - now integrated with consolidation sweeps
-if l_swept
+// Volume Confirmation Logic
+volume_sma = ta.sma(volume, volume_period)
+volume_spike = volume > volume_sma * volume_multiplier
+volume_confirmed = use_volume_confirmation ? volume_spike : true
+
+// Smart Money Trap Detection
+bull_trap = use_smart_money_traps ? (high > high[1] and close < low[1]) : false
+bear_trap = use_smart_money_traps ? (low < low[1] and close > high[1]) : false
+
+// Enhanced CISD detection logic - now with volume confirmation and smart money traps
+if l_swept and volume_confirmed
     bull_cisd_ara := true
-if h_swept
+if h_swept and volume_confirmed
     bear_cisd_ara := true
+
+// Smart Money Trap Enhanced CISD
+if bull_trap and volume_confirmed
+    bear_cisd_ara := true  // Bull trap = bearish signal
+if bear_trap and volume_confirmed
+    bull_cisd_ara := true  // Bear trap = bullish signal
 
 // Specific CISD timeframe logic
 // 30min - 3min CISD
 if use_cisd_30_3 and timeframe.period == "3" and (highSwept1 or lowSwept1)
-    if highSwept1 and close >= low[1] and close <= high[1]
+    if highSwept1 and close >= low[1] and close <= high[1] and volume_confirmed
         bear_cisd_ara := true
-    if lowSwept1 and close >= low[1] and close <= high[1]
+    if lowSwept1 and close >= low[1] and close <= high[1] and volume_confirmed
         bull_cisd_ara := true
 
 // 1h - 5min CISD
 if use_cisd_1h_5 and timeframe.period == "5" and (highSwept2 or lowSwept2)
-    if highSwept2 and close >= low[1] and close <= high[1]
+    if highSwept2 and close >= low[1] and close <= high[1] and volume_confirmed
         bear_cisd_ara := true
-    if lowSwept2 and close >= low[1] and close <= high[1]
+    if lowSwept2 and close >= low[1] and close <= high[1] and volume_confirmed
         bull_cisd_ara := true
 
 // 4h - 15min CISD
 if use_cisd_4h_15 and timeframe.period == "15" and (highSwept4 or lowSwept4)
-    if highSwept4 and close >= low[1] and close <= high[1]
+    if highSwept4 and close >= low[1] and close <= high[1] and volume_confirmed
         bear_cisd_ara := true
-    if lowSwept4 and close >= low[1] and close <= high[1]
+    if lowSwept4 and close >= low[1] and close <= high[1] and volume_confirmed
         bull_cisd_ara := true
 
 // Day - 1h CISD
 if use_cisd_day_1h and timeframe.period == "60" and (highSwept5 or lowSwept5)
-    if highSwept5 and close >= low[1] and close <= high[1]
+    if highSwept5 and close >= low[1] and close <= high[1] and volume_confirmed
         bear_cisd_ara := true
-    if lowSwept5 and close >= low[1] and close <= high[1]
+    if lowSwept5 and close >= low[1] and close <= high[1] and volume_confirmed
         bull_cisd_ara := true
 
 // Week - 4h CISD
 if use_cisd_week_4h and timeframe.period == "240" and (highSwept6 or lowSwept6)
-    if highSwept6 and close >= low[1] and close <= high[1]
+    if highSwept6 and close >= low[1] and close <= high[1] and volume_confirmed
         bear_cisd_ara := true
-    if lowSwept6 and close >= low[1] and close <= high[1]
+    if lowSwept6 and close >= low[1] and close <= high[1] and volume_confirmed
         bull_cisd_ara := true
 
 // Month - Day CISD
 if use_cisd_month_day and timeframe.period == "D" and (highSwept7 or lowSwept7)
-    if highSwept7 and close >= low[1] and close <= high[1]
+    if highSwept7 and close >= low[1] and close <= high[1] and volume_confirmed
         bear_cisd_ara := true
-    if lowSwept7 and close >= low[1] and close <= high[1]
+    if lowSwept7 and close >= low[1] and close <= high[1] and volume_confirmed
         bull_cisd_ara := true
 
 up = close > open
@@ -507,6 +532,11 @@ if array.size(becisdg) > 1
 plotshape(bull_alarm, title="Bullish CISD", style=shape.arrowup, location=location.belowbar, color=bull_color, size=size.tiny, text="", textcolor=color.green, offset=-1)
 plotshape(bear_alarm, title="Bearish CISD", style=shape.arrowdown, location=location.abovebar, color=bear_color, size=size.tiny, text="", textcolor=color.red, offset=-1)
 
+// Plot Volume Confirmation and Smart Money Traps
+plotshape(volume_spike and use_volume_confirmation, title="Volume Spike", style=shape.circle, location=location.bottom, color=color.yellow, size=size.tiny, text="V", textcolor=color.black, offset=0)
+plotshape(bull_trap and use_smart_money_traps, title="Bull Trap", style=shape.triangledown, location=location.abovebar, color=color.red, size=size.small, text="TRAP", textcolor=color.white, offset=0)
+plotshape(bear_trap and use_smart_money_traps, title="Bear Trap", style=shape.triangleup, location=location.belowbar, color=color.green, size=size.small, text="TRAP", textcolor=color.white, offset=0)
+
 // Reset alarms
 bull_alarm := false
 bear_alarm := false
@@ -526,3 +556,24 @@ if alert_on_weekly and (bullishTouch6 or bearishTouch6)
     alert("Weekly touch detected", alert.freq_once_per_bar_close)
 if alert_on_monthly and (bullishTouch7 or bearishTouch7)
     alert("Monthly touch detected", alert.freq_once_per_bar_close)
+
+// Enhanced Alerts for Volume Confirmation and Smart Money Traps
+if volume_spike and use_volume_confirmation
+    alert("🔥 VOLUME SPIKE DETECTED! Potential institutional move!", alert.freq_once_per_bar_close)
+if bull_trap and use_smart_money_traps and volume_confirmed
+    alert("🚨 BULL TRAP DETECTED! Smart money selling into strength!", alert.freq_once_per_bar_close)
+if bear_trap and use_smart_money_traps and volume_confirmed
+    alert("🚨 BEAR TRAP DETECTED! Smart money buying weakness!", alert.freq_once_per_bar_close)
+
+// Risk-Reward Calculator for CISD Signals
+if bull_cisd_ara and volume_confirmed
+    bull_target_1 = close + (high - low) * 1.5  // 1.5:1 RR
+    bull_target_2 = close + (high - low) * 2.0  // 2:1 RR
+    bull_stop = low - (high - low) * 0.5        // 0.5:1 risk
+    label.new(bar_index, high, text="🎯 BULL TARGETS:\n1.5R: " + str.tostring(bull_target_1, "#.##") + "\n2.0R: " + str.tostring(bull_target_2, "#.##") + "\nSTOP: " + str.tostring(bull_stop, "#.##"), style=label.style_label_down, color=color.green, textcolor=color.white, size=size.small)
+
+if bear_cisd_ara and volume_confirmed
+    bear_target_1 = close - (high - low) * 1.5  // 1.5:1 RR
+    bear_target_2 = close - (high - low) * 2.0  // 2:1 RR
+    bear_stop = high + (high - low) * 0.5       // 0.5:1 risk
+    label.new(bar_index, low, text="🎯 BEAR TARGETS:\n1.5R: " + str.tostring(bear_target_1, "#.##") + "\n2.0R: " + str.tostring(bear_target_2, "#.##") + "\nSTOP: " + str.tostring(bear_stop, "#.##"), style=label.style_label_up, color=color.red, textcolor=color.white, size=size.small)
