@@ -5,7 +5,8 @@
 indicator("Ultimate IPDA Analyzer", shorttitle="IPDA Pro", overlay=true, max_labels_count=500, max_lines_count=500)
 
 // === BASIC SETTINGS ===
-start_date = input.time(timestamp(2025, 01, 15, 09, 30), "Start Date", group="Basic Settings")
+const int start_date_default = timestamp(2025, 01, 15, 09, 30)
+start_date = input.time(start_date_default, "Start Date", group="Basic Settings")
 sequence_type = input.string("custom", "Sequence Type", options=["custom", "sequence_7", "sequence_13", "sequence_21", "gann_cardinal"], group="Basic Settings")
 custom_sequence = input.string("7,13,21,31,42", "Custom Sequence (comma-separated)", group="Basic Settings")
 max_candles = input.int(100, "Number of Candles (main counter)", minval=1, maxval=500, group="Basic Settings")
@@ -205,7 +206,7 @@ if time >= start_date and start_mode == "Manual" and not counting_started
 pivot_high_now = start_mode != "Manual" and not na(ph) and (start_mode == "Auto: last swing high" or start_mode == "Auto: last swing (H/L)")
 pivot_low_now  = start_mode != "Manual" and not na(pl) and (start_mode == "Auto: last swing low"  or start_mode == "Auto: last swing (H/L)")
 
-selected_anchor_index = na
+int selected_anchor_index = na
 if pivot_high_now and (not pivot_low_now or ph_idx >= pl_idx)
     selected_anchor_index := ph_idx
 else if pivot_low_now
