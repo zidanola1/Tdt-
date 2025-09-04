@@ -51,6 +51,13 @@ casting_color = input.color(#FF00FF, "Casting Color", group="Display Settings")
 display_only_sequence = input.bool(true, "Display Only Sequence Numbers", group="Display Settings")
 line_alpha = input.int(0, "Cycle line opacity (0-100)", minval=0, maxval=100, group="Display Settings")
 
+// === BIAS & INVALIDATION SETTINGS ===
+bias_mode = input.string("Auto from pivot", "Bias Mode", options=["Auto from pivot", "Manual: Bullish", "Manual: Bearish"], group="Bias & Invalidation")
+draw_bias_invalid = input.bool(true, "Draw Bias + Invalidation", group="Bias & Invalidation")
+inv_offset_ticks = input.int(0, "Invalidation Offset (ticks)", minval=0, maxval=10000, group="Bias & Invalidation")
+inv_extend_opt = input.string("Right", "Invalidation Extend", options=["None", "Right"], group="Bias & Invalidation")
+pos_offset_frac = input.float(0.12, "Position Label Offset (range frac)", minval=0.0, maxval=5.0, group="Bias & Invalidation")
+
 // === ENHANCED SEQUENCES ===
 get_sequence(string seq_type) =>
     switch seq_type
@@ -151,6 +158,11 @@ var bool casting_phase_negative = true
 var int cast_forward_count = 0
 var bool casting_initialized = false
 var bool on_cycle_candle = false
+var string active_bias = "Neutral"  // "Bullish" | "Bearish" | "Neutral"
+var line   inv_line = na
+var label  inv_label = na
+var label  pos_label = na
+var float  inv_price_series = na
 
 // === SEQUENCE ARRAYS ===
 current_sequence_str = get_sequence(sequence_type)
@@ -224,6 +236,43 @@ if (not na(selected_anchor_index)) and (not counting_started or auto_rearm_on_ne
     cast_forward_count := 0
     casting_initialized := false
     on_cycle_candle := false
+    // set bias + invalidation from pivot
+    if draw_bias_invalid
+        // Determine bias from pivot direction when auto; else from manual selection
+        if bias_mode == "Auto from pivot"
+            // if anchored from swing high -> bearish, from swing low -> bullish
+            active_bias := (selected_anchor_index == ph_idx) ? "Bearish" : (selected_anchor_index == pl_idx ? "Bullish" : "Neutral")
+        else
+            active_bias := (bias_mode == "Manual: Bullish") ? "Bullish" : "Bearish"
+        // Clear previous drawings
+        if not na(inv_line)
+            line.delete(inv_line)
+            inv_line := na
+        if not na(inv_label)
+            label.delete(inv_label)
+            inv_label := na
+        if not na(pos_label)
+            label.delete(pos_label)
+            pos_label := na
+        // Calculate invalidation and position marker
+        anchor_high = high[selected_anchor_index - bar_index]
+        anchor_low  = low[selected_anchor_index - bar_index]
+        price_tick = syminfo.mintick
+        inv_extend = inv_extend_opt == "Right" ? extend.right : extend.none
+        if active_bias == "Bearish"
+            inv_price = anchor_high + price_tick * inv_offset_ticks
+            inv_price_series := inv_price
+            inv_line := line.new(selected_anchor_index, inv_price, bar_index, inv_price, xloc=xloc.bar_index, extend=inv_extend, color=color.new(color.red, 0), width=2)
+            inv_label := label.new(selected_anchor_index, inv_price, "Invalidation", color=color.new(#FFFFFF, 100), textcolor=color.red, style=label.style_label_left)
+            pos_y = display_position == "above_candle" ? high + (high - low) * pos_offset_frac : low - (high - low) * pos_offset_frac
+            pos_label := label.new(selected_anchor_index, pos_y, "Sell →", color=color.new(#FFFFFF, 100), textcolor=color.red, style=label.style_label_down, size=get_label_size())
+        if active_bias == "Bullish"
+            inv_price = anchor_low - price_tick * inv_offset_ticks
+            inv_price_series := inv_price
+            inv_line := line.new(selected_anchor_index, inv_price, bar_index, inv_price, xloc=xloc.bar_index, extend=inv_extend, color=color.new(color.green, 0), width=2)
+            inv_label := label.new(selected_anchor_index, inv_price, "Invalidation", color=color.new(#FFFFFF, 100), textcolor=color.green, style=label.style_label_left)
+            pos_y = display_position == "above_candle" ? high + (high - low) * pos_offset_frac : low - (high - low) * pos_offset_frac
+            pos_label := label.new(selected_anchor_index, pos_y, "Buy →", color=color.new(#FFFFFF, 100), textcolor=color.green, style=label.style_label_up, size=get_label_size())
 
 // === TDT BACKWARD CASTING LOGIC ===
 if enable_casting and counting_started
@@ -360,7 +409,7 @@ if enable_casting and forward_cast_active
 
 // === STATUS TABLE ===
 if barstate.islast
-    var table status_table = table.new(position.top_right, 2, 11, bgcolor=color.new(#FFFFFF, 80), frame_width=1)
+    var table status_table = table.new(position.top_right, 2, 14, bgcolor=color.new(#FFFFFF, 80), frame_width=1)
     table.cell(status_table, 0, 0, "Status", text_color=#000000, text_size=size.tiny)
     table.cell(status_table, 1, 0, "Value", text_color=#000000, text_size=size.tiny)
     table.cell(status_table, 0, 1, "Counting", text_color=#000000, text_size=size.tiny)
@@ -383,4 +432,10 @@ if barstate.islast
     table.cell(status_table, 1, 9, enable_casting ? str.tostring(cast_forward_count) : "OFF", text_color=#000000, text_size=size.tiny)
     table.cell(status_table, 0, 10, "Seq", text_color=#000000, text_size=size.tiny)
     table.cell(status_table, 1, 10, current_sequence_str, text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 0, 11, "Skip Inside?", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 1, 11, auto_mark_skip_inside ? "Yes" : "No", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 0, 12, "Bias", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 1, 12, draw_bias_invalid ? active_bias : "OFF", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 0, 13, "Invalidation", text_color=#000000, text_size=size.tiny)
+    table.cell(status_table, 1, 13, draw_bias_invalid and not na(inv_price_series) ? str.tostring(inv_price_series) : "N/A", text_color=#000000, text_size=size.tiny)
 
