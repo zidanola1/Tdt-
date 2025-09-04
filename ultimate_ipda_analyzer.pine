@@ -5,8 +5,7 @@
 indicator("Ultimate IPDA Analyzer", shorttitle="IPDA Pro", overlay=true, max_labels_count=500, max_lines_count=500)
 
 // === BASIC SETTINGS ===
-const int start_date_default = timestamp(2025, 01, 15, 09, 30)
-start_date = input.time(start_date_default, "Start Date", group="Basic Settings")
+start_date = input.time(0, "Start Date", group="Basic Settings")
 sequence_type = input.string("custom", "Sequence Type", options=["custom", "sequence_7", "sequence_13", "sequence_21", "gann_cardinal"], group="Basic Settings")
 custom_sequence = input.string("7,13,21,31,42", "Custom Sequence (comma-separated)", group="Basic Settings")
 max_candles = input.int(100, "Number of Candles (main counter)", minval=1, maxval=500, group="Basic Settings")
@@ -197,7 +196,7 @@ cum_all_bars := nz(cum_all_bars[1]) + 1
 cum_non_inside_bars := nz(cum_non_inside_bars[1]) + (auto_mark_skip_inside and current_is_inside ? 0 : 1)
 
 // === ANCHOR POINT LOGIC (manual or swing-based) ===
-if time >= start_date and start_mode == "Manual" and not counting_started
+if start_mode == "Manual" and start_date > 0 and time >= start_date and not counting_started
     anchor_bar_index := bar_index
     counting_started := true
     current_count_number := enable_shift_mode ? (shift_seed - 1) : 0
@@ -307,6 +306,11 @@ var array<int> piv_cum_all = array.new<int>()
 var array<int> piv_cum_non_inside = array.new<int>()
 
 register_pivot(p_index, p_price) =>
+    // Call this every bar; return early when not a confirmed pivot
+    if na(p_price)
+        return
+    if bar_index < swing_right
+        return
     c_all = cum_all_bars[swing_right]
     c_non = cum_non_inside_bars[swing_right]
     array.push(piv_idx, p_index)
@@ -340,10 +344,8 @@ register_pivot(p_index, p_price) =>
                 label.new(midx, midy, str.tostring(leg), color=color.new(#FFFFFF, 100), textcolor=sequence_color, style=label.style_label_center, size=get_label_size())
                 hits += 1
 
-if not na(ph)
-    register_pivot(ph_idx, ph)
-if not na(pl)
-    register_pivot(pl_idx, pl)
+register_pivot(ph_idx, ph)
+register_pivot(pl_idx, pl)
 
 // === ALERTS ===
 if counting_started and not in_time_distortion
