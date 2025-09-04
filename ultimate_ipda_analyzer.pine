@@ -306,43 +306,40 @@ var array<int> piv_cum_all = array.new<int>()
 var array<int> piv_cum_non_inside = array.new<int>()
 
 register_pivot(p_index, p_price) =>
-    // Call this every bar; return early when not a confirmed pivot
-    if na(p_price)
-        return
-    if bar_index < swing_right
-        return
-    c_all = cum_all_bars[swing_right]
-    c_non = cum_non_inside_bars[swing_right]
-    array.push(piv_idx, p_index)
-    array.push(piv_price, p_price)
-    array.push(piv_cum_all, c_all)
-    array.push(piv_cum_non_inside, c_non)
-    while array.size(piv_idx) > cycle_pivot_lookback
-        array.shift(piv_idx)
-        array.shift(piv_price)
-        array.shift(piv_cum_all)
-        array.shift(piv_cum_non_inside)
-    if enable_auto_mark_cycles
-        hits = 0
-        end_i = array.size(piv_idx) - 1
-        end_idx = array.get(piv_idx, end_i)
-        end_price = array.get(piv_price, end_i)
-        end_all = array.get(piv_cum_all, end_i)
-        end_non = array.get(piv_cum_non_inside, end_i)
-        for j = end_i - 1 to 0
-            if hits >= auto_mark_max_hits_per_pivot
-                break
-            start_idx = array.get(piv_idx, j)
-            start_price = array.get(piv_price, j)
-            start_all = array.get(piv_cum_all, j)
-            start_non = array.get(piv_cum_non_inside, j)
-            leg = auto_mark_skip_inside ? (end_non - start_non) : (end_all - start_all)
-            if array.includes(sequence_array, float(leg))
-                line.new(start_idx, start_price, end_idx, end_price, xloc=xloc.bar_index, extend=extend.none, color=color.new(sequence_color, line_alpha), width=2)
-                midx = math.round((start_idx + end_idx) / 2)
-                midy = (start_price + end_price) / 2
-                label.new(midx, midy, str.tostring(leg), color=color.new(#FFFFFF, 100), textcolor=sequence_color, style=label.style_label_center, size=get_label_size())
-                hits += 1
+    // Process only when pivot is confirmed and enough history exists
+    if not na(p_price) and bar_index >= swing_right
+        c_all = cum_all_bars[swing_right]
+        c_non = cum_non_inside_bars[swing_right]
+        array.push(piv_idx, p_index)
+        array.push(piv_price, p_price)
+        array.push(piv_cum_all, c_all)
+        array.push(piv_cum_non_inside, c_non)
+        while array.size(piv_idx) > cycle_pivot_lookback
+            array.shift(piv_idx)
+            array.shift(piv_price)
+            array.shift(piv_cum_all)
+            array.shift(piv_cum_non_inside)
+        if enable_auto_mark_cycles
+            hits = 0
+            end_i = array.size(piv_idx) - 1
+            end_idx = array.get(piv_idx, end_i)
+            end_price = array.get(piv_price, end_i)
+            end_all = array.get(piv_cum_all, end_i)
+            end_non = array.get(piv_cum_non_inside, end_i)
+            for j = end_i - 1 to 0
+                if hits >= auto_mark_max_hits_per_pivot
+                    break
+                start_idx = array.get(piv_idx, j)
+                start_price = array.get(piv_price, j)
+                start_all = array.get(piv_cum_all, j)
+                start_non = array.get(piv_cum_non_inside, j)
+                leg = auto_mark_skip_inside ? (end_non - start_non) : (end_all - start_all)
+                if array.includes(sequence_array, float(leg))
+                    line.new(start_idx, start_price, end_idx, end_price, xloc=xloc.bar_index, extend=extend.none, color=color.new(sequence_color, line_alpha), width=2)
+                    midx = math.round((start_idx + end_idx) / 2)
+                    midy = (start_price + end_price) / 2
+                    label.new(int(midx), midy, str.tostring(leg), color=color.new(#FFFFFF, 100), textcolor=sequence_color, style=label.style_label_center, size=get_label_size())
+                    hits += 1
 
 register_pivot(ph_idx, ph)
 register_pivot(pl_idx, pl)
