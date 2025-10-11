@@ -1,0 +1,463 @@
+//@version=5
+indicator("TDT Master - Clean Edition", shorttitle="TDT Master", overlay=true, max_labels_count=500, max_lines_count=500, max_boxes_count=100)
+
+// ========================================
+// 1. CORE SETTINGS
+// ========================================
+grp_core = "1. Core Settings"
+i_main_sequence = input.string("1,3,7,13,21,31,43", "Main Sequence", group=grp_core)
+i_counting_direction = input.string("Neutral", "Direction", options=["Neutral", "Bullish", "Bearish"], group=grp_core)
+
+// ========================================
+// 2. ANCHOR
+// ========================================
+grp_anchor = "2. Anchor"
+i_manual_anchor_time = input.time(timestamp("2025-01-15 09:30"), "Anchor Time", group=grp_anchor)
+i_show_anchor_line = input.bool(true, "Show Anchor Line", group=grp_anchor)
+
+// ========================================
+// 3. TIME DISTORTION
+// ========================================
+grp_td = "3. Time Distortion"
+i_enable_td = input.bool(true, "Enable TD Detection", group=grp_td)
+i_freeze_on_td = input.bool(true, "Freeze Count on TD", group=grp_td)
+i_highlight_td = input.bool(true, "Highlight TD Zones", group=grp_td)
+
+// ========================================
+// 4. MULTIPLE CYCLES
+// ========================================
+grp_cycles = "4. Multiple Cycles"
+i_enable_multiple_cycles = input.bool(true, "Enable Multiple Cycles", group=grp_cycles)
+i_max_cycles = input.int(4, "Max Cycles", minval=1, maxval=10, group=grp_cycles)
+i_auto_spawn = input.bool(true, "Auto Spawn at 7,13,21", group=grp_cycles)
+
+// ========================================
+// 5. MULTI-TIMEFRAME
+// ========================================
+grp_mtf = "5. Multi-Timeframe"
+i_enable_htf1 = input.bool(true, "Enable HTF 1", group=grp_mtf)
+i_htf1 = input.timeframe("60", "HTF 1", group=grp_mtf)
+i_enable_htf2 = input.bool(true, "Enable HTF 2", group=grp_mtf)
+i_htf2 = input.timeframe("240", "HTF 2", group=grp_mtf)
+i_enable_htf3 = input.bool(false, "Enable HTF 3", group=grp_mtf)
+i_htf3 = input.timeframe("D", "HTF 3", group=grp_mtf)
+i_show_alignment = input.bool(true, "Highlight HTF/LTF Alignment", group=grp_mtf, tooltip="Show when HTF and LTF hit same sequence number")
+
+// ========================================
+// 6. THE LINE & EOB
+// ========================================
+grp_concepts = "6. THE LINE & EOB"
+i_enable_line = input.bool(true, "Enable THE LINE", group=grp_concepts)
+i_enable_eob = input.bool(true, "Enable EOB", group=grp_concepts)
+
+// ========================================
+// 7. VISUALS
+// ========================================
+grp_visuals = "7. Visuals"
+i_label_size = input.string("small", "Label Size", options=["tiny", "small", "normal"], group=grp_visuals)
+i_show_non_sequence = input.bool(false, "Show All Numbers", group=grp_visuals, tooltip="If OFF, only show sequence numbers")
+
+// Colors
+i_cycle1_color = input.color(color.red, "Cycle 1", group=grp_visuals)
+i_cycle2_color = input.color(color.green, "Cycle 2", group=grp_visuals)
+i_cycle3_color = input.color(color.blue, "Cycle 3", group=grp_visuals)
+i_cycle4_color = input.color(color.fuchsia, "Cycle 4", group=grp_visuals)
+i_htf_color = input.color(color.orange, "HTF Color", group=grp_visuals)
+i_alignment_color = input.color(color.yellow, "Alignment Color", group=grp_visuals)
+
+// ========================================
+// TYPES
+// ========================================
+type CycleData
+    int start_bar
+    int count
+    bool active
+
+type LineData
+    line line_id
+    float level
+    bool is_bullish
+
+type EOBData
+    box box_id
+    float high_level
+    float low_level
+    bool is_bullish
+
+// ========================================
+// VARIABLES
+// ========================================
+var array<CycleData> active_cycles = array.new<CycleData>()
+var array<LineData> active_lines = array.new<LineData>()
+var array<EOBData> active_eobs = array.new<EOBData>()
+var bool counting_started = false
+var int anchor_bar = int(na)
+var int anchor_time = int(na)
+var line anchor_line = line(na)
+
+var int htf1_count = 0
+var int htf1_last_time = 0
+var int htf2_count = 0
+var int htf2_last_time = 0
+var int htf3_count = 0
+var int htf3_last_time = 0
+
+// ========================================
+// FUNCTIONS
+// ========================================
+f_parse_sequence(string seq_str) =>
+    arr = array.new<float>()
+    parts = str.split(seq_str, ",")
+    for part in parts
+        val = str.tonumber(str.trim(part))
+        if not na(val)
+            array.push(arr, val)
+    arr
+
+f_get_label_size(string size_str) =>
+    switch size_str
+        "tiny" => size.tiny
+        "small" => size.small
+        => size.normal
+
+f_in_sequence(int count, array<float> seq) =>
+    array.includes(seq, float(count))
+
+f_get_cycle_color(int idx) =>
+    switch idx
+        0 => i_cycle1_color
+        1 => i_cycle2_color
+        2 => i_cycle3_color
+        3 => i_cycle4_color
+        => color.gray
+
+f_is_time_distorted() =>
+    if not i_enable_td
+        false
+    else
+        candle_range = high - low
+        body_size = math.abs(close - open)
+        avg_range = ta.sma(high - low, 20)
+        
+        is_inside = high <= high[1] and low >= low[1]
+        is_small_body = candle_range > 0 and (body_size / candle_range) < 0.3
+        is_consolidation = candle_range < avg_range * 0.5
+        
+        is_inside or is_small_body or is_consolidation
+
+f_should_count_candle() =>
+    if i_counting_direction == "Neutral"
+        true
+    else if i_counting_direction == "Bullish"
+        close >= open
+    else
+        close <= open
+
+f_detect_fvg() =>
+    if bar_index < 2
+        [false, float(na), false]
+    else
+        is_bull = low[0] > high[2]
+        is_bear = high[0] < low[2]
+        
+        level = float(na)
+        valid = false
+        
+        if is_bull
+            level := high[2]
+            valid := true
+        else if is_bear
+            level := low[2]
+            valid := true
+        
+        [valid, level, is_bull]
+
+f_detect_eob() =>
+    if bar_index < 1
+        [false, float(na), float(na), false]
+    else
+        is_bear = (close[1] > open[1]) and (close < open[1]) and (low < low[1])
+        is_bull = (close[1] < open[1]) and (close > open[1]) and (high > high[1])
+        
+        eob_h = float(na)
+        eob_l = float(na)
+        valid = false
+        
+        if is_bear
+            eob_h := high[1]
+            eob_l := low[1]
+            valid := true
+        else if is_bull
+            eob_h := high[1]
+            eob_l := low[1]
+            valid := true
+        
+        [valid, eob_h, eob_l, is_bull]
+
+// Parse sequence
+main_seq = f_parse_sequence(i_main_sequence)
+atr_val = ta.atr(14)
+label_size = f_get_label_size(i_label_size)
+
+// ========================================
+// ANCHOR
+// ========================================
+if na(anchor_bar) and time >= i_manual_anchor_time
+    anchor_bar := bar_index
+    anchor_time := int(time)
+    counting_started := true
+    
+    if i_enable_multiple_cycles
+        array.push(active_cycles, CycleData.new(anchor_bar, 0, true))
+
+// Anchor line
+if i_show_anchor_line and not na(anchor_time) and counting_started
+    if na(anchor_line)
+        anchor_line := line.new(anchor_time, low, anchor_time, high, xloc=xloc.bar_time, color=color.black, width=2, style=line.style_dashed, extend=extend.both)
+
+// ========================================
+// TIME DISTORTION
+// ========================================
+is_td = f_is_time_distorted()
+bgcolor(i_highlight_td and is_td ? color.new(color.yellow, 85) : na)
+
+// ========================================
+// MULTIPLE CYCLES COUNTING
+// ========================================
+if counting_started and bar_index >= anchor_bar and i_enable_multiple_cycles
+    should_count = f_should_count_candle()
+    should_freeze = is_td and i_freeze_on_td
+    
+    if should_count and not should_freeze
+        for i = 0 to array.size(active_cycles) - 1
+            cycle = array.get(active_cycles, i)
+            
+            if cycle.active and bar_index >= cycle.start_bar
+                new_count = cycle.count + 1
+                cycle.count := new_count
+                array.set(active_cycles, i, cycle)
+                
+                is_seq = f_in_sequence(new_count, main_seq)
+                
+                // Only show sequence numbers OR all if enabled
+                if is_seq or i_show_non_sequence
+                    cycle_color = f_get_cycle_color(i)
+                    y_offset = atr_val * (0.5 + i * 0.4)
+                    label_y = high + y_offset
+                    
+                    if is_seq or i_show_non_sequence
+                        label.new(bar_index, label_y, str.tostring(new_count), 
+                                 color=color.new(color.white, 100), 
+                                 textcolor=cycle_color, 
+                                 style=label.style_label_down, 
+                                 size=label_size)
+                
+                // Auto spawn
+                if i_auto_spawn and (new_count == 7 or new_count == 13 or new_count == 21)
+                    if array.size(active_cycles) < i_max_cycles
+                        array.push(active_cycles, CycleData.new(bar_index, 0, true))
+                
+                // Restart at 31
+                if new_count >= 31
+                    cycle.count := 0
+                    cycle.start_bar := bar_index
+                    array.set(active_cycles, i, cycle)
+
+// ========================================
+// HTF COUNTING WITH ALIGNMENT DETECTION
+// ========================================
+htf1_time = request.security(syminfo.tickerid, i_htf1, time)
+htf2_time = request.security(syminfo.tickerid, i_htf2, time)
+htf3_time = request.security(syminfo.tickerid, i_htf3, time)
+
+// Get current LTF count for alignment check
+current_ltf_count = 0
+if array.size(active_cycles) > 0
+    main_cycle = array.get(active_cycles, 0)
+    current_ltf_count := main_cycle.count
+
+// HTF 1
+if i_enable_htf1 and counting_started
+    if htf1_time != htf1_last_time
+        htf1_last_time := htf1_time
+        htf1_count := htf1_count + 1
+        
+        if f_in_sequence(htf1_count, main_seq)
+            y_pos = low - atr_val * 1.0
+            
+            // Check alignment
+            is_aligned = current_ltf_count == htf1_count
+            label_color = is_aligned and i_show_alignment ? i_alignment_color : i_htf_color
+            
+            label.new(bar_index, y_pos, i_htf1 + ":" + str.tostring(htf1_count), 
+                     color=color.new(color.white, 100), 
+                     textcolor=label_color, 
+                     style=label.style_label_up, 
+                     size=is_aligned ? size.normal : label_size,
+                     tooltip=is_aligned ? "HTF/LTF ALIGNED!" : "")
+            
+            // Visual marker for alignment
+            if is_aligned and i_show_alignment
+                label.new(bar_index, high + atr_val * 0.2, "★ " + str.tostring(htf1_count) + " ★", 
+                         color=i_alignment_color, 
+                         textcolor=color.black, 
+                         style=label.style_label_down, 
+                         size=size.large)
+
+// HTF 2
+if i_enable_htf2 and counting_started
+    if htf2_time != htf2_last_time
+        htf2_last_time := htf2_time
+        htf2_count := htf2_count + 1
+        
+        if f_in_sequence(htf2_count, main_seq)
+            y_pos = low - atr_val * 1.5
+            
+            is_aligned = current_ltf_count == htf2_count
+            label_color = is_aligned and i_show_alignment ? i_alignment_color : i_htf_color
+            
+            label.new(bar_index, y_pos, i_htf2 + ":" + str.tostring(htf2_count), 
+                     color=color.new(color.white, 100), 
+                     textcolor=label_color, 
+                     style=label.style_label_up, 
+                     size=is_aligned ? size.normal : label_size,
+                     tooltip=is_aligned ? "HTF/LTF ALIGNED!" : "")
+            
+            if is_aligned and i_show_alignment
+                label.new(bar_index, high + atr_val * 0.5, "★★ " + str.tostring(htf2_count) + " ★★", 
+                         color=i_alignment_color, 
+                         textcolor=color.black, 
+                         style=label.style_label_down, 
+                         size=size.large)
+
+// HTF 3
+if i_enable_htf3 and counting_started
+    if htf3_time != htf3_last_time
+        htf3_last_time := htf3_time
+        htf3_count := htf3_count + 1
+        
+        if f_in_sequence(htf3_count, main_seq)
+            y_pos = low - atr_val * 2.0
+            
+            is_aligned = current_ltf_count == htf3_count
+            label_color = is_aligned and i_show_alignment ? i_alignment_color : i_htf_color
+            
+            label.new(bar_index, y_pos, i_htf3 + ":" + str.tostring(htf3_count), 
+                     color=color.new(color.white, 100), 
+                     textcolor=label_color, 
+                     style=label.style_label_up, 
+                     size=is_aligned ? size.normal : label_size,
+                     tooltip=is_aligned ? "HTF/LTF ALIGNED!" : "")
+
+// ========================================
+// THE LINE (FVG)
+// ========================================
+if i_enable_line
+    [is_fvg, fvg_level, is_bull] = f_detect_fvg()
+    
+    if is_fvg and not na(fvg_level)
+        while array.size(active_lines) >= 5
+            old = array.shift(active_lines)
+            line.delete(old.line_id)
+        
+        new_line = line.new(bar_index, fvg_level, bar_index+1, fvg_level, 
+                           extend=extend.right, 
+                           color=is_bull ? color.aqua : color.orange, 
+                           width=1)
+        
+        array.push(active_lines, LineData.new(new_line, fvg_level, is_bull))
+    
+    // Mitigation
+    if array.size(active_lines) > 0
+        for i = 0 to array.size(active_lines) - 1
+            if i < array.size(active_lines)
+                line_data = array.get(active_lines, i)
+                mitigated = line_data.is_bullish ? (low <= line_data.level) : (high >= line_data.level)
+                
+                if mitigated
+                    line.set_extend(line_data.line_id, extend.none)
+                    line.set_xy2(line_data.line_id, bar_index, line_data.level)
+                    line.set_color(line_data.line_id, color.gray)
+
+// ========================================
+// EOB
+// ========================================
+if i_enable_eob
+    [is_eob, eob_h, eob_l, is_bull] = f_detect_eob()
+    
+    if is_eob and not na(eob_h)
+        while array.size(active_eobs) >= 3
+            old = array.shift(active_eobs)
+            box.delete(old.box_id)
+        
+        eob_color = is_bull ? color.new(color.green, 80) : color.new(color.red, 80)
+        new_box = box.new(bar_index, eob_h, bar_index+1, eob_l, 
+                         extend=extend.right, 
+                         border_color=eob_color, 
+                         bgcolor=eob_color)
+        
+        array.push(active_eobs, EOBData.new(new_box, eob_h, eob_l, is_bull))
+    
+    // Mitigation
+    if array.size(active_eobs) > 0
+        for i = 0 to array.size(active_eobs) - 1
+            if i < array.size(active_eobs)
+                eob_data = array.get(active_eobs, i)
+                mitigated = eob_data.is_bullish ? (close < eob_data.high_level) : (close > eob_data.low_level)
+                
+                if mitigated
+                    box.set_extend(eob_data.box_id, extend.none)
+                    box.set_right(eob_data.box_id, bar_index)
+                    box.set_bgcolor(eob_data.box_id, color.new(color.gray, 90))
+
+// ========================================
+// CLEAN STATUS TABLE
+// ========================================
+if barstate.islast
+    var table status = table.new(position.top_right, 2, 8, bgcolor=color.new(color.white, 85), border_width=1)
+    
+    table.cell(status, 0, 0, "TDT", bgcolor=color.new(color.blue, 70), text_color=color.white)
+    table.cell(status, 1, 0, "", bgcolor=color.new(color.blue, 70))
+    
+    table.cell(status, 0, 1, "Counting", text_size=size.tiny)
+    table.cell(status, 1, 1, counting_started ? "✓" : "✗", text_color=counting_started ? color.green : color.red, text_size=size.tiny)
+    
+    table.cell(status, 0, 2, "Cycles", text_size=size.tiny)
+    table.cell(status, 1, 2, str.tostring(array.size(active_cycles)), text_size=size.tiny)
+    
+    table.cell(status, 0, 3, "TD", text_size=size.tiny)
+    table.cell(status, 1, 3, is_td ? "⚠" : "✓", text_color=is_td ? color.orange : color.green, text_size=size.tiny)
+    
+    table.cell(status, 0, 4, i_htf1, text_size=size.tiny)
+    table.cell(status, 1, 4, str.tostring(htf1_count), text_color=i_htf_color, text_size=size.tiny)
+    
+    table.cell(status, 0, 5, i_htf2, text_size=size.tiny)
+    table.cell(status, 1, 5, str.tostring(htf2_count), text_color=i_htf_color, text_size=size.tiny)
+    
+    if array.size(active_cycles) > 0
+        main = array.get(active_cycles, 0)
+        table.cell(status, 0, 6, "Current", text_size=size.tiny)
+        table.cell(status, 1, 6, str.tostring(main.count), text_color=i_cycle1_color, text_size=size.tiny)
+    
+    // Check alignment status
+    is_any_aligned = (current_ltf_count == htf1_count and i_enable_htf1) or (current_ltf_count == htf2_count and i_enable_htf2)
+    table.cell(status, 0, 7, "Aligned", text_size=size.tiny)
+    table.cell(status, 1, 7, is_any_aligned ? "★ YES" : "NO", text_color=is_any_aligned ? i_alignment_color : color.gray, text_size=size.tiny)
+
+// ========================================
+// ALERTS
+// ========================================
+if counting_started and array.size(active_cycles) > 0
+    main = array.get(active_cycles, 0)
+    if f_in_sequence(main.count, main_seq)
+        alert("TDT: Sequence " + str.tostring(main.count), alert.freq_once_per_bar)
+
+// HTF/LTF Alignment alert
+is_htf1_aligned = current_ltf_count == htf1_count and i_enable_htf1
+is_htf2_aligned = current_ltf_count == htf2_count and i_enable_htf2
+
+if is_htf1_aligned and i_show_alignment
+    alert("🌟 HTF1/LTF ALIGNED at " + str.tostring(current_ltf_count), alert.freq_once_per_bar)
+
+if is_htf2_aligned and i_show_alignment
+    alert("🌟🌟 HTF2/LTF ALIGNED at " + str.tostring(current_ltf_count), alert.freq_once_per_bar)

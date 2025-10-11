@@ -1,0 +1,1135 @@
+//@version=5
+indicator("TDT Master Edition - Complete System", shorttitle="TDT Master", overlay=true, max_labels_count=500, max_lines_count=500, max_boxes_count=100)
+
+// ========================================
+// 1. CORE SETTINGS
+// ========================================
+grp_core = "1. Core Settings"
+i_counting_direction = input.string("Neutral", "Counting Direction", options=["Neutral", "Bullish", "Bearish"], group=grp_core, tooltip="Neutral: Count all. Bullish: Ignore bearish candles. Bearish: Ignore bullish candles.")
+i_main_sequence = input.string("1,3,7,13,21,31,43", "Main Sequence (n²-n+1)", group=grp_core)
+i_sequence_2 = input.string("1,5,9,17,25,37", "Alternate Sequence 2", group=grp_core)
+i_sequence_3 = input.string("1,3,6,9,15,24", "Perfect Sequence 3", group=grp_core)
+i_active_sequence = input.string("Sequence 1", "Active Sequence", options=["Sequence 1", "Sequence 2", "Sequence 3"], group=grp_core)
+
+// ========================================
+// 2. ANCHOR SETTINGS
+// ========================================
+grp_anchor = "2. Anchor Settings"
+i_enable_auto_anchor = input.bool(true, "Enable Auto Anchor from Perfect Cycles", group=grp_anchor)
+i_anchor_type = input.string("Time", "Anchor Type", options=["Time", "Pivot Low", "Pivot High"], group=grp_anchor)
+i_manual_anchor_time = input.time(timestamp("2025-01-15 09:30"), "Manual Anchor Time", group=grp_anchor, confirm=true)
+i_pivot_left = input.int(3, "Pivot Left Bars", minval=1, group=grp_anchor)
+i_pivot_right = input.int(3, "Pivot Right Bars", minval=1, group=grp_anchor)
+i_lookback_cycles = input.int(200, "Lookback for Perfect Cycles", minval=50, maxval=1000, group=grp_anchor)
+i_show_anchor_line = input.bool(true, "Show Anchor Line", group=grp_anchor)
+
+// ========================================
+// 3. SHIFT MODE
+// ========================================
+grp_shift = "3. Shift Mode"
+i_enable_shift = input.bool(false, "Enable Shift Mode", group=grp_shift, tooltip="Start counting from a specific number")
+i_shift_start = input.int(7, "Start Count At", minval=1, group=grp_shift)
+
+// ========================================
+// 4. TDT CASTING
+// ========================================
+grp_casting = "4. TDT Casting (Backward-to-Forward)"
+i_enable_casting = input.bool(false, "Enable TDT Casting", group=grp_casting)
+i_backward_sequence = input.string("33,27,21,13,7,3,1", "Backward Sequence", group=grp_casting)
+i_forward_cast_sequence = input.string("1,3,7,13,21,27,33", "Forward Cast Sequence", group=grp_casting)
+i_shared_candle = input.bool(true, "Shared -1/1 Candle", group=grp_casting, tooltip="-1 candle IS the 1 candle")
+
+// ========================================
+// 5. TIME DISTORTION
+// ========================================
+grp_td = "5. Time Distortion"
+i_enable_td = input.bool(true, "Enable Time Distortion", group=grp_td)
+i_freeze_on_td = input.bool(true, "Freeze Count on TD", group=grp_td)
+i_body_threshold = input.float(0.3, "Body % Threshold", minval=0.1, maxval=1.0, group=grp_td)
+i_consolidation_threshold = input.float(0.5, "Consolidation Threshold", minval=0.1, maxval=1.0, group=grp_td)
+i_highlight_td = input.bool(true, "Highlight TD Zones", group=grp_td)
+i_enable_inside_bar = input.bool(true, "Detect Inside Bars", group=grp_td)
+i_enable_small_body = input.bool(true, "Detect Small Body", group=grp_td)
+i_multiple_inside = input.bool(false, "Count Multiple Inside Candles", group=grp_td)
+
+// ========================================
+// 6. MULTIPLE CYCLES
+// ========================================
+grp_cycles = "6. Multiple Simultaneous Cycles"
+i_enable_multiple_cycles = input.bool(true, "Enable Multiple Cycles", group=grp_cycles)
+i_max_cycles = input.int(4, "Max Simultaneous Cycles", minval=1, maxval=10, group=grp_cycles)
+i_auto_spawn = input.bool(true, "Auto Spawn at Key Numbers", group=grp_cycles)
+i_spawn_numbers = input.string("7,13,21", "Spawn Numbers", group=grp_cycles)
+i_show_overlaps = input.bool(true, "Show Cycle Overlaps", group=grp_cycles)
+i_cycle_restart = input.int(31, "Cycle Restart Number", minval=21, group=grp_cycles, tooltip="Restart cycle after reaching this number")
+
+// ========================================
+// 7. MULTI-TIMEFRAME (HTF on LTF)
+// ========================================
+grp_mtf = "7. Multi-Timeframe"
+i_enable_mtf1 = input.bool(true, "Enable HTF 1", group=grp_mtf)
+i_htf1 = input.timeframe("60", "HTF 1", group=grp_mtf)
+i_htf1_sequence = input.string("1,7,13,21,31", "HTF 1 Sequence", group=grp_mtf)
+i_htf1_anchor_time = input.time(timestamp("2025-01-15 09:30"), "HTF 1 Anchor (Independent)", group=grp_mtf, tooltip="HTF can have different start point than LTF")
+i_htf1_shift = input.bool(false, "HTF 1 Shift Mode", group=grp_mtf)
+i_htf1_shift_start = input.int(1, "HTF 1 Start At", minval=1, group=grp_mtf)
+
+i_enable_mtf2 = input.bool(true, "Enable HTF 2", group=grp_mtf)
+i_htf2 = input.timeframe("240", "HTF 2", group=grp_mtf)
+i_htf2_sequence = input.string("1,7,13,21,31", "HTF 2 Sequence", group=grp_mtf)
+i_htf2_anchor_time = input.time(timestamp("2025-01-15 09:30"), "HTF 2 Anchor (Independent)", group=grp_mtf, tooltip="HTF can have different start point than LTF")
+i_htf2_shift = input.bool(false, "HTF 2 Shift Mode", group=grp_mtf)
+i_htf2_shift_start = input.int(1, "HTF 2 Start At", minval=1, group=grp_mtf)
+
+i_enable_mtf3 = input.bool(false, "Enable HTF 3", group=grp_mtf)
+i_htf3 = input.timeframe("D", "HTF 3", group=grp_mtf)
+i_htf3_sequence = input.string("1,7,13,21", "HTF 3 Sequence", group=grp_mtf)
+
+i_mtf_label_format = input.string("TF:Count", "MTF Label Format", options=["TF:Count", "Custom"], group=grp_mtf)
+i_mtf_custom_format = input.string("{tf}:{count}", "Custom Format", group=grp_mtf, tooltip="Use {tf} for timeframe, {count} for count")
+i_show_htf_ltf_alignment = input.bool(true, "★ Show HTF/LTF Alignment", group=grp_mtf, tooltip="Show BIG STAR when HTF and LTF hit same sequence number (7, 13, 21 etc)")
+
+// ========================================
+// 8. MARKET CYCLES & TIME STATES
+// ========================================
+grp_market = "8. Market Cycles & Time States"
+i_enable_market_cycles = input.bool(true, "Enable Market Cycle Detection", group=grp_market)
+i_show_cycle_labels = input.bool(false, "Show Cycle Type Labels", group=grp_market, tooltip="Turn OFF to reduce visual spam - keeps background color only")
+i_consolidation_length = input.string("10,20", "Consolidation Lengths", group=grp_market)
+i_expansion_length = input.string("4,7", "Expansion Lengths", group=grp_market)
+i_retracement_length = input.string("3,4", "Retracement Lengths", group=grp_market)
+i_reversal_length = input.string("13,21", "Reversal Lengths", group=grp_market)
+
+i_enable_time_states = input.bool(true, "Enable Time States", group=grp_market)
+i_enable_contraction = input.bool(true, "Detect Time Contraction", group=grp_market)
+i_enable_expansion = input.bool(true, "Detect Time Expansion", group=grp_market)
+i_atr_length = input.int(14, "ATR Length", minval=5, group=grp_market)
+
+// ========================================
+// 9. FRACTAL ANALYSIS
+// ========================================
+grp_fractal = "9. Fractal Analysis"
+i_enable_fractals = input.bool(true, "Enable Fractal Detection", group=grp_fractal)
+i_show_fractal_labels = input.bool(false, "Show Fractal Labels", group=grp_fractal, tooltip="Turn OFF to reduce visual spam")
+i_fractal_micro = input.int(5, "Micro Fractal Bars", minval=3, group=grp_fractal)
+i_fractal_medium = input.int(10, "Medium Fractal Bars", minval=5, group=grp_fractal)
+i_fractal_macro = input.int(20, "Macro Fractal Bars", minval=10, group=grp_fractal)
+
+// ========================================
+// 10. HARMONY/CHAOS
+// ========================================
+grp_harmony = "10. Harmony/Chaos Detection"
+i_enable_harmony = input.bool(true, "Enable Harmony/Chaos", group=grp_harmony)
+i_show_harmony_labels = input.bool(false, "Show Harmony/Chaos Labels", group=grp_harmony, tooltip="Turn OFF to reduce visual spam")
+i_harmony_threshold = input.float(1.5, "Harmony Threshold", minval=1.0, group=grp_harmony)
+i_chaos_threshold = input.float(0.5, "Chaos Threshold", maxval=1.0, group=grp_harmony)
+
+// ========================================
+// 11. TRADING SIGNALS
+// ========================================
+grp_signals = "11. Trading Signals"
+i_enable_signals = input.bool(true, "Enable Trading Signals", group=grp_signals)
+i_show_entry_exit = input.bool(true, "Show Entry/Exit Markers", group=grp_signals)
+i_entry_numbers = input.string("7,13", "Entry Numbers", group=grp_signals)
+i_exit_numbers = input.string("13,21,31", "Exit Numbers", group=grp_signals)
+i_show_pyramid = input.bool(true, "Show Pyramid Entries", group=grp_signals)
+
+// ========================================
+// 12. THE LINE (FVG)
+// ========================================
+grp_line = "12. THE LINE (Fair Value Gaps)"
+i_enable_line = input.bool(true, "Enable THE LINE", group=grp_line)
+i_line_max = input.int(5, "Max Active LINEs", minval=1, maxval=10, group=grp_line)
+i_line_current_tf = input.bool(true, "Show Current TF", group=grp_line)
+i_line_htf = input.bool(true, "Show HTF LINEs", group=grp_line)
+i_line_mitigation = input.string("Wick or Body", "Mitigation Type", options=["Wick or Body", "Body Close Only"], group=grp_line)
+i_line_show_mitigated = input.bool(true, "Show Mitigated LINEs", group=grp_line)
+
+// ========================================
+// 13. ENHANCED ORDER BLOCKS
+// ========================================
+grp_eob = "13. Enhanced Order Blocks"
+i_enable_eob = input.bool(true, "Enable EOB", group=grp_eob)
+i_eob_max = input.int(3, "Max Active EOBs", minval=1, maxval=8, group=grp_eob)
+i_eob_current_tf = input.bool(true, "Show Current TF", group=grp_eob)
+i_eob_htf = input.bool(true, "Show HTF EOBs", group=grp_eob)
+i_eob_show_mitigated = input.bool(true, "Show Mitigated EOBs", group=grp_eob)
+
+// ========================================
+// 14. FUTURE PROJECTIONS
+// ========================================
+grp_future = "14. Future Projections"
+i_enable_future = input.bool(true, "Enable Future Projections", group=grp_future)
+i_future_count = input.int(3, "Number of Projections", minval=1, maxval=10, group=grp_future)
+i_future_mtf = input.bool(true, "Show MTF Projections", group=grp_future)
+
+// ========================================
+// 15. SESSION FILTER
+// ========================================
+grp_session = "15. Session Filter"
+i_enable_session = input.bool(false, "Enable Session Filter", group=grp_session)
+i_session = input.session("0800-1600", "Trading Session", group=grp_session)
+i_timezone = input.string("UTC", "Timezone", group=grp_session)
+
+// ========================================
+// 16. VISUAL SETTINGS
+// ========================================
+grp_visuals = "16. Visual Settings"
+i_label_size = input.string("small", "Label Size", options=["tiny", "small", "normal", "large", "huge"], group=grp_visuals)
+i_show_non_sequence = input.bool(false, "Show Non-Sequence Numbers", group=grp_visuals)
+i_vertical_offset = input.float(0.5, "Label Vertical Offset (ATR)", group=grp_visuals)
+
+// Colors
+i_sequence_color = input.color(color.red, "Sequence Number Color", group=grp_visuals)
+i_normal_color = input.color(color.gray, "Normal Count Color", group=grp_visuals)
+i_td_color = input.color(color.orange, "TD Color", group=grp_visuals)
+i_td_bg = input.color(color.new(color.yellow, 85), "TD Background", group=grp_visuals)
+i_casting_color = input.color(color.fuchsia, "Casting Color", group=grp_visuals)
+i_anchor_line_color = input.color(color.black, "Anchor Line Color", group=grp_visuals)
+
+// Cycle Colors
+i_cycle1_color = input.color(color.red, "Cycle 1 Color", group=grp_visuals)
+i_cycle2_color = input.color(color.green, "Cycle 2 Color", group=grp_visuals)
+i_cycle3_color = input.color(color.blue, "Cycle 3 Color", group=grp_visuals)
+i_cycle4_color = input.color(color.fuchsia, "Cycle 4 Color", group=grp_visuals)
+
+// MTF Colors
+i_htf1_color = input.color(color.orange, "HTF 1 Color", group=grp_visuals)
+i_htf2_color = input.color(color.purple, "HTF 2 Color", group=grp_visuals)
+i_htf3_color = input.color(color.teal, "HTF 3 Color", group=grp_visuals)
+
+// Signal Colors
+i_entry_color = input.color(color.lime, "Entry Signal Color", group=grp_visuals)
+i_exit_color = input.color(color.red, "Exit Signal Color", group=grp_visuals)
+
+// ========================================
+// TYPES
+// ========================================
+type CycleData
+    int start_bar
+    int count
+    bool active
+    int cycle_id
+
+type LineData
+    line line_id
+    label label_id
+    float level
+    bool is_bullish
+    bool is_mitigated
+    string tf
+
+type EOBData
+    box box_id
+    label label_id
+    float high_level
+    float low_level
+    bool is_bullish
+    bool is_mitigated
+    string tf
+
+// ========================================
+// STATE VARIABLES
+// ========================================
+var array<CycleData> active_cycles = array.new<CycleData>()
+var array<LineData> active_lines = array.new<LineData>()
+var array<EOBData> active_eobs = array.new<EOBData>()
+var bool counting_started = false
+var int anchor_bar = int(na)
+var int anchor_time = int(na)
+var int next_cycle_id = 0
+var line anchor_line = line(na)
+
+// Casting variables
+var bool casting_active = false
+var bool casting_negative_phase = true
+var int backward_count = 0
+var int forward_count = 0
+var bool casting_initialized = false
+
+// MTF variables
+var int htf1_count = 0
+var int htf1_last_time = 0
+var bool htf1_counting = false
+var int htf2_count = 0
+var int htf2_last_time = 0
+var bool htf2_counting = false
+var int htf3_count = 0
+var int htf3_last_time = 0
+var bool htf3_counting = false
+
+// Market cycle tracking
+var int td_cycle_count = 0
+var int expansion_count = 0
+var int retracement_count = 0
+var int reversal_count = 0
+var string last_cycle_type = "Unknown"
+
+// ========================================
+// HELPER FUNCTIONS
+// ========================================
+f_parse_sequence(string seq_str) =>
+    arr = array.new<float>()
+    parts = str.split(seq_str, ",")
+    for part in parts
+        val = str.tonumber(str.trim(part))
+        if not na(val)
+            array.push(arr, val)
+    arr
+
+f_get_label_size(string size_str) =>
+    switch size_str
+        "tiny" => size.tiny
+        "small" => size.small
+        "normal" => size.normal
+        "large" => size.large
+        "huge" => size.huge
+        => size.normal
+
+f_in_sequence(int count, array<float> seq) =>
+    array.includes(seq, float(count))
+
+f_get_cycle_color(int idx) =>
+    switch idx
+        0 => i_cycle1_color
+        1 => i_cycle2_color
+        2 => i_cycle3_color
+        3 => i_cycle4_color
+        => color.gray
+
+// ========================================
+// TIME DISTORTION DETECTION
+// ========================================
+f_is_time_distorted() =>
+    if not i_enable_td
+        false
+    else
+        candle_range = high - low
+        body_size = math.abs(close - open)
+        avg_range = ta.sma(high - low, 20)
+        
+        is_inside = i_enable_inside_bar and (high <= high[1] and low >= low[1])
+        is_small_body = i_enable_small_body and (candle_range > 0 and (body_size / candle_range) < i_body_threshold)
+        is_consolidation = candle_range < avg_range * i_consolidation_threshold
+        
+        is_inside or is_small_body or is_consolidation
+
+// ========================================
+// TIME STATES
+// ========================================
+f_is_time_contracted() =>
+    if not i_enable_contraction
+        false
+    else
+        atr = ta.atr(i_atr_length)
+        current_vol = (high - low) / atr
+        avg_vol = ta.sma(current_vol, 20)
+        current_vol > avg_vol * 1.5
+
+f_is_time_expanded() =>
+    if not i_enable_expansion
+        false
+    else
+        atr = ta.atr(i_atr_length)
+        current_vol = (high - low) / atr
+        avg_vol = ta.sma(current_vol, 20)
+        current_vol < avg_vol * 0.7
+
+f_get_time_state() =>
+    if f_is_time_contracted()
+        "Contraction"
+    else if f_is_time_expanded()
+        "Expansion"
+    else
+        "Normal"
+
+// ========================================
+// MARKET CYCLE DETECTION
+// ========================================
+f_detect_market_cycle() =>
+    if not i_enable_market_cycles
+        "Unknown"
+    else
+        price_range = high - low
+        avg_range = ta.sma(high - low, 20)
+        
+        if price_range < avg_range * 0.5
+            "Consolidation"
+        else if price_range > avg_range * 1.5
+            "Expansion"
+        else if close < close[1] and close[1] < close[2]
+            "Retracement"
+        else if close > close[1] and close[1] > close[2]
+            "Reversal"
+        else
+            "Unknown"
+
+// ========================================
+// FRACTAL DETECTION
+// ========================================
+f_detect_fractal() =>
+    if not i_enable_fractals
+        [false, "None"]
+    else
+        // Micro fractal
+        micro_up = true
+        micro_down = true
+        for i = 1 to i_fractal_micro - 1
+            if high <= high[i]
+                micro_up := false
+            if low >= low[i]
+                micro_down := false
+        
+        if micro_up or micro_down
+            [true, "Micro"]
+        else
+            // Medium fractal
+            medium_up = true
+            medium_down = true
+            for i = 1 to i_fractal_medium - 1
+                if high <= high[i]
+                    medium_up := false
+                if low >= low[i]
+                    medium_down := false
+            
+            if medium_up or medium_down
+                [true, "Medium"]
+            else
+                // Macro fractal
+                macro_up = true
+                macro_down = true
+                for i = 1 to i_fractal_macro - 1
+                    if high <= high[i]
+                        macro_up := false
+                    if low >= low[i]
+                        macro_down := false
+                
+                [macro_up or macro_down, "Macro"]
+
+// ========================================
+// HARMONY/CHAOS DETECTION
+// ========================================
+f_detect_harmony_chaos() =>
+    if not i_enable_harmony
+        "Unknown"
+    else
+        price_change = close - close[1]
+        avg_change = ta.sma(math.abs(price_change), 10)
+        atr = ta.atr(i_atr_length)
+        
+        ratio = avg_change > 0 ? (atr / avg_change) : 0
+        
+        if ratio > i_harmony_threshold
+            "Harmony"
+        else if ratio < i_chaos_threshold
+            "Chaos"
+        else
+            "Balance"
+
+// ========================================
+// CANDLE DIRECTION CHECK
+// ========================================
+f_should_count_candle() =>
+    if i_counting_direction == "Neutral"
+        true
+    else if i_counting_direction == "Bullish"
+        close >= open
+    else
+        close <= open
+
+// ========================================
+// SESSION CHECK
+// ========================================
+f_in_session() =>
+    if not i_enable_session
+        true
+    else
+        not na(time(timeframe.period, i_session, i_timezone))
+
+// ========================================
+// FVG DETECTION
+// ========================================
+f_detect_fvg() =>
+    if bar_index < 2
+        [false, float(na), false]
+    else
+        is_bull_fvg = low[0] > high[2] and low[1] > high[2]
+        is_bear_fvg = high[0] < low[2] and high[1] < low[2]
+        
+        level = float(na)
+        valid = false
+        is_bull = false
+        
+        if is_bull_fvg
+            level := high[2]
+            valid := true
+            is_bull := true
+        else if is_bear_fvg
+            level := low[2]
+            valid := true
+            is_bull := false
+        
+        [valid, level, is_bull]
+
+// ========================================
+// EOB DETECTION
+// ========================================
+f_detect_eob() =>
+    if bar_index < 1
+        [false, float(na), float(na), false]
+    else
+        is_bear = (close[1] > open[1]) and (close < open[1]) and (low < low[1])
+        is_bull = (close[1] < open[1]) and (close > open[1]) and (high > high[1])
+        
+        eob_h = float(na)
+        eob_l = float(na)
+        valid = false
+        is_bull_eob = false
+        
+        if is_bear
+            eob_h := high[1]
+            eob_l := low[1]
+            valid := true
+            is_bull_eob := false
+        else if is_bull
+            eob_h := high[1]
+            eob_l := low[1]
+            valid := true
+            is_bull_eob := true
+        
+        [valid, eob_h, eob_l, is_bull_eob]
+
+// ========================================
+// TRADING SIGNALS
+// ========================================
+f_get_trading_signal(int count) =>
+    if not i_enable_signals
+        "None"
+    else
+        entry_seq = f_parse_sequence(i_entry_numbers)
+        exit_seq = f_parse_sequence(i_exit_numbers)
+        
+        if f_in_sequence(count, entry_seq)
+            "Entry"
+        else if f_in_sequence(count, exit_seq)
+            "Exit"
+        else
+            "None"
+
+// ========================================
+// PARSE SEQUENCES
+// ========================================
+main_seq = f_parse_sequence(i_main_sequence)
+seq_2 = f_parse_sequence(i_sequence_2)
+seq_3 = f_parse_sequence(i_sequence_3)
+
+current_seq = switch i_active_sequence
+    "Sequence 2" => seq_2
+    "Sequence 3" => seq_3
+    => main_seq
+
+htf1_seq = f_parse_sequence(i_htf1_sequence)
+htf2_seq = f_parse_sequence(i_htf2_sequence)
+htf3_seq = f_parse_sequence(i_htf3_sequence)
+spawn_seq = f_parse_sequence(i_spawn_numbers)
+backward_seq = f_parse_sequence(i_backward_sequence)
+forward_cast_seq = f_parse_sequence(i_forward_cast_sequence)
+
+atr_val = ta.atr(i_atr_length)
+label_size = f_get_label_size(i_label_size)
+
+// ========================================
+// PERFECT CYCLE AUTO ANCHOR
+// ========================================
+f_score_cycle_quality(int bar) =>
+    score = 0.0
+    
+    // Check for clean pivot
+    pivot_l = ta.pivotlow(low, i_pivot_left, i_pivot_right)
+    pivot_h = ta.pivothigh(high, i_pivot_left, i_pivot_right)
+    if not na(pivot_l) or not na(pivot_h)
+        score := score + 0.4
+    
+    // Check for strong directional move after
+    if bar + 10 < bar_index
+        range_after = math.abs(close[bar_index - bar - 10] - close[bar_index - bar])
+        atr_avg = ta.atr(14)
+        if range_after > atr_avg * 3
+            score := score + 0.3
+    
+    // Check for low volatility at start
+    if bar + 5 < bar_index
+        vol_at_start = high[bar_index - bar] - low[bar_index - bar]
+        avg_vol = ta.sma(high - low, 20)
+        if vol_at_start < avg_vol * 0.8
+            score := score + 0.3
+    
+    score
+
+// ========================================
+// ANCHOR INITIALIZATION
+// ========================================
+if i_enable_auto_anchor and na(anchor_bar)
+    best_score = 0.0
+    best_bar = int(na)
+    
+    // Look back for perfect cycle start
+    for i = i_pivot_right to math.min(i_lookback_cycles, bar_index - 1)
+        score = f_score_cycle_quality(i)
+        if score > best_score and score > 0.7
+            best_score := score
+            best_bar := bar_index - i
+    
+    if not na(best_bar)
+        anchor_bar := best_bar
+        anchor_time := int(time)
+        counting_started := true
+        
+        if i_enable_multiple_cycles
+            initial_count = i_enable_shift ? (i_shift_start - 1) : 0
+            array.push(active_cycles, CycleData.new(anchor_bar, initial_count, true, next_cycle_id))
+            next_cycle_id := next_cycle_id + 1
+
+// Manual anchor fallback
+if not i_enable_auto_anchor and na(anchor_bar) and time >= i_manual_anchor_time
+    if i_anchor_type == "Time"
+        anchor_bar := bar_index
+        anchor_time := int(time)
+        counting_started := true
+    else
+        pivot_l = ta.pivotlow(low, i_pivot_left, i_pivot_right)
+        pivot_h = ta.pivothigh(high, i_pivot_left, i_pivot_right)
+        
+        if (i_anchor_type == "Pivot Low" and not na(pivot_l)) or (i_anchor_type == "Pivot High" and not na(pivot_h))
+            anchor_bar := bar_index
+            anchor_time := int(time)
+            counting_started := true
+    
+    if counting_started and i_enable_multiple_cycles
+        initial_count = i_enable_shift ? (i_shift_start - 1) : 0
+        array.push(active_cycles, CycleData.new(anchor_bar, initial_count, true, next_cycle_id))
+        next_cycle_id := next_cycle_id + 1
+
+// ========================================
+// ANCHOR LINE
+// ========================================
+if i_show_anchor_line and not na(anchor_bar) and not na(anchor_time) and counting_started
+    if na(anchor_line)
+        anchor_line := line.new(anchor_time, low, anchor_time, high, xloc=xloc.bar_time, color=i_anchor_line_color, width=2, style=line.style_dashed, extend=extend.both)
+
+// ========================================
+// TIME DISTORTION
+// ========================================
+is_td = f_is_time_distorted()
+bgcolor(i_highlight_td and is_td ? i_td_bg : na)
+
+// ========================================
+// TDT CASTING LOGIC
+// ========================================
+if i_enable_casting and counting_started and bar_index == anchor_bar and not casting_initialized and array.size(backward_seq) > 0
+    highest_backward = 0.0
+    for i = 0 to array.size(backward_seq) - 1
+        val = array.get(backward_seq, i)
+        if val > highest_backward
+            highest_backward := val
+    
+    backward_count := -int(highest_backward)
+    casting_initialized := true
+    casting_active := true
+
+if i_enable_casting and casting_initialized
+    should_count = f_should_count_candle() and f_in_session()
+    should_freeze = is_td and i_freeze_on_td
+    
+    if should_count and not should_freeze
+        if casting_negative_phase
+            if backward_count == -1
+                casting_negative_phase := false
+                forward_count := i_shared_candle ? 1 : 0
+            else
+                backward_count := backward_count + 1
+        else
+            forward_count := forward_count + 1
+    
+    // Display backward casting
+    if casting_negative_phase
+        if f_in_sequence(math.abs(backward_count), backward_seq)
+            y_pos = low - atr_val * (i_vertical_offset + 0.8)
+            label.new(bar_index, y_pos, str.tostring(backward_count), 
+                     color=color.new(color.white, 100), 
+                     textcolor=i_casting_color, 
+                     style=label.style_label_up, 
+                     size=label_size)
+    
+    // Display forward casting
+    if not casting_negative_phase and forward_count > 0
+        if f_in_sequence(forward_count, forward_cast_seq)
+            y_pos = low - atr_val * (i_vertical_offset + 1.2)
+            label.new(bar_index, y_pos, "FC:" + str.tostring(forward_count), 
+                     color=color.new(color.white, 100), 
+                     textcolor=i_casting_color, 
+                     style=label.style_label_up, 
+                     size=label_size)
+
+// ========================================
+// MULTIPLE CYCLES COUNTING
+// ========================================
+if counting_started and bar_index >= anchor_bar and i_enable_multiple_cycles and not i_enable_casting and array.size(active_cycles) > 0
+    should_count = f_should_count_candle() and f_in_session()
+    should_freeze = is_td and i_freeze_on_td
+    
+    if should_count and not should_freeze
+        for i = 0 to array.size(active_cycles) - 1
+            cycle = array.get(active_cycles, i)
+            
+            if cycle.active and bar_index >= cycle.start_bar
+                new_count = cycle.count + 1
+                cycle.count := new_count
+                array.set(active_cycles, i, cycle)
+                
+                is_seq = f_in_sequence(new_count, current_seq)
+                
+                if is_seq or i_show_non_sequence
+                    cycle_color = f_get_cycle_color(i)
+                    y_offset = atr_val * (i_vertical_offset + i * 0.35)
+                    label_y = high + y_offset
+                    
+                    // Check overlaps
+                    overlap = ""
+                    for j = 0 to array.size(active_cycles) - 1
+                        if j != i
+                            other = array.get(active_cycles, j)
+                            if other.count == new_count
+                                overlap := overlap + "C" + str.tostring(j+1) + " "
+                    
+                    label_txt = str.tostring(new_count)
+                    if overlap != "" and i_show_overlaps
+                        label_txt := label_txt + "\n(" + overlap + ")"
+                    
+                    if is_seq
+                        label.new(bar_index, label_y, label_txt, 
+                                 color=color.new(color.white, 100), 
+                                 textcolor=cycle_color, 
+                                 style=label.style_label_down, 
+                                 size=label_size)
+                    
+                    // Trading signals
+                    signal = f_get_trading_signal(new_count)
+                    if i_show_entry_exit and signal != "None"
+                        sig_y = signal == "Entry" ? low - atr_val * 0.5 : high + atr_val * 0.5
+                        sig_color = signal == "Entry" ? i_entry_color : i_exit_color
+                        sig_style = signal == "Entry" ? label.style_triangleup : label.style_triangledown
+                        label.new(bar_index, sig_y, signal, 
+                                 color=sig_color, 
+                                 textcolor=color.white, 
+                                 style=sig_style, 
+                                 size=size.small)
+                
+                // Auto spawn
+                if i_auto_spawn and f_in_sequence(new_count, spawn_seq)
+                    if array.size(active_cycles) < i_max_cycles
+                        array.push(active_cycles, CycleData.new(bar_index, 0, true, next_cycle_id))
+                        next_cycle_id := next_cycle_id + 1
+                
+                // Restart cycle
+                if new_count >= i_cycle_restart
+                    cycle.count := 0
+                    cycle.start_bar := bar_index
+                    array.set(active_cycles, i, cycle)
+
+// ========================================
+// TD LABEL
+// ========================================
+if is_td and i_enable_td
+    label.new(bar_index, high + atr_val * 0.2, "TD", 
+             color=color.new(color.white, 100), 
+             textcolor=i_td_color, 
+             style=label.style_label_down, 
+             size=size.tiny)
+
+// ========================================
+// MARKET CYCLE TRACKING
+// ========================================
+if i_enable_market_cycles and counting_started
+    cycle_type = f_detect_market_cycle()
+    
+    if cycle_type != last_cycle_type
+        last_cycle_type := cycle_type
+        
+        switch cycle_type
+            "Consolidation" => 
+                td_cycle_count := td_cycle_count + 1
+            "Expansion" => 
+                expansion_count := expansion_count + 1
+            "Retracement" => 
+                retracement_count := retracement_count + 1
+            "Reversal" => 
+                reversal_count := reversal_count + 1
+    
+    if i_show_cycle_labels and cycle_type != "Unknown"
+        cycle_label_y = high + atr_val * 0.1
+        cycle_text = switch cycle_type
+            "Consolidation" => "TD:" + str.tostring(td_cycle_count)
+            "Expansion" => "E:" + str.tostring(expansion_count)
+            "Retracement" => "R:" + str.tostring(retracement_count)
+            "Reversal" => "V:" + str.tostring(reversal_count)
+            => ""
+        
+        if cycle_text != ""
+            label.new(bar_index, cycle_label_y, cycle_text, 
+                     color=color.new(color.white, 100), 
+                     textcolor=color.aqua, 
+                     style=label.style_label_down, 
+                     size=size.tiny)
+
+// ========================================
+// FRACTAL LABELS
+// ========================================
+if i_enable_fractals and i_show_fractal_labels
+    [is_fractal, fractal_type] = f_detect_fractal()
+    
+    if is_fractal
+        fractal_y = high + atr_val * 0.05
+        label.new(bar_index, fractal_y, "F:" + fractal_type, 
+                 color=color.new(color.white, 100), 
+                 textcolor=color.yellow, 
+                 style=label.style_label_down, 
+                 size=size.tiny)
+
+// ========================================
+// HARMONY/CHAOS LABELS
+// ========================================
+if i_enable_harmony and i_show_harmony_labels
+    harmony_state = f_detect_harmony_chaos()
+    
+    if harmony_state != "Balance"
+        harmony_y = low - atr_val * 0.1
+        harmony_color = harmony_state == "Harmony" ? color.lime : color.red
+        label.new(bar_index, harmony_y, harmony_state, 
+                 color=color.new(color.white, 100), 
+                 textcolor=harmony_color, 
+                 style=label.style_label_up, 
+                 size=size.tiny)
+
+// ========================================
+// MULTI-TIMEFRAME COUNTING
+// ========================================
+// Get HTF times outside conditionals
+htf1_time = request.security(syminfo.tickerid, i_htf1, time)
+htf2_time = request.security(syminfo.tickerid, i_htf2, time)
+htf3_time = request.security(syminfo.tickerid, i_htf3, time)
+
+// Get current LTF count for alignment detection
+current_ltf_count = 0
+if array.size(active_cycles) > 0
+    main_cycle = array.get(active_cycles, 0)
+    current_ltf_count := main_cycle.count
+
+// HTF 1 - Independent anchor and counting
+if i_enable_mtf1
+    if not htf1_counting and time >= i_htf1_anchor_time
+        htf1_counting := true
+        htf1_count := i_htf1_shift ? i_htf1_shift_start - 1 : 0
+    
+    if htf1_counting and htf1_time != htf1_last_time
+        htf1_last_time := htf1_time
+        htf1_count := htf1_count + 1
+        
+        if f_in_sequence(htf1_count, htf1_seq)
+            y_pos = low - atr_val * (i_vertical_offset + 0.5)
+            label_text = i_mtf_label_format == "Custom" ? 
+                         str.replace(str.replace(i_mtf_custom_format, "{tf}", i_htf1), "{count}", str.tostring(htf1_count)) : 
+                         i_htf1 + ":" + str.tostring(htf1_count)
+            
+            // Check if LTF is also on a sequence number
+            ltf_on_sequence = f_in_sequence(current_ltf_count, current_seq)
+            // SPECIAL: Both on SAME sequence number
+            is_same_number = current_ltf_count == htf1_count
+            // GOOD: Both on sequence numbers (any)
+            is_both_sequence = ltf_on_sequence
+            
+            label_color = is_same_number and i_show_htf_ltf_alignment ? color.yellow : 
+                          (is_both_sequence and i_show_htf_ltf_alignment ? color.orange : i_htf1_color)
+            
+            label.new(bar_index, y_pos, label_text, 
+                     color=color.new(color.white, 100), 
+                     textcolor=label_color, 
+                     style=label.style_label_up, 
+                     size=is_same_number ? size.normal : label_size)
+            
+            // BIG STAR for SAME number alignment
+            if is_same_number and i_show_htf_ltf_alignment
+                label.new(bar_index, high + atr_val * 0.3, "★★★ " + str.tostring(htf1_count) + " ★★★", 
+                         color=color.yellow, 
+                         textcolor=color.black, 
+                         style=label.style_label_down, 
+                         size=size.huge,
+                         tooltip="GOLDEN ALIGNMENT: HTF1 and LTF both at " + str.tostring(htf1_count))
+            // Small star for both on sequence
+            else if is_both_sequence and i_show_htf_ltf_alignment
+                label.new(bar_index, high + atr_val * 0.2, "★", 
+                         color=color.orange, 
+                         textcolor=color.black, 
+                         style=label.style_label_down, 
+                         size=size.small,
+                         tooltip="Both on sequence: LTF=" + str.tostring(current_ltf_count) + " HTF1=" + str.tostring(htf1_count))
+
+// HTF 2 - Independent anchor and counting
+if i_enable_mtf2
+    if not htf2_counting and time >= i_htf2_anchor_time
+        htf2_counting := true
+        htf2_count := i_htf2_shift ? i_htf2_shift_start - 1 : 0
+    
+    if htf2_counting and htf2_time != htf2_last_time
+        htf2_last_time := htf2_time
+        htf2_count := htf2_count + 1
+        
+        if f_in_sequence(htf2_count, htf2_seq)
+            y_pos = low - atr_val * (i_vertical_offset + 1.0)
+            label_text = i_mtf_label_format == "Custom" ? 
+                         str.replace(str.replace(i_mtf_custom_format, "{tf}", i_htf2), "{count}", str.tostring(htf2_count)) : 
+                         i_htf2 + ":" + str.tostring(htf2_count)
+            
+            ltf_on_sequence = f_in_sequence(current_ltf_count, current_seq)
+            is_same_number = current_ltf_count == htf2_count
+            is_both_sequence = ltf_on_sequence
+            
+            label_color = is_same_number and i_show_htf_ltf_alignment ? color.yellow : 
+                          (is_both_sequence and i_show_htf_ltf_alignment ? color.orange : i_htf2_color)
+            
+            label.new(bar_index, y_pos, label_text, 
+                     color=color.new(color.white, 100), 
+                     textcolor=label_color, 
+                     style=label.style_label_up, 
+                     size=is_same_number ? size.normal : label_size)
+            
+            if is_same_number and i_show_htf_ltf_alignment
+                label.new(bar_index, high + atr_val * 0.6, "★★★ " + str.tostring(htf2_count) + " ★★★", 
+                         color=color.yellow, 
+                         textcolor=color.black, 
+                         style=label.style_label_down, 
+                         size=size.huge,
+                         tooltip="GOLDEN ALIGNMENT: HTF2 and LTF both at " + str.tostring(htf2_count))
+            else if is_both_sequence and i_show_htf_ltf_alignment
+                label.new(bar_index, high + atr_val * 0.4, "★", 
+                         color=color.orange, 
+                         textcolor=color.black, 
+                         style=label.style_label_down, 
+                         size=size.small,
+                         tooltip="Both on sequence: LTF=" + str.tostring(current_ltf_count) + " HTF2=" + str.tostring(htf2_count))
+
+// HTF 3
+if i_enable_mtf3
+    if not htf3_counting and counting_started
+        htf3_counting := true
+    
+    if htf3_counting and htf3_time != htf3_last_time
+        htf3_last_time := htf3_time
+        htf3_count := htf3_count + 1
+        
+        if f_in_sequence(htf3_count, htf3_seq)
+            y_pos = low - atr_val * (i_vertical_offset + 1.5)
+            label_text = i_mtf_label_format == "Custom" ? 
+                         str.replace(str.replace(i_mtf_custom_format, "{tf}", i_htf3), "{count}", str.tostring(htf3_count)) : 
+                         i_htf3 + ":" + str.tostring(htf3_count)
+            
+            is_same_number = current_ltf_count == htf3_count
+            label_color = is_same_number and i_show_htf_ltf_alignment ? color.yellow : i_htf3_color
+            
+            label.new(bar_index, y_pos, label_text, 
+                     color=color.new(color.white, 100), 
+                     textcolor=label_color, 
+                     style=label.style_label_up, 
+                     size=is_same_number ? size.normal : label_size)
+
+// ========================================
+// THE LINE (FVG)
+// ========================================
+if i_enable_line
+    [is_fvg, fvg_level, is_bull] = f_detect_fvg()
+    
+    if i_line_current_tf and is_fvg and not na(fvg_level)
+        while array.size(active_lines) >= i_line_max
+            old = array.shift(active_lines)
+            line.delete(old.line_id)
+            if not na(old.label_id)
+                label.delete(old.label_id)
+        
+        new_line = line.new(bar_index, fvg_level, bar_index+1, fvg_level, 
+                           extend=extend.right, 
+                           color=is_bull ? color.aqua : color.orange, 
+                           width=1)
+        
+        new_label = label.new(bar_index, fvg_level, "FVG", 
+                             color=color.new(color.white, 100), 
+                             textcolor=is_bull ? color.aqua : color.orange, 
+                             size=size.tiny, 
+                             style=is_bull ? label.style_label_up : label.style_label_down)
+        
+        array.push(active_lines, LineData.new(new_line, new_label, fvg_level, is_bull, false, "Current"))
+    
+    // Mitigation
+    if array.size(active_lines) > 0
+        for i = 0 to array.size(active_lines) - 1
+            if i < array.size(active_lines)
+                line_data = array.get(active_lines, i)
+                
+                if not line_data.is_mitigated
+                    mitigated = false
+                    if i_line_mitigation == "Wick or Body"
+                        mitigated := line_data.is_bullish ? (low <= line_data.level) : (high >= line_data.level)
+                    else
+                        mitigated := line_data.is_bullish ? (close <= line_data.level) : (close >= line_data.level)
+                    
+                    if mitigated
+                        line_data.is_mitigated := true
+                        array.set(active_lines, i, line_data)
+                        line.set_extend(line_data.line_id, extend.none)
+                        line.set_xy2(line_data.line_id, bar_index, line_data.level)
+                        line.set_color(line_data.line_id, color.gray)
+
+// ========================================
+// ENHANCED ORDER BLOCKS
+// ========================================
+if i_enable_eob
+    [is_eob_detected, eob_high, eob_low, is_bull_eob] = f_detect_eob()
+    
+    if i_eob_current_tf and is_eob_detected and not na(eob_high)
+        while array.size(active_eobs) >= i_eob_max
+            old = array.shift(active_eobs)
+            box.delete(old.box_id)
+            if not na(old.label_id)
+                label.delete(old.label_id)
+        
+        eob_color = is_bull_eob ? color.new(color.green, 80) : color.new(color.red, 80)
+        new_box = box.new(bar_index, eob_high, bar_index+1, eob_low, 
+                         extend=extend.right, 
+                         border_color=eob_color, 
+                         bgcolor=eob_color)
+        
+        eob_mid = (eob_high + eob_low) / 2
+        new_label = label.new(bar_index, eob_mid, "EOB", 
+                             color=color.new(color.white, 100), 
+                             textcolor=is_bull_eob ? color.green : color.red, 
+                             size=size.tiny, 
+                             style=label.style_label_right)
+        
+        array.push(active_eobs, EOBData.new(new_box, new_label, eob_high, eob_low, is_bull_eob, false, "Current"))
+    
+    // Mitigation
+    if array.size(active_eobs) > 0
+        for i = 0 to array.size(active_eobs) - 1
+            if i < array.size(active_eobs)
+                eob_data = array.get(active_eobs, i)
+                
+                if not eob_data.is_mitigated
+                    mitigated = eob_data.is_bullish ? (close < eob_data.high_level) : (close > eob_data.low_level)
+                    
+                    if mitigated
+                        eob_data.is_mitigated := true
+                        array.set(active_eobs, i, eob_data)
+                        box.set_extend(eob_data.box_id, extend.none)
+                        box.set_right(eob_data.box_id, bar_index)
+                        box.set_bgcolor(eob_data.box_id, color.new(color.gray, 90))
+                        box.set_border_color(eob_data.box_id, color.new(color.gray, 90))
+
+// ========================================
+// FUTURE PROJECTIONS
+// ========================================
+if i_enable_future and counting_started and barstate.islast and array.size(active_cycles) > 0
+    main_cycle = array.get(active_cycles, 0)
+    proj_count = main_cycle.count
+    proj_shown = 0
+    bar_offset = 1
+    
+    while proj_shown < i_future_count and bar_offset < 200
+        proj_count := proj_count + 1
+        
+        if f_in_sequence(proj_count, current_seq)
+            y_pos = close + atr_val * i_vertical_offset
+            label.new(bar_index + bar_offset, y_pos, "+" + str.tostring(proj_count), 
+                     color=color.new(color.white, 100), 
+                     textcolor=color.blue, 
+                     style=label.style_label_down, 
+                     size=label_size)
+            proj_shown := proj_shown + 1
+        
+        bar_offset := bar_offset + 1
+
+// ========================================
+// STATUS TABLE
+// ========================================
+if barstate.islast
+    var table status = table.new(position.top_right, 2, 20, bgcolor=color.new(color.white, 85), border_width=1)
+    
+    table.cell(status, 0, 0, "TDT MASTER", bgcolor=color.new(color.blue, 70), text_color=color.white, text_size=size.normal)
+    table.cell(status, 1, 0, "", bgcolor=color.new(color.blue, 70))
+    
+    table.cell(status, 0, 1, "Counting", text_size=size.tiny)
+    table.cell(status, 1, 1, counting_started ? "✓" : "✗", text_color=counting_started ? color.green : color.red, text_size=size.tiny)
+    
+    table.cell(status, 0, 2, "Active Cycles", text_size=size.tiny)
+    table.cell(status, 1, 2, str.tostring(array.size(active_cycles)), text_size=size.tiny)
+    
+    table.cell(status, 0, 3, "Time Distortion", text_size=size.tiny)
+    table.cell(status, 1, 3, is_td ? "⚠ TD" : "Normal", text_color=is_td ? color.orange : color.green, text_size=size.tiny)
+    
+    table.cell(status, 0, 4, "Time State", text_size=size.tiny)
+    table.cell(status, 1, 4, f_get_time_state(), text_size=size.tiny)
+    
+    table.cell(status, 0, 5, "Market Cycle", text_size=size.tiny)
+    table.cell(status, 1, 5, last_cycle_type, text_size=size.tiny)
+    
+    table.cell(status, 0, 6, "Harmony/Chaos", text_size=size.tiny)
+    table.cell(status, 1, 6, f_detect_harmony_chaos(), text_size=size.tiny)
+    
+    [is_frac, frac_type] = f_detect_fractal()
+    table.cell(status, 0, 7, "Fractal", text_size=size.tiny)
+    table.cell(status, 1, 7, is_frac ? frac_type : "None", text_size=size.tiny)
+    
+    table.cell(status, 0, 8, "HTF 1", text_size=size.tiny)
+    table.cell(status, 1, 8, i_enable_mtf1 ? str.tostring(htf1_count) : "OFF", text_color=i_htf1_color, text_size=size.tiny)
+    
+    table.cell(status, 0, 9, "HTF 2", text_size=size.tiny)
+    table.cell(status, 1, 9, i_enable_mtf2 ? str.tostring(htf2_count) : "OFF", text_color=i_htf2_color, text_size=size.tiny)
+    
+    table.cell(status, 0, 10, "HTF 3", text_size=size.tiny)
+    table.cell(status, 1, 10, i_enable_mtf3 ? str.tostring(htf3_count) : "OFF", text_color=i_htf3_color, text_size=size.tiny)
+    
+    table.cell(status, 0, 11, "Casting", text_size=size.tiny)
+    table.cell(status, 1, 11, i_enable_casting ? (casting_negative_phase ? "NEG" : "POS") : "OFF", text_size=size.tiny)
+    
+    table.cell(status, 0, 12, "Active LINEs", text_size=size.tiny)
+    table.cell(status, 1, 12, str.tostring(array.size(active_lines)), text_size=size.tiny)
+    
+    table.cell(status, 0, 13, "Active EOBs", text_size=size.tiny)
+    table.cell(status, 1, 13, str.tostring(array.size(active_eobs)), text_size=size.tiny)
+    
+    table.cell(status, 0, 14, "Session", text_size=size.tiny)
+    table.cell(status, 1, 14, f_in_session() ? "✓" : "✗", text_color=f_in_session() ? color.green : color.red, text_size=size.tiny)
+    
+    // Show cycle counts
+    if array.size(active_cycles) > 0
+        for i = 0 to math.min(4, array.size(active_cycles) - 1)
+            cycle = array.get(active_cycles, i)
+            table.cell(status, 0, 15 + i, "Cycle " + str.tostring(i+1), text_size=size.tiny)
+            table.cell(status, 1, 15 + i, str.tostring(cycle.count), text_color=f_get_cycle_color(i), text_size=size.tiny)
+
+// ========================================
+// ALERTS
+// ========================================
+if counting_started and array.size(active_cycles) > 0
+    for cycle in active_cycles
+        if f_in_sequence(cycle.count, current_seq)
+            alert("TDT: Cycle " + str.tostring(cycle.cycle_id) + " hit " + str.tostring(cycle.count), alert.freq_once_per_bar)
+
+if is_td and not is_td[1]
+    alert("TDT: Time Distortion Zone", alert.freq_once_per_bar)
+
+[is_frac_alert, frac_type_alert] = f_detect_fractal()
+if is_frac_alert and i_enable_fractals
+    alert("TDT: " + frac_type_alert + " Fractal Detected", alert.freq_once_per_bar)
+
+harmony_alert = f_detect_harmony_chaos()
+if (harmony_alert == "Harmony" or harmony_alert == "Chaos") and i_enable_harmony
+    alert("TDT: " + harmony_alert + " State", alert.freq_once_per_bar)
