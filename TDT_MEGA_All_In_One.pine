@@ -133,6 +133,8 @@ type CycleData
     bool active
     int cycle_id
     int last_count_bar  // Track last bar we counted
+    bool is_bullish     // Cycle direction
+    float anchor_price  // Starting price to validate progression
 
 type LineData
     line line_id
@@ -325,7 +327,7 @@ if not ltf_counting and not waiting_for_expansion
             ltf_counting := true
             ltf_is_bullish_wave := true
             if i_enable_multiple
-                array.push(active_cycles, CycleData.new(ltf_anchor_bar, 1, true, 0, ltf_anchor_bar))
+                array.push(active_cycles, CycleData.new(ltf_anchor_bar, 1, true, 0, ltf_anchor_bar, true, close))
             label.new(ltf_anchor_bar, low - atr_val * 0.3, "1", color=color.new(color.white, 100), textcolor=i_ltf_color, style=label.style_label_up, size=label_size)
             ltf_last_seq_bar := ltf_anchor_bar
             ltf_last_seq_price := low
@@ -359,7 +361,8 @@ if waiting_for_expansion and not ltf_counting
         waiting_for_expansion := false
         
         if i_enable_multiple
-            array.push(active_cycles, CycleData.new(ltf_anchor_bar, 1, true, 0, ltf_anchor_bar))
+            cycle_direction = expansion_should_be_bullish
+            array.push(active_cycles, CycleData.new(ltf_anchor_bar, 1, true, 0, ltf_anchor_bar, cycle_direction, close))
         
         pivot_style = expansion_should_be_bullish ? label.style_label_up : label.style_label_down
         label_y = expansion_should_be_bullish ? low - atr_val * 0.3 : high + atr_val * 0.3
@@ -394,53 +397,67 @@ if ltf_counting and bar_index >= ltf_anchor_bar and i_enable_multiple
             cycle = array.get(active_cycles, i)
             // ONLY count if we haven't counted this bar yet!
             if cycle.active and bar_index >= cycle.start_bar and bar_index != cycle.last_count_bar
-                new_count = cycle.count + 1
-                cycle.count := new_count
-                cycle.last_count_bar := bar_index
-                array.set(active_cycles, i, cycle)
+                // VALIDATE: Cycle must match direction!
+                is_valid = false
+                if cycle.is_bullish
+                    // Bullish cycle: price should be making higher levels
+                    is_valid := high >= cycle.anchor_price
+                else
+                    // Bearish cycle: price should be making lower levels
+                    is_valid := low <= cycle.anchor_price
                 
-                is_seq = f_in_seq(new_count, main_seq)
-                if is_seq
-                    cycle_color = f_get_cycle_color(i)
-                    y_offset = atr_val * (0.5 + i * 0.4)
-                    label_y = high + y_offset
+                if is_valid
+                    new_count = cycle.count + 1
+                    cycle.count := new_count
+                    cycle.last_count_bar := bar_index
+                    array.set(active_cycles, i, cycle)
                     
-                    // Check overlaps
-                    overlap = ""
-                    for j = 0 to array.size(active_cycles) - 1
-                        if j != i
-                            other = array.get(active_cycles, j)
-                            if other.count == new_count and i_show_overlaps
-                                overlap := overlap + "C" + str.tostring(j+1) + " "
+                    is_seq = f_in_seq(new_count, main_seq)
+                    if is_seq
+                        cycle_color = f_get_cycle_color(i)
+                        y_offset = atr_val * (0.5 + i * 0.4)
+                        label_y = high + y_offset
+                        
+                        // Check overlaps
+                        overlap = ""
+                        for j = 0 to array.size(active_cycles) - 1
+                            if j != i
+                                other = array.get(active_cycles, j)
+                                if other.count == new_count and i_show_overlaps
+                                    overlap := overlap + "C" + str.tostring(j+1) + " "
+                        
+                        label_text = str.tostring(new_count)
+                        if overlap != ""
+                            label_text := label_text + "\n(" + overlap + ")"
+                        
+                        label.new(bar_index, label_y, label_text, color=color.new(color.white, 100), textcolor=cycle_color, style=label.style_label_down, size=label_size)
+                        
+                        // Connect lines (like NASDAQ photo)
+                        if i_show_ltf_lines and not na(ltf_last_seq_bar) and i == 0
+                            new_line = line.new(ltf_last_seq_bar, ltf_last_seq_price, bar_index, high, color=cycle_color, width=2)
+                            array.push(ltf_lines, new_line)
+                            if array.size(ltf_lines) > 10
+                                old = array.shift(ltf_lines)
+                                line.delete(old)
+                        
+                        if i == 0
+                            ltf_last_seq_bar := bar_index
+                            ltf_last_seq_price := high
                     
-                    label_text = str.tostring(new_count)
-                    if overlap != ""
-                        label_text := label_text + "\n(" + overlap + ")"
+                    // Auto spawn - new cycle inherits parent direction
+                    if i_auto_spawn and (new_count == 7 or new_count == 13 or new_count == 21)
+                        if array.size(active_cycles) < i_max_cycles
+                            // New cycle starts at 1, same direction
+                            array.push(active_cycles, CycleData.new(bar_index, 1, true, array.size(active_cycles), bar_index, cycle.is_bullish, close))
                     
-                    label.new(bar_index, label_y, label_text, color=color.new(color.white, 100), textcolor=cycle_color, style=label.style_label_down, size=label_size)
-                    
-                    // Connect lines (like NASDAQ photo)
-                    if i_show_ltf_lines and not na(ltf_last_seq_bar) and i == 0
-                        new_line = line.new(ltf_last_seq_bar, ltf_last_seq_price, bar_index, high, color=cycle_color, width=2)
-                        array.push(ltf_lines, new_line)
-                        if array.size(ltf_lines) > 10
-                            old = array.shift(ltf_lines)
-                            line.delete(old)
-                    
-                    if i == 0
-                        ltf_last_seq_bar := bar_index
-                        ltf_last_seq_price := high
-                
-                // Auto spawn
-                if i_auto_spawn and (new_count == 7 or new_count == 13 or new_count == 21)
-                    if array.size(active_cycles) < i_max_cycles
-                        // New cycle starts at 1
-                        array.push(active_cycles, CycleData.new(bar_index, 1, true, array.size(active_cycles), bar_index))
-                
-                // Restart
-                if new_count >= 31
-                    cycle.count := 0
-                    cycle.start_bar := bar_index
+                    // Restart
+                    if new_count >= 31
+                        cycle.count := 0
+                        cycle.start_bar := bar_index
+                        array.set(active_cycles, i, cycle)
+                else
+                    // Cycle invalidated - stop counting
+                    cycle.active := false
                     array.set(active_cycles, i, cycle)
 
 // Get current LTF count
