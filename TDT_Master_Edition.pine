@@ -232,9 +232,9 @@ var array<CycleData> active_cycles = array.new<CycleData>()
 var array<LineData> active_lines = array.new<LineData>()
 var array<EOBData> active_eobs = array.new<EOBData>()
 var bool counting_started = false
-var int anchor_bar = na
+var int anchor_bar = int(na)
 var int next_cycle_id = 0
-var line anchor_line = na
+var line anchor_line = line(na)
 
 // Casting variables
 var bool casting_active = false
@@ -444,12 +444,12 @@ f_in_session() =>
 // ========================================
 f_detect_fvg() =>
     if bar_index < 2
-        [false, na, false]
+        [false, float(na), false]
     else
         is_bull_fvg = low[0] > high[2] and low[1] > high[2]
         is_bear_fvg = high[0] < low[2] and high[1] < low[2]
         
-        level = na(float)
+        level = float(na)
         valid = false
         is_bull = false
         
@@ -469,13 +469,13 @@ f_detect_fvg() =>
 // ========================================
 f_detect_eob() =>
     if bar_index < 1
-        [false, na, na, false]
+        [false, float(na), float(na), false]
     else
         is_bear = (close[1] > open[1]) and (close < open[1]) and (low < low[1])
         is_bull = (close[1] < open[1]) and (close > open[1]) and (high > high[1])
         
-        eob_h = na(float)
-        eob_l = na(float)
+        eob_h = float(na)
+        eob_l = float(na)
         valid = false
         is_bull_eob = false
         
@@ -546,8 +546,8 @@ f_score_cycle_quality(int bar) =>
     // Check for strong directional move after
     if bar + 10 < bar_index
         range_after = math.abs(close[bar_index - bar - 10] - close[bar_index - bar])
-        avg_range = ta.atr(14)
-        if range_after > avg_range * 3
+        atr_avg = ta.atr(14)
+        if range_after > atr_avg * 3
             score := score + 0.3
     
     // Check for low volatility at start
@@ -564,7 +564,7 @@ f_score_cycle_quality(int bar) =>
 // ========================================
 if i_enable_auto_anchor and na(anchor_bar)
     best_score = 0.0
-    best_bar = na(int)
+    best_bar = int(na)
     
     // Look back for perfect cycle start
     for i = i_pivot_right to math.min(i_lookback_cycles, bar_index - 1)
