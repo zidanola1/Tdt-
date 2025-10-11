@@ -286,41 +286,79 @@ atr_val = ta.atr(14)
 label_size = f_get_size(i_label_size)
 
 // ================================================
-// LTF ANCHOR DETECTION
+// LTF ANCHOR DETECTION (SMART)
 // ================================================
+// Only detect SIGNIFICANT pivots, not every small one
+pivot_l = ta.pivotlow(low, i_ltf_auto_pivot_left, i_ltf_auto_pivot_right)
+pivot_h = ta.pivothigh(high, i_ltf_auto_pivot_left, i_ltf_auto_pivot_right)
+
+// Check if pivot is SIGNIFICANT (not just any pivot)
+is_significant_pivot = false
+pivot_is_bullish = false
+
+if not na(pivot_l)
+    // Bullish pivot - check if it's a major low
+    recent_low = ta.lowest(low, 50)
+    pivot_strength = (high - low[i_ltf_auto_pivot_right]) / atr_val
+    // Use user-defined significance threshold
+    if low[i_ltf_auto_pivot_right] <= recent_low * 1.005 and pivot_strength > 1.5
+        is_significant_pivot := true
+        pivot_is_bullish := true
+
+if not na(pivot_h)
+    // Bearish pivot - check if it's a major high
+    recent_high = ta.highest(high, 50)
+    pivot_strength = (high[i_ltf_auto_pivot_right] - low) / atr_val
+    // Use user-defined significance threshold
+    if high[i_ltf_auto_pivot_right] >= recent_high * 0.995 and pivot_strength > 1.5
+        is_significant_pivot := true
+        pivot_is_bullish := false
+
 if not ltf_counting
     if i_ltf_anchor_mode == "Manual"
         if time >= i_ltf_anchor_time
             ltf_anchor_bar := bar_index
             ltf_counting := true
             if i_enable_multiple
-                // START AT 1 - the anchor IS "1"
                 array.push(active_cycles, CycleData.new(ltf_anchor_bar, 1, true, 0))
-            
-            // Label the anchor as "1"
             label.new(ltf_anchor_bar, low - atr_val * 0.3, "1", color=color.new(color.white, 100), textcolor=i_ltf_color, style=label.style_label_up, size=label_size)
             ltf_last_seq_bar := ltf_anchor_bar
             ltf_last_seq_price := low
     else
-        pivot_l = ta.pivotlow(low, i_ltf_auto_pivot_left, i_ltf_auto_pivot_right)
-        pivot_h = ta.pivothigh(high, i_ltf_auto_pivot_left, i_ltf_auto_pivot_right)
-        if not na(pivot_l) or not na(pivot_h)
+        // Auto mode - only start on SIGNIFICANT pivots
+        if is_significant_pivot
             ltf_anchor_bar := bar_index - i_ltf_auto_pivot_right
             ltf_counting := true
             if i_enable_multiple
-                // START AT 1 - the pivot IS "1"
                 array.push(active_cycles, CycleData.new(ltf_anchor_bar, 1, true, 0))
             
-            // Label the pivot as "1"
-            label.new(ltf_anchor_bar, not na(pivot_l) ? low[i_ltf_auto_pivot_right] - atr_val * 0.3 : high[i_ltf_auto_pivot_right] + atr_val * 0.3, "1", color=color.new(color.white, 100), textcolor=i_ltf_color, style=not na(pivot_l) ? label.style_label_up : label.style_label_down, size=label_size)
+            pivot_price = pivot_is_bullish ? low[i_ltf_auto_pivot_right] : high[i_ltf_auto_pivot_right]
+            pivot_style = pivot_is_bullish ? label.style_label_up : label.style_label_down
+            label.new(ltf_anchor_bar, pivot_is_bullish ? pivot_price - atr_val * 0.3 : pivot_price + atr_val * 0.3, "1", color=color.new(color.white, 100), textcolor=i_ltf_color, style=pivot_style, size=label_size)
             ltf_last_seq_bar := ltf_anchor_bar
-            ltf_last_seq_price := not na(pivot_l) ? low[i_ltf_auto_pivot_right] : high[i_ltf_auto_pivot_right]
+            ltf_last_seq_price := pivot_price
 
 // ================================================
 // LTF COUNTING & MULTIPLE CYCLES
 // ================================================
 is_td = f_is_td()
 bgcolor(is_td and i_highlight_td ? color.new(color.yellow, 90) : na)
+
+// Check for major structure break (should reset)
+var bool ltf_is_bullish_wave = true
+if ltf_counting and array.size(active_cycles) > 0
+    main_cycle = array.get(active_cycles, 0)
+    
+    // Check if structure is broken (major reversal)
+    if ltf_is_bullish_wave
+        // In bullish wave - check if major bearish structure
+        if close < ta.lowest(low, 20) and close < open
+            // Major bearish break - but DON'T reset, just note it
+            // Wave continues until 31 or new significant pivot
+    else
+        // In bearish wave - check if major bullish structure
+        if close > ta.highest(high, 20) and close > open
+            // Major bullish break
 
 if ltf_counting and bar_index >= ltf_anchor_bar and i_enable_multiple
     should_count = f_should_count()
