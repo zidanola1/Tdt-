@@ -132,6 +132,7 @@ type CycleData
     int count
     bool active
     int cycle_id
+    int last_count_bar  // Track last bar we counted
 
 type LineData
     line line_id
@@ -324,7 +325,7 @@ if not ltf_counting and not waiting_for_expansion
             ltf_counting := true
             ltf_is_bullish_wave := true
             if i_enable_multiple
-                array.push(active_cycles, CycleData.new(ltf_anchor_bar, 1, true, 0))
+                array.push(active_cycles, CycleData.new(ltf_anchor_bar, 1, true, 0, ltf_anchor_bar))
             label.new(ltf_anchor_bar, low - atr_val * 0.3, "1", color=color.new(color.white, 100), textcolor=i_ltf_color, style=label.style_label_up, size=label_size)
             ltf_last_seq_bar := ltf_anchor_bar
             ltf_last_seq_price := low
@@ -358,7 +359,7 @@ if waiting_for_expansion and not ltf_counting
         waiting_for_expansion := false
         
         if i_enable_multiple
-            array.push(active_cycles, CycleData.new(ltf_anchor_bar, 1, true, 0))
+            array.push(active_cycles, CycleData.new(ltf_anchor_bar, 1, true, 0, ltf_anchor_bar))
         
         pivot_style = expansion_should_be_bullish ? label.style_label_up : label.style_label_down
         label_y = expansion_should_be_bullish ? low - atr_val * 0.3 : high + atr_val * 0.3
