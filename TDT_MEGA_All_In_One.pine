@@ -171,6 +171,8 @@ var int htf1_last_time = 0
 var int htf1_last_bar = na
 var float htf1_last_price = na
 var line[] htf1_lines = array.new<line>()
+var bool htf1_is_bullish = true
+var float htf1_anchor_price = na
 
 // HTF2
 var bool htf2_counting = false
@@ -179,10 +181,15 @@ var int htf2_last_time = 0
 var int htf2_last_bar = na
 var float htf2_last_price = na
 var line[] htf2_lines = array.new<line>()
+var bool htf2_is_bullish = true
+var float htf2_anchor_price = na
 
 // HTF3
 var bool htf3_counting = false
 var int htf3_count = 0
+var int htf3_last_time = 0
+var bool htf3_is_bullish = true
+var float htf3_anchor_price = na
 var int htf3_last_time = 0
 
 // Casting
@@ -325,13 +332,17 @@ if not ltf_counting and not waiting_for_expansion
         if time >= i_ltf_anchor_time
             ltf_anchor_bar := bar_index
             ltf_counting := true
-            ltf_is_bullish_wave := true
+            // DETECT direction from candle body
+            ltf_is_bullish_wave := close > open
             if i_enable_multiple
-                // Bullish: anchor at LOW (don't break below)
-                array.push(active_cycles, CycleData.new(ltf_anchor_bar, 1, true, 0, ltf_anchor_bar, true, low))
-            label.new(ltf_anchor_bar, low - atr_val * 0.3, "1", color=color.new(color.white, 100), textcolor=i_ltf_color, style=label.style_label_up, size=label_size)
+                // Set anchor based on direction
+                anchor_level_ltf = ltf_is_bullish_wave ? low : high
+                array.push(active_cycles, CycleData.new(ltf_anchor_bar, 1, true, 0, ltf_anchor_bar, ltf_is_bullish_wave, anchor_level_ltf))
+            label_style_ltf = ltf_is_bullish_wave ? label.style_label_up : label.style_label_down
+            label_y_ltf = ltf_is_bullish_wave ? low - atr_val * 0.3 : high + atr_val * 0.3
+            label.new(ltf_anchor_bar, label_y_ltf, "1", color=color.new(color.white, 100), textcolor=i_ltf_color, style=label_style_ltf, size=label_size)
             ltf_last_seq_bar := ltf_anchor_bar
-            ltf_last_seq_price := low
+            ltf_last_seq_price := ltf_is_bullish_wave ? low : high
     else
         // Auto mode - detect pivot, then wait for expansion
         if is_significant_pivot
@@ -439,7 +450,9 @@ if ltf_counting and bar_index >= ltf_anchor_bar and i_enable_multiple
                         
                         // Connect lines (like NASDAQ photo)
                         if i_show_ltf_lines and not na(ltf_last_seq_bar) and i == 0
-                            new_line = line.new(ltf_last_seq_bar, ltf_last_seq_price, bar_index, high, color=cycle_color, width=2)
+                            // Use correct price level for direction
+                            current_seq_price = cycle.is_bullish ? high : low
+                            new_line = line.new(ltf_last_seq_bar, ltf_last_seq_price, bar_index, current_seq_price, color=cycle_color, width=2)
                             array.push(ltf_lines, new_line)
                             if array.size(ltf_lines) > 10
                                 old = array.shift(ltf_lines)
@@ -447,7 +460,7 @@ if ltf_counting and bar_index >= ltf_anchor_bar and i_enable_multiple
                         
                         if i == 0
                             ltf_last_seq_bar := bar_index
-                            ltf_last_seq_price := high
+                            ltf_last_seq_price := cycle.is_bullish ? high : low
                     
                     // Auto spawn - new cycle inherits parent direction
                     if i_auto_spawn and (new_count == 7 or new_count == 13 or new_count == 21)
@@ -485,21 +498,51 @@ if i_enable_htf1 and not htf1_counting
             htf1_counting := true
             htf1_count := 1
             htf1_last_bar := bar_index
-            htf1_last_price := low
-            label.new(bar_index, low - atr_val * 1.0, i_htf1 + ":1", color=color.new(color.white, 100), textcolor=i_htf1_color, style=label.style_label_up, size=size.small)
+            // Detect direction
+            htf1_is_bullish := close > open
+            htf1_anchor_price := htf1_is_bullish ? low : high
+            htf1_last_price := htf1_anchor_price
+            label_style_h1 = htf1_is_bullish ? label.style_label_up : label.style_label_down
+            label_y_h1 = htf1_is_bullish ? low - atr_val * 1.0 : high + atr_val * 1.0
+            label.new(bar_index, label_y_h1, i_htf1 + ":1", color=color.new(color.white, 100), textcolor=i_htf1_color, style=label_style_h1, size=size.small)
     else
-        if not na(htf1_pivot_l) or not na(htf1_pivot_h)
+        if not na(htf1_pivot_l)
             htf1_counting := true
             htf1_count := 1
             htf1_last_bar := bar_index
+            htf1_is_bullish := true
+            htf1_anchor_price := low
             htf1_last_price := low
             label.new(bar_index, low - atr_val * 1.0, i_htf1 + ":1", color=color.new(color.white, 100), textcolor=i_htf1_color, style=label.style_label_up, size=size.small)
+        else if not na(htf1_pivot_h)
+            htf1_counting := true
+            htf1_count := 1
+            htf1_last_bar := bar_index
+            htf1_is_bullish := false
+            htf1_anchor_price := high
+            htf1_last_price := high
+            label.new(bar_index, high + atr_val * 1.0, i_htf1 + ":1", color=color.new(color.white, 100), textcolor=i_htf1_color, style=label.style_label_down, size=size.small)
 
 if i_enable_htf1 and htf1_counting and htf1_time != htf1_last_time
     htf1_last_time := htf1_time
-    htf1_count := htf1_count + 1
     
-    if f_in_seq(htf1_count, htf1_seq)
+    // VALIDATE: Structure must NOT break
+    is_htf1_valid = true
+    if htf1_is_bullish
+        // Bullish: LOW must stay ABOVE anchor
+        if low < htf1_anchor_price
+            is_htf1_valid := false
+            htf1_counting := false  // Stop counting
+    else
+        // Bearish: HIGH must stay BELOW anchor
+        if high > htf1_anchor_price
+            is_htf1_valid := false
+            htf1_counting := false  // Stop counting
+    
+    if is_htf1_valid
+        htf1_count := htf1_count + 1
+    
+    if is_htf1_valid and f_in_seq(htf1_count, htf1_seq)
         y_pos = low - atr_val * 1.0
         
         // Alignment detection
@@ -530,14 +573,15 @@ if i_enable_htf1 and htf1_counting and htf1_time != htf1_last_time
         
         // Connect lines
         if i_show_htf1_lines and not na(htf1_last_bar)
-            new_line = line.new(htf1_last_bar, htf1_last_price, bar_index, low, color=i_htf1_color, width=1, style=line.style_dashed)
+            current_htf1_price = htf1_is_bullish ? high : low
+            new_line = line.new(htf1_last_bar, htf1_last_price, bar_index, current_htf1_price, color=i_htf1_color, width=1, style=line.style_dashed)
             array.push(htf1_lines, new_line)
             if array.size(htf1_lines) > 10
                 old = array.shift(htf1_lines)
                 line.delete(old)
         
         htf1_last_bar := bar_index
-        htf1_last_price := low
+        htf1_last_price := htf1_is_bullish ? high : low
     
     if htf1_count >= 31
         htf1_count := 0
@@ -556,21 +600,48 @@ if i_enable_htf2 and not htf2_counting
             htf2_counting := true
             htf2_count := 1
             htf2_last_bar := bar_index
-            htf2_last_price := low
-            label.new(bar_index, low - atr_val * 1.5, i_htf2 + ":1", color=color.new(color.white, 100), textcolor=i_htf2_color, style=label.style_label_up, size=size.small)
+            htf2_is_bullish := close > open
+            htf2_anchor_price := htf2_is_bullish ? low : high
+            htf2_last_price := htf2_anchor_price
+            label_style_h2 = htf2_is_bullish ? label.style_label_up : label.style_label_down
+            label_y_h2 = htf2_is_bullish ? low - atr_val * 1.5 : high + atr_val * 1.5
+            label.new(bar_index, label_y_h2, i_htf2 + ":1", color=color.new(color.white, 100), textcolor=i_htf2_color, style=label_style_h2, size=size.small)
     else
-        if not na(htf2_pivot_l) or not na(htf2_pivot_h)
+        if not na(htf2_pivot_l)
             htf2_counting := true
             htf2_count := 1
             htf2_last_bar := bar_index
+            htf2_is_bullish := true
+            htf2_anchor_price := low
             htf2_last_price := low
             label.new(bar_index, low - atr_val * 1.5, i_htf2 + ":1", color=color.new(color.white, 100), textcolor=i_htf2_color, style=label.style_label_up, size=size.small)
+        else if not na(htf2_pivot_h)
+            htf2_counting := true
+            htf2_count := 1
+            htf2_last_bar := bar_index
+            htf2_is_bullish := false
+            htf2_anchor_price := high
+            htf2_last_price := high
+            label.new(bar_index, high + atr_val * 1.5, i_htf2 + ":1", color=color.new(color.white, 100), textcolor=i_htf2_color, style=label.style_label_down, size=size.small)
 
 if i_enable_htf2 and htf2_counting and htf2_time != htf2_last_time
     htf2_last_time := htf2_time
-    htf2_count := htf2_count + 1
     
-    if f_in_seq(htf2_count, htf2_seq)
+    // VALIDATE: Structure must NOT break
+    is_htf2_valid = true
+    if htf2_is_bullish
+        if low < htf2_anchor_price
+            is_htf2_valid := false
+            htf2_counting := false
+    else
+        if high > htf2_anchor_price
+            is_htf2_valid := false
+            htf2_counting := false
+    
+    if is_htf2_valid
+        htf2_count := htf2_count + 1
+    
+    if is_htf2_valid and f_in_seq(htf2_count, htf2_seq)
         y_pos = low - atr_val * 1.5
         
         is_same_number = current_ltf_count == htf2_count and ltf_counting
@@ -599,14 +670,15 @@ if i_enable_htf2 and htf2_counting and htf2_time != htf2_last_time
             label.new(bar_index, high + atr_val * 0.6, star_text, color=i_align_color, textcolor=color.black, style=label.style_label_down, size=star_size)
         
         if i_show_htf2_lines and not na(htf2_last_bar)
-            new_line = line.new(htf2_last_bar, htf2_last_price, bar_index, low, color=i_htf2_color, width=1, style=line.style_dotted)
+            current_htf2_price = htf2_is_bullish ? high : low
+            new_line = line.new(htf2_last_bar, htf2_last_price, bar_index, current_htf2_price, color=i_htf2_color, width=1, style=line.style_dotted)
             array.push(htf2_lines, new_line)
             if array.size(htf2_lines) > 10
                 old = array.shift(htf2_lines)
                 line.delete(old)
         
         htf2_last_bar := bar_index
-        htf2_last_price := low
+        htf2_last_price := htf2_is_bullish ? high : low
     
     if htf2_count >= 31
         htf2_count := 0
@@ -621,14 +693,31 @@ if i_enable_htf3 and not htf3_counting
     if i_htf3_anchor_mode == "Manual"
         if time >= i_htf3_anchor_time
             htf3_counting := true
-            htf3_count := 1  // START AT 1
-            label.new(bar_index, low - atr_val * 2.0, i_htf3 + ":1", color=color.new(color.white, 100), textcolor=i_htf3_color, style=label.style_label_up, size=size.small)
+            htf3_count := 1
+            htf3_is_bullish := close > open
+            htf3_anchor_price := htf3_is_bullish ? low : high
+            label_style_h3 = htf3_is_bullish ? label.style_label_up : label.style_label_down
+            label_y_h3 = htf3_is_bullish ? low - atr_val * 2.0 : high + atr_val * 2.0
+            label.new(bar_index, label_y_h3, i_htf3 + ":1", color=color.new(color.white, 100), textcolor=i_htf3_color, style=label_style_h3, size=size.small)
 
 if i_enable_htf3 and htf3_counting and htf3_time != htf3_last_time
     htf3_last_time := htf3_time
-    htf3_count := htf3_count + 1
     
-    if f_in_seq(htf3_count, htf3_seq)
+    // VALIDATE: Structure must NOT break
+    is_htf3_valid = true
+    if htf3_is_bullish
+        if low < htf3_anchor_price
+            is_htf3_valid := false
+            htf3_counting := false
+    else
+        if high > htf3_anchor_price
+            is_htf3_valid := false
+            htf3_counting := false
+    
+    if is_htf3_valid
+        htf3_count := htf3_count + 1
+    
+    if is_htf3_valid and f_in_seq(htf3_count, htf3_seq)
         y_pos = low - atr_val * 2.0
         is_same = current_ltf_count == htf3_count and ltf_counting
         label_color = is_same and i_show_alignment ? i_align_color : i_htf3_color
