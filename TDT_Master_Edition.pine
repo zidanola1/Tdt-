@@ -809,9 +809,12 @@ if i_enable_harmony and i_show_harmony_labels
 // ========================================
 // MULTI-TIMEFRAME COUNTING
 // ========================================
+// Get HTF times outside conditionals
+htf1_time = request.security(syminfo.tickerid, i_htf1, time)
+htf2_time = request.security(syminfo.tickerid, i_htf2, time)
+htf3_time = request.security(syminfo.tickerid, i_htf3, time)
+
 if i_enable_mtf1 and counting_started
-    htf1_time = request.security(syminfo.tickerid, i_htf1, time)
-    
     if htf1_time != htf1_last_time
         htf1_last_time := htf1_time
         htf1_count := htf1_count + 1
@@ -829,8 +832,6 @@ if i_enable_mtf1 and counting_started
                      size=label_size)
 
 if i_enable_mtf2 and counting_started
-    htf2_time = request.security(syminfo.tickerid, i_htf2, time)
-    
     if htf2_time != htf2_last_time
         htf2_last_time := htf2_time
         htf2_count := htf2_count + 1
@@ -848,8 +849,6 @@ if i_enable_mtf2 and counting_started
                      size=label_size)
 
 if i_enable_mtf3 and counting_started
-    htf3_time = request.security(syminfo.tickerid, i_htf3, time)
-    
     if htf3_time != htf3_last_time
         htf3_last_time := htf3_time
         htf3_count := htf3_count + 1
