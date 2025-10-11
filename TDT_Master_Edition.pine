@@ -85,13 +85,14 @@ i_htf3_sequence = input.string("1,7,13,21", "HTF 3 Sequence", group=grp_mtf)
 
 i_mtf_label_format = input.string("TF:Count", "MTF Label Format", options=["TF:Count", "Custom"], group=grp_mtf)
 i_mtf_custom_format = input.string("{tf}:{count}", "Custom Format", group=grp_mtf, tooltip="Use {tf} for timeframe, {count} for count")
+i_show_htf_ltf_alignment = input.bool(true, "★ Show HTF/LTF Alignment", group=grp_mtf, tooltip="Show BIG STAR when HTF and LTF hit same sequence number (7, 13, 21 etc)")
 
 // ========================================
 // 8. MARKET CYCLES & TIME STATES
 // ========================================
 grp_market = "8. Market Cycles & Time States"
 i_enable_market_cycles = input.bool(true, "Enable Market Cycle Detection", group=grp_market)
-i_show_cycle_labels = input.bool(true, "Show Cycle Type Labels", group=grp_market)
+i_show_cycle_labels = input.bool(false, "Show Cycle Type Labels", group=grp_market, tooltip="Turn OFF to reduce visual spam - keeps background color only")
 i_consolidation_length = input.string("10,20", "Consolidation Lengths", group=grp_market)
 i_expansion_length = input.string("4,7", "Expansion Lengths", group=grp_market)
 i_retracement_length = input.string("3,4", "Retracement Lengths", group=grp_market)
@@ -107,7 +108,7 @@ i_atr_length = input.int(14, "ATR Length", minval=5, group=grp_market)
 // ========================================
 grp_fractal = "9. Fractal Analysis"
 i_enable_fractals = input.bool(true, "Enable Fractal Detection", group=grp_fractal)
-i_show_fractal_labels = input.bool(true, "Show Fractal Labels", group=grp_fractal)
+i_show_fractal_labels = input.bool(false, "Show Fractal Labels", group=grp_fractal, tooltip="Turn OFF to reduce visual spam")
 i_fractal_micro = input.int(5, "Micro Fractal Bars", minval=3, group=grp_fractal)
 i_fractal_medium = input.int(10, "Medium Fractal Bars", minval=5, group=grp_fractal)
 i_fractal_macro = input.int(20, "Macro Fractal Bars", minval=10, group=grp_fractal)
@@ -117,7 +118,7 @@ i_fractal_macro = input.int(20, "Macro Fractal Bars", minval=10, group=grp_fract
 // ========================================
 grp_harmony = "10. Harmony/Chaos Detection"
 i_enable_harmony = input.bool(true, "Enable Harmony/Chaos", group=grp_harmony)
-i_show_harmony_labels = input.bool(true, "Show Harmony/Chaos Labels", group=grp_harmony)
+i_show_harmony_labels = input.bool(false, "Show Harmony/Chaos Labels", group=grp_harmony, tooltip="Turn OFF to reduce visual spam")
 i_harmony_threshold = input.float(1.5, "Harmony Threshold", minval=1.0, group=grp_harmony)
 i_chaos_threshold = input.float(0.5, "Chaos Threshold", maxval=1.0, group=grp_harmony)
 
