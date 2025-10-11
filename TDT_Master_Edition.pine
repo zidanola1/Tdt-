@@ -955,26 +955,25 @@ if i_enable_eob
 // ========================================
 // FUTURE PROJECTIONS
 // ========================================
-if i_enable_future and counting_started and barstate.islast
-    if array.size(active_cycles) > 0
-        main_cycle = array.get(active_cycles, 0)
-        proj_count = main_cycle.count
-        proj_shown = 0
-        bar_offset = 1
+if i_enable_future and counting_started and barstate.islast and array.size(active_cycles) > 0
+    main_cycle = array.get(active_cycles, 0)
+    proj_count = main_cycle.count
+    proj_shown = 0
+    bar_offset = 1
+    
+    while proj_shown < i_future_count and bar_offset < 200
+        proj_count := proj_count + 1
         
-        while proj_shown < i_future_count and bar_offset < 200
-            proj_count := proj_count + 1
-            
-            if f_in_sequence(proj_count, current_seq)
-                y_pos = close + atr_val * i_vertical_offset
-                label.new(bar_index + bar_offset, y_pos, "+" + str.tostring(proj_count), 
-                         color=color.new(color.white, 100), 
-                         textcolor=color.blue, 
-                         style=label.style_label_down, 
-                         size=label_size)
-                proj_shown := proj_shown + 1
-            
-            bar_offset := bar_offset + 1
+        if f_in_sequence(proj_count, current_seq)
+            y_pos = close + atr_val * i_vertical_offset
+            label.new(bar_index + bar_offset, y_pos, "+" + str.tostring(proj_count), 
+                     color=color.new(color.white, 100), 
+                     textcolor=color.blue, 
+                     style=label.style_label_down, 
+                     size=label_size)
+            proj_shown := proj_shown + 1
+        
+        bar_offset := bar_offset + 1
 
 // ========================================
 // STATUS TABLE
