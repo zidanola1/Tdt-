@@ -327,7 +327,8 @@ if not ltf_counting and not waiting_for_expansion
             ltf_counting := true
             ltf_is_bullish_wave := true
             if i_enable_multiple
-                array.push(active_cycles, CycleData.new(ltf_anchor_bar, 1, true, 0, ltf_anchor_bar, true, close))
+                // Bullish: anchor at LOW (don't break below)
+                array.push(active_cycles, CycleData.new(ltf_anchor_bar, 1, true, 0, ltf_anchor_bar, true, low))
             label.new(ltf_anchor_bar, low - atr_val * 0.3, "1", color=color.new(color.white, 100), textcolor=i_ltf_color, style=label.style_label_up, size=label_size)
             ltf_last_seq_bar := ltf_anchor_bar
             ltf_last_seq_price := low
@@ -362,7 +363,9 @@ if waiting_for_expansion and not ltf_counting
         
         if i_enable_multiple
             cycle_direction = expansion_should_be_bullish
-            array.push(active_cycles, CycleData.new(ltf_anchor_bar, 1, true, 0, ltf_anchor_bar, cycle_direction, close))
+            // Set anchor: bullish=LOW, bearish=HIGH
+            anchor_level = cycle_direction ? low : high
+            array.push(active_cycles, CycleData.new(ltf_anchor_bar, 1, true, 0, ltf_anchor_bar, cycle_direction, anchor_level))
         
         pivot_style = expansion_should_be_bullish ? label.style_label_up : label.style_label_down
         label_y = expansion_should_be_bullish ? low - atr_val * 0.3 : high + atr_val * 0.3
@@ -397,14 +400,16 @@ if ltf_counting and bar_index >= ltf_anchor_bar and i_enable_multiple
             cycle = array.get(active_cycles, i)
             // ONLY count if we haven't counted this bar yet!
             if cycle.active and bar_index >= cycle.start_bar and bar_index != cycle.last_count_bar
-                // VALIDATE: Cycle must match direction!
-                is_valid = false
+                // VALIDATE: Cycle must NOT break structure
+                is_valid = true
                 if cycle.is_bullish
-                    // Bullish cycle: price should be making higher levels
-                    is_valid := high >= cycle.anchor_price
+                    // Bullish cycle: LOW must stay ABOVE anchor (no lower low)
+                    if low < cycle.anchor_price
+                        is_valid := false
                 else
-                    // Bearish cycle: price should be making lower levels
-                    is_valid := low <= cycle.anchor_price
+                    // Bearish cycle: HIGH must stay BELOW anchor (no higher high)
+                    if high > cycle.anchor_price
+                        is_valid := false
                 
                 if is_valid
                     new_count = cycle.count + 1
@@ -448,7 +453,8 @@ if ltf_counting and bar_index >= ltf_anchor_bar and i_enable_multiple
                     if i_auto_spawn and (new_count == 7 or new_count == 13 or new_count == 21)
                         if array.size(active_cycles) < i_max_cycles
                             // New cycle starts at 1, same direction
-                            array.push(active_cycles, CycleData.new(bar_index, 1, true, array.size(active_cycles), bar_index, cycle.is_bullish, close))
+                            spawn_anchor = cycle.is_bullish ? low : high
+                            array.push(active_cycles, CycleData.new(bar_index, 1, true, array.size(active_cycles), bar_index, cycle.is_bullish, spawn_anchor))
                     
                     // Restart
                     if new_count >= 31
