@@ -621,7 +621,7 @@ bgcolor(i_highlight_td and is_td ? i_td_bg : na)
 // ========================================
 // TDT CASTING LOGIC
 // ========================================
-if i_enable_casting and counting_started and bar_index == anchor_bar and not casting_initialized
+if i_enable_casting and counting_started and bar_index == anchor_bar and not casting_initialized and array.size(backward_seq) > 0
     highest_backward = 0.0
     for i = 0 to array.size(backward_seq) - 1
         val = array.get(backward_seq, i)
@@ -669,7 +669,7 @@ if i_enable_casting and casting_initialized
 // ========================================
 // MULTIPLE CYCLES COUNTING
 // ========================================
-if counting_started and bar_index >= anchor_bar and i_enable_multiple_cycles and not i_enable_casting
+if counting_started and bar_index >= anchor_bar and i_enable_multiple_cycles and not i_enable_casting and array.size(active_cycles) > 0
     should_count = f_should_count_candle() and f_in_session()
     should_freeze = is_td and i_freeze_on_td
     
@@ -892,22 +892,24 @@ if i_enable_line
         array.push(active_lines, LineData.new(new_line, new_label, fvg_level, is_bull, false, "Current"))
     
     // Mitigation
-    for i = 0 to array.size(active_lines) - 1
-        line_data = array.get(active_lines, i)
-        
-        if not line_data.is_mitigated
-            mitigated = false
-            if i_line_mitigation == "Wick or Body"
-                mitigated := line_data.is_bullish ? (low <= line_data.level) : (high >= line_data.level)
-            else
-                mitigated := line_data.is_bullish ? (close <= line_data.level) : (close >= line_data.level)
-            
-            if mitigated
-                line_data.is_mitigated := true
-                array.set(active_lines, i, line_data)
-                line.set_extend(line_data.line_id, extend.none)
-                line.set_xy2(line_data.line_id, bar_index, line_data.level)
-                line.set_color(line_data.line_id, color.gray)
+    if array.size(active_lines) > 0
+        for i = 0 to array.size(active_lines) - 1
+            if i < array.size(active_lines)
+                line_data = array.get(active_lines, i)
+                
+                if not line_data.is_mitigated
+                    mitigated = false
+                    if i_line_mitigation == "Wick or Body"
+                        mitigated := line_data.is_bullish ? (low <= line_data.level) : (high >= line_data.level)
+                    else
+                        mitigated := line_data.is_bullish ? (close <= line_data.level) : (close >= line_data.level)
+                    
+                    if mitigated
+                        line_data.is_mitigated := true
+                        array.set(active_lines, i, line_data)
+                        line.set_extend(line_data.line_id, extend.none)
+                        line.set_xy2(line_data.line_id, bar_index, line_data.level)
+                        line.set_color(line_data.line_id, color.gray)
 
 // ========================================
 // ENHANCED ORDER BLOCKS
@@ -938,19 +940,21 @@ if i_enable_eob
         array.push(active_eobs, EOBData.new(new_box, new_label, eob_high, eob_low, is_bull_eob, false, "Current"))
     
     // Mitigation
-    for i = 0 to array.size(active_eobs) - 1
-        eob_data = array.get(active_eobs, i)
-        
-        if not eob_data.is_mitigated
-            mitigated = eob_data.is_bullish ? (close < eob_data.high_level) : (close > eob_data.low_level)
-            
-            if mitigated
-                eob_data.is_mitigated := true
-                array.set(active_eobs, i, eob_data)
-                box.set_extend(eob_data.box_id, extend.none)
-                box.set_right(eob_data.box_id, bar_index)
-                box.set_bgcolor(eob_data.box_id, color.new(color.gray, 90))
-                box.set_border_color(eob_data.box_id, color.new(color.gray, 90))
+    if array.size(active_eobs) > 0
+        for i = 0 to array.size(active_eobs) - 1
+            if i < array.size(active_eobs)
+                eob_data = array.get(active_eobs, i)
+                
+                if not eob_data.is_mitigated
+                    mitigated = eob_data.is_bullish ? (close < eob_data.high_level) : (close > eob_data.low_level)
+                    
+                    if mitigated
+                        eob_data.is_mitigated := true
+                        array.set(active_eobs, i, eob_data)
+                        box.set_extend(eob_data.box_id, extend.none)
+                        box.set_right(eob_data.box_id, bar_index)
+                        box.set_bgcolor(eob_data.box_id, color.new(color.gray, 90))
+                        box.set_border_color(eob_data.box_id, color.new(color.gray, 90))
 
 // ========================================
 // FUTURE PROJECTIONS
