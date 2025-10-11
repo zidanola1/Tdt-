@@ -70,12 +70,14 @@ grp_mtf = "7. Multi-Timeframe"
 i_enable_mtf1 = input.bool(true, "Enable HTF 1", group=grp_mtf)
 i_htf1 = input.timeframe("60", "HTF 1", group=grp_mtf)
 i_htf1_sequence = input.string("1,7,13,21,31", "HTF 1 Sequence", group=grp_mtf)
+i_htf1_anchor_time = input.time(timestamp("2025-01-15 09:30"), "HTF 1 Anchor (Independent)", group=grp_mtf, tooltip="HTF can have different start point than LTF")
 i_htf1_shift = input.bool(false, "HTF 1 Shift Mode", group=grp_mtf)
 i_htf1_shift_start = input.int(1, "HTF 1 Start At", minval=1, group=grp_mtf)
 
 i_enable_mtf2 = input.bool(true, "Enable HTF 2", group=grp_mtf)
 i_htf2 = input.timeframe("240", "HTF 2", group=grp_mtf)
 i_htf2_sequence = input.string("1,7,13,21,31", "HTF 2 Sequence", group=grp_mtf)
+i_htf2_anchor_time = input.time(timestamp("2025-01-15 09:30"), "HTF 2 Anchor (Independent)", group=grp_mtf, tooltip="HTF can have different start point than LTF")
 i_htf2_shift = input.bool(false, "HTF 2 Shift Mode", group=grp_mtf)
 i_htf2_shift_start = input.int(1, "HTF 2 Start At", minval=1, group=grp_mtf)
 
@@ -248,10 +250,13 @@ var bool casting_initialized = false
 // MTF variables
 var int htf1_count = 0
 var int htf1_last_time = 0
+var bool htf1_counting = false
 var int htf2_count = 0
 var int htf2_last_time = 0
+var bool htf2_counting = false
 var int htf3_count = 0
 var int htf3_last_time = 0
+var bool htf3_counting = false
 
 // Market cycle tracking
 var int td_cycle_count = 0
@@ -814,8 +819,19 @@ htf1_time = request.security(syminfo.tickerid, i_htf1, time)
 htf2_time = request.security(syminfo.tickerid, i_htf2, time)
 htf3_time = request.security(syminfo.tickerid, i_htf3, time)
 
-if i_enable_mtf1 and counting_started
-    if htf1_time != htf1_last_time
+// Get current LTF count for alignment detection
+current_ltf_count = 0
+if array.size(active_cycles) > 0
+    main_cycle = array.get(active_cycles, 0)
+    current_ltf_count := main_cycle.count
+
+// HTF 1 - Independent anchor and counting
+if i_enable_mtf1
+    if not htf1_counting and time >= i_htf1_anchor_time
+        htf1_counting := true
+        htf1_count := i_htf1_shift ? i_htf1_shift_start - 1 : 0
+    
+    if htf1_counting and htf1_time != htf1_last_time
         htf1_last_time := htf1_time
         htf1_count := htf1_count + 1
         
@@ -825,14 +841,46 @@ if i_enable_mtf1 and counting_started
                          str.replace(str.replace(i_mtf_custom_format, "{tf}", i_htf1), "{count}", str.tostring(htf1_count)) : 
                          i_htf1 + ":" + str.tostring(htf1_count)
             
+            // Check if LTF is also on a sequence number
+            ltf_on_sequence = f_in_sequence(current_ltf_count, current_seq)
+            // SPECIAL: Both on SAME sequence number
+            is_same_number = current_ltf_count == htf1_count
+            // GOOD: Both on sequence numbers (any)
+            is_both_sequence = ltf_on_sequence
+            
+            label_color = is_same_number and i_show_htf_ltf_alignment ? color.yellow : 
+                          (is_both_sequence and i_show_htf_ltf_alignment ? color.orange : i_htf1_color)
+            
             label.new(bar_index, y_pos, label_text, 
                      color=color.new(color.white, 100), 
-                     textcolor=i_htf1_color, 
+                     textcolor=label_color, 
                      style=label.style_label_up, 
-                     size=label_size)
+                     size=is_same_number ? size.normal : label_size)
+            
+            // BIG STAR for SAME number alignment
+            if is_same_number and i_show_htf_ltf_alignment
+                label.new(bar_index, high + atr_val * 0.3, "★★★ " + str.tostring(htf1_count) + " ★★★", 
+                         color=color.yellow, 
+                         textcolor=color.black, 
+                         style=label.style_label_down, 
+                         size=size.huge,
+                         tooltip="GOLDEN ALIGNMENT: HTF1 and LTF both at " + str.tostring(htf1_count))
+            // Small star for both on sequence
+            else if is_both_sequence and i_show_htf_ltf_alignment
+                label.new(bar_index, high + atr_val * 0.2, "★", 
+                         color=color.orange, 
+                         textcolor=color.black, 
+                         style=label.style_label_down, 
+                         size=size.small,
+                         tooltip="Both on sequence: LTF=" + str.tostring(current_ltf_count) + " HTF1=" + str.tostring(htf1_count))
 
-if i_enable_mtf2 and counting_started
-    if htf2_time != htf2_last_time
+// HTF 2 - Independent anchor and counting
+if i_enable_mtf2
+    if not htf2_counting and time >= i_htf2_anchor_time
+        htf2_counting := true
+        htf2_count := i_htf2_shift ? i_htf2_shift_start - 1 : 0
+    
+    if htf2_counting and htf2_time != htf2_last_time
         htf2_last_time := htf2_time
         htf2_count := htf2_count + 1
         
@@ -842,14 +890,40 @@ if i_enable_mtf2 and counting_started
                          str.replace(str.replace(i_mtf_custom_format, "{tf}", i_htf2), "{count}", str.tostring(htf2_count)) : 
                          i_htf2 + ":" + str.tostring(htf2_count)
             
+            ltf_on_sequence = f_in_sequence(current_ltf_count, current_seq)
+            is_same_number = current_ltf_count == htf2_count
+            is_both_sequence = ltf_on_sequence
+            
+            label_color = is_same_number and i_show_htf_ltf_alignment ? color.yellow : 
+                          (is_both_sequence and i_show_htf_ltf_alignment ? color.orange : i_htf2_color)
+            
             label.new(bar_index, y_pos, label_text, 
                      color=color.new(color.white, 100), 
-                     textcolor=i_htf2_color, 
+                     textcolor=label_color, 
                      style=label.style_label_up, 
-                     size=label_size)
+                     size=is_same_number ? size.normal : label_size)
+            
+            if is_same_number and i_show_htf_ltf_alignment
+                label.new(bar_index, high + atr_val * 0.6, "★★★ " + str.tostring(htf2_count) + " ★★★", 
+                         color=color.yellow, 
+                         textcolor=color.black, 
+                         style=label.style_label_down, 
+                         size=size.huge,
+                         tooltip="GOLDEN ALIGNMENT: HTF2 and LTF both at " + str.tostring(htf2_count))
+            else if is_both_sequence and i_show_htf_ltf_alignment
+                label.new(bar_index, high + atr_val * 0.4, "★", 
+                         color=color.orange, 
+                         textcolor=color.black, 
+                         style=label.style_label_down, 
+                         size=size.small,
+                         tooltip="Both on sequence: LTF=" + str.tostring(current_ltf_count) + " HTF2=" + str.tostring(htf2_count))
 
-if i_enable_mtf3 and counting_started
-    if htf3_time != htf3_last_time
+// HTF 3
+if i_enable_mtf3
+    if not htf3_counting and counting_started
+        htf3_counting := true
+    
+    if htf3_counting and htf3_time != htf3_last_time
         htf3_last_time := htf3_time
         htf3_count := htf3_count + 1
         
@@ -859,11 +933,14 @@ if i_enable_mtf3 and counting_started
                          str.replace(str.replace(i_mtf_custom_format, "{tf}", i_htf3), "{count}", str.tostring(htf3_count)) : 
                          i_htf3 + ":" + str.tostring(htf3_count)
             
+            is_same_number = current_ltf_count == htf3_count
+            label_color = is_same_number and i_show_htf_ltf_alignment ? color.yellow : i_htf3_color
+            
             label.new(bar_index, y_pos, label_text, 
                      color=color.new(color.white, 100), 
-                     textcolor=i_htf3_color, 
+                     textcolor=label_color, 
                      style=label.style_label_up, 
-                     size=label_size)
+                     size=is_same_number ? size.normal : label_size)
 
 // ========================================
 // THE LINE (FVG)
