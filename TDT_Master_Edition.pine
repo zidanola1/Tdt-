@@ -603,14 +603,15 @@ if not i_enable_auto_anchor and na(anchor_bar) and time >= i_manual_anchor_time
 // ========================================
 // ANCHOR LINE
 // ========================================
-if i_show_anchor_line and not na(anchor_bar)
+if i_show_anchor_line and not na(anchor_bar) and counting_started
     if na(anchor_line)
-        anchor_line := line.new(anchor_bar, low, anchor_bar, high, color=i_anchor_line_color, width=2, style=line.style_dashed, extend=extend.both)
-    else
-        line.set_x1(anchor_line, anchor_bar)
-        line.set_x2(anchor_line, anchor_bar)
-        line.set_y1(anchor_line, low)
-        line.set_y2(anchor_line, high)
+        anchor_time = time[bar_index - anchor_bar]
+        anchor_line := line.new(anchor_time, low, anchor_time, high, xloc=xloc.bar_time, color=i_anchor_line_color, width=2, style=line.style_dashed, extend=extend.both)
+    else if barstate.islast
+        // Update only on last bar to avoid performance issues
+        anchor_time = time[bar_index - anchor_bar]
+        line.set_x1(anchor_line, anchor_time)
+        line.set_x2(anchor_line, anchor_time)
 
 // ========================================
 // TIME DISTORTION
