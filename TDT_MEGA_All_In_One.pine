@@ -392,9 +392,11 @@ if ltf_counting and bar_index >= ltf_anchor_bar and i_enable_multiple
     if should_count and not should_freeze
         for i = 0 to array.size(active_cycles) - 1
             cycle = array.get(active_cycles, i)
-            if cycle.active and bar_index >= cycle.start_bar
+            // ONLY count if we haven't counted this bar yet!
+            if cycle.active and bar_index >= cycle.start_bar and bar_index != cycle.last_count_bar
                 new_count = cycle.count + 1
                 cycle.count := new_count
+                cycle.last_count_bar := bar_index
                 array.set(active_cycles, i, cycle)
                 
                 is_seq = f_in_seq(new_count, main_seq)
@@ -433,7 +435,7 @@ if ltf_counting and bar_index >= ltf_anchor_bar and i_enable_multiple
                 if i_auto_spawn and (new_count == 7 or new_count == 13 or new_count == 21)
                     if array.size(active_cycles) < i_max_cycles
                         // New cycle starts at 1
-                        array.push(active_cycles, CycleData.new(bar_index, 1, true, array.size(active_cycles)))
+                        array.push(active_cycles, CycleData.new(bar_index, 1, true, array.size(active_cycles), bar_index))
                 
                 // Restart
                 if new_count >= 31
