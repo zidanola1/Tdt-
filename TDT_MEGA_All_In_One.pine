@@ -344,21 +344,21 @@ if not ltf_counting
 is_td = f_is_td()
 bgcolor(is_td and i_highlight_td ? color.new(color.yellow, 90) : na)
 
-// Check for major structure break (should reset)
+// Track wave direction for structure analysis
 var bool ltf_is_bullish_wave = true
 if ltf_counting and array.size(active_cycles) > 0
     main_cycle = array.get(active_cycles, 0)
     
-    // Check if structure is broken (major reversal)
+    // Check structure - but DON'T reset on retracements
+    // Wave continues until 31 or major opposite pivot
     if ltf_is_bullish_wave
-        // In bullish wave - check if major bearish structure
         if close < ta.lowest(low, 20) and close < open
-            // Major bearish break - but DON'T reset, just note it
-            // Wave continues until 31 or new significant pivot
+            // Major bearish structure noted
+            ltf_is_bullish_wave := ltf_is_bullish_wave  // Keep tracking
     else
-        // In bearish wave - check if major bullish structure
         if close > ta.highest(high, 20) and close > open
-            // Major bullish break
+            // Major bullish structure noted
+            ltf_is_bullish_wave := ltf_is_bullish_wave  // Keep tracking
 
 if ltf_counting and bar_index >= ltf_anchor_bar and i_enable_multiple
     should_count = f_should_count()
