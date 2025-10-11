@@ -1,0 +1,505 @@
+//@version=5
+indicator("TDT Ultimate Combined - Multi-Timeframe & Multiple Cycles", shorttitle="TDT Ultimate", overlay=true, max_labels_count=500, max_lines_count=500, max_boxes_count=100)
+
+// ===== CORE SETTINGS =====
+grp_core = "1. Core Settings"
+i_counting_direction = input.string("Neutral", "Counting Direction", options=["Neutral", "Bullish", "Bearish"], group=grp_core, tooltip="Neutral: Count all candles. Bullish: Ignore bearish candles. Bearish: Ignore bullish candles.")
+i_main_sequence = input.string("1,3,7,13,21,31,43", "Main Sequence (Transcript Formula)", group=grp_core, tooltip="Standard: n²-n+1 formula from transcript")
+i_enable_auto_anchor = input.bool(true, "Auto Anchor from Pivots", group=grp_core)
+i_manual_anchor_time = input.time(timestamp("2025-01-15 09:30"), "Manual Anchor Point", group=grp_core)
+i_pivot_left = input.int(3, "Pivot Left Bars", minval=1, group=grp_core)
+i_pivot_right = input.int(3, "Pivot Right Bars", minval=1, group=grp_core)
+
+// ===== TIME DISTORTION SETTINGS =====
+grp_td = "2. Time Distortion"
+i_enable_td = input.bool(true, "Enable Time Distortion Detection", group=grp_td)
+i_freeze_on_td = input.bool(true, "Freeze Count on TD", group=grp_td, tooltip="Don't increment count during time distortion")
+i_body_threshold = input.float(0.3, "Body % Threshold for TD", minval=0.1, maxval=1.0, group=grp_td)
+i_consolidation_threshold = input.float(0.5, "Consolidation Threshold", minval=0.1, maxval=1.0, group=grp_td)
+i_highlight_td = input.bool(true, "Highlight TD Zones", group=grp_td)
+i_show_td_labels = input.bool(true, "Show TD Labels", group=grp_td)
+
+// ===== MULTIPLE CYCLES SETTINGS =====
+grp_cycles = "3. Multiple Cycles"
+i_enable_multiple_cycles = input.bool(true, "Enable Multiple Simultaneous Cycles", group=grp_cycles, tooltip="Run multiple overlapping cycles like in the charts")
+i_max_cycles = input.int(4, "Maximum Simultaneous Cycles", minval=1, maxval=10, group=grp_cycles)
+i_auto_spawn_cycles = input.bool(true, "Auto Spawn New Cycles at Key Numbers", group=grp_cycles, tooltip="Automatically start new cycles at 7, 13, 21")
+i_spawn_numbers = input.string("7,13,21", "Cycle Spawn Numbers", group=grp_cycles)
+i_show_cycle_overlaps = input.bool(true, "Show Cycle Overlap Info", group=grp_cycles)
+
+// ===== MULTI-TIMEFRAME SETTINGS =====
+grp_mtf = "4. Multi-Timeframe (HTF on LTF)"
+i_enable_htf1 = input.bool(true, "Enable HTF 1", group=grp_mtf)
+i_htf1 = input.timeframe("60", "Higher Timeframe 1", group=grp_mtf)
+i_htf1_sequence = input.string("1,7,13,21,31", "HTF 1 Sequence", group=grp_mtf)
+i_enable_htf2 = input.bool(true, "Enable HTF 2", group=grp_mtf)
+i_htf2 = input.timeframe("240", "Higher Timeframe 2", group=grp_mtf)
+i_htf2_sequence = input.string("1,7,13,21,31", "HTF 2 Sequence", group=grp_mtf)
+i_enable_htf3 = input.bool(false, "Enable HTF 3", group=grp_mtf)
+i_htf3 = input.timeframe("D", "Higher Timeframe 3", group=grp_mtf)
+i_htf3_sequence = input.string("1,7,13,21", "HTF 3 Sequence", group=grp_mtf)
+
+// ===== THE LINE (FVG) SETTINGS =====
+grp_line = "5. THE LINE (FVG)"
+i_enable_line = input.bool(true, "Enable THE LINE", group=grp_line)
+i_line_max = input.int(5, "Max Active LINEs", minval=1, maxval=10, group=grp_line)
+i_line_current_tf = input.bool(true, "Show Current TF LINEs", group=grp_line)
+i_line_htf = input.bool(true, "Show HTF LINEs", group=grp_line)
+
+// ===== EOB SETTINGS =====
+grp_eob = "6. Enhanced Order Blocks"
+i_enable_eob = input.bool(true, "Enable EOB", group=grp_eob)
+i_eob_max = input.int(3, "Max Active EOBs", minval=1, maxval=8, group=grp_eob)
+i_eob_current_tf = input.bool(true, "Show Current TF EOBs", group=grp_eob)
+i_eob_htf = input.bool(true, "Show HTF EOBs", group=grp_eob)
+
+// ===== VISUAL SETTINGS =====
+grp_visuals = "7. Visual Settings"
+i_label_size = input.string("small", "Label Size", options=["tiny", "small", "normal", "large"], group=grp_visuals)
+i_show_non_sequence = input.bool(false, "Show Non-Sequence Numbers", group=grp_visuals)
+i_vertical_offset = input.float(0.5, "Label Vertical Offset (ATR)", group=grp_visuals)
+
+// Cycle Colors
+i_cycle1_color = input.color(color.red, "Cycle 1 Color", group=grp_visuals)
+i_cycle2_color = input.color(color.green, "Cycle 2 Color", group=grp_visuals)
+i_cycle3_color = input.color(color.blue, "Cycle 3 Color", group=grp_visuals)
+i_cycle4_color = input.color(color.fuchsia, "Cycle 4 Color", group=grp_visuals)
+
+// MTF Colors
+i_htf1_color = input.color(color.orange, "HTF 1 Color", group=grp_visuals)
+i_htf2_color = input.color(color.purple, "HTF 2 Color", group=grp_visuals)
+i_htf3_color = input.color(color.teal, "HTF 3 Color", group=grp_visuals)
+
+// TD Colors
+i_td_color = input.color(color.new(color.yellow, 80), "TD Zone Color", group=grp_visuals)
+i_td_label_color = input.color(color.orange, "TD Label Color", group=grp_visuals)
+
+// ===== HELPER FUNCTIONS =====
+f_parse_sequence(string seq_str) =>
+    arr = array.new<float>()
+    parts = str.split(seq_str, ",")
+    for part in parts
+        val = str.tonumber(str.trim(part))
+        if not na(val)
+            array.push(arr, val)
+    arr
+
+f_get_label_size(string size_str) =>
+    switch size_str
+        "tiny" => size.tiny
+        "small" => size.small
+        "large" => size.large
+        => size.normal
+
+f_in_sequence(int count, array<float> seq) =>
+    array.includes(seq, float(count))
+
+f_get_cycle_color(int cycle_index) =>
+    switch cycle_index
+        0 => i_cycle1_color
+        1 => i_cycle2_color
+        2 => i_cycle3_color
+        3 => i_cycle4_color
+        => color.gray
+
+// ===== TIME DISTORTION DETECTION =====
+f_is_time_distorted() =>
+    if not i_enable_td
+        false
+    else
+        candle_range = high - low
+        body_size = math.abs(close - open)
+        avg_range = ta.sma(high - low, 20)
+        
+        // Inside bar
+        is_inside = high <= high[1] and low >= low[1]
+        
+        // Small body
+        is_small_body = candle_range > 0 and (body_size / candle_range) < i_body_threshold
+        
+        // Consolidation
+        is_consolidation = candle_range < avg_range * i_consolidation_threshold
+        
+        is_inside or is_small_body or is_consolidation
+
+// ===== CANDLE DIRECTION CHECK (FOR DIRECTIONAL COUNTING) =====
+f_should_count_candle() =>
+    if i_counting_direction == "Neutral"
+        true
+    else if i_counting_direction == "Bullish"
+        close >= open  // Count only bullish/doji candles
+    else  // Bearish
+        close <= open  // Count only bearish/doji candles
+
+// ===== FVG DETECTION =====
+f_detect_fvg() =>
+    if bar_index < 2
+        [false, na, false]
+    else
+        is_bullish_fvg = low[0] > high[2]
+        is_bearish_fvg = high[0] < low[2]
+        
+        fvg_level = na(float)
+        is_valid = false
+        is_bullish = false
+        
+        if is_bullish_fvg
+            fvg_level := high[2]
+            is_valid := true
+            is_bullish := true
+        else if is_bearish_fvg
+            fvg_level := low[2]
+            is_valid := true
+            is_bullish := false
+        
+        [is_valid, fvg_level, is_bullish]
+
+// ===== EOB DETECTION =====
+f_detect_eob() =>
+    if bar_index < 1
+        [false, na, na, false]
+    else
+        is_bearish_eob = (close[1] > open[1]) and (close < open[1]) and (low < low[1])
+        is_bullish_eob = (close[1] < open[1]) and (close > open[1]) and (high > high[1])
+        
+        eob_high = na(float)
+        eob_low = na(float)
+        is_valid = false
+        is_bullish = false
+        
+        if is_bearish_eob
+            eob_high := high[1]
+            eob_low := low[1]
+            is_valid := true
+            is_bullish := false
+        else if is_bullish_eob
+            eob_high := high[1]
+            eob_low := low[1]
+            is_valid := true
+            is_bullish := true
+        
+        [is_valid, eob_high, eob_low, is_bullish]
+
+// ===== TYPES FOR TRACKING =====
+type CycleData
+    int start_bar
+    int count
+    bool active
+    int cycle_id
+
+type LineData
+    line line_id
+    label label_id
+    float level
+    bool is_bullish
+    bool is_mitigated
+    string tf
+
+type EOBData
+    box box_id
+    label label_id
+    float high_level
+    float low_level
+    bool is_bullish
+    bool is_mitigated
+    string tf
+
+// ===== STATE VARIABLES =====
+var array<CycleData> active_cycles = array.new<CycleData>()
+var array<LineData> active_lines = array.new<LineData>()
+var array<EOBData> active_eobs = array.new<EOBData>()
+var bool counting_started = false
+var int anchor_bar = na
+var int next_cycle_id = 0
+
+// Parse sequences
+main_sequence = f_parse_sequence(i_main_sequence)
+htf1_sequence = f_parse_sequence(i_htf1_sequence)
+htf2_sequence = f_parse_sequence(i_htf2_sequence)
+htf3_sequence = f_parse_sequence(i_htf3_sequence)
+spawn_numbers = f_parse_sequence(i_spawn_numbers)
+
+atr_val = ta.atr(14)
+label_size = f_get_label_size(i_label_size)
+
+// ===== AUTO ANCHOR DETECTION =====
+if i_enable_auto_anchor and na(anchor_bar)
+    pivot_low = ta.pivotlow(low, i_pivot_left, i_pivot_right)
+    pivot_high = ta.pivothigh(high, i_pivot_left, i_pivot_right)
+    
+    if not na(pivot_low) or not na(pivot_high)
+        anchor_bar := bar_index
+        counting_started := true
+        
+        // Start first cycle
+        if i_enable_multiple_cycles
+            array.push(active_cycles, CycleData.new(anchor_bar, 0, true, next_cycle_id))
+            next_cycle_id := next_cycle_id + 1
+
+// Manual anchor fallback
+if not i_enable_auto_anchor and na(anchor_bar) and time >= i_manual_anchor_time
+    anchor_bar := bar_index
+    counting_started := true
+    
+    if i_enable_multiple_cycles
+        array.push(active_cycles, CycleData.new(anchor_bar, 0, true, next_cycle_id))
+        next_cycle_id := next_cycle_id + 1
+
+// ===== TIME DISTORTION DETECTION & BACKGROUND =====
+is_td = f_is_time_distorted()
+bgcolor(i_highlight_td and is_td ? i_td_color : na)
+
+// ===== MULTIPLE CYCLES COUNTING =====
+if counting_started and bar_index >= anchor_bar and i_enable_multiple_cycles
+    
+    should_count = f_should_count_candle()
+    should_freeze = is_td and i_freeze_on_td
+    
+    if should_count and not should_freeze
+        // Update all active cycles
+        for i = 0 to array.size(active_cycles) - 1
+            cycle = array.get(active_cycles, i)
+            
+            if cycle.active and bar_index >= cycle.start_bar
+                // Increment count
+                new_count = cycle.count + 1
+                cycle.count := new_count
+                array.set(active_cycles, i, cycle)
+                
+                // Check if it's a sequence number
+                is_sequence_hit = f_in_sequence(new_count, main_sequence)
+                
+                // Display label
+                if is_sequence_hit or i_show_non_sequence
+                    cycle_color = f_get_cycle_color(i)
+                    y_offset = atr_val * (i_vertical_offset + i * 0.3)
+                    label_y = high + y_offset
+                    
+                    // Check for overlaps with other cycles
+                    overlap_text = ""
+                    for j = 0 to array.size(active_cycles) - 1
+                        if j != i
+                            other_cycle = array.get(active_cycles, j)
+                            if other_cycle.count == new_count
+                                overlap_text := overlap_text + "C" + str.tostring(j + 1) + " "
+                    
+                    label_text = str.tostring(new_count)
+                    if overlap_text != "" and i_show_cycle_overlaps
+                        label_text := label_text + "\n(" + overlap_text + ")"
+                    
+                    if is_sequence_hit
+                        label.new(bar_index, label_y, label_text, 
+                                 color=color.new(color.white, 100), 
+                                 textcolor=cycle_color, 
+                                 style=label.style_label_down, 
+                                 size=label_size)
+                
+                // Auto spawn new cycles at key numbers
+                if i_auto_spawn_cycles and f_in_sequence(new_count, spawn_numbers)
+                    if array.size(active_cycles) < i_max_cycles
+                        array.push(active_cycles, CycleData.new(bar_index, 0, true, next_cycle_id))
+                        next_cycle_id := next_cycle_id + 1
+                
+                // Restart cycle at 31 (like in transcript)
+                if new_count >= 31
+                    cycle.count := 0
+                    cycle.start_bar := bar_index
+                    array.set(active_cycles, i, cycle)
+
+// ===== TD LABEL =====
+if i_show_td_labels and is_td
+    label.new(bar_index, high + atr_val * 0.2, "TD", 
+             color=color.new(color.white, 100), 
+             textcolor=i_td_label_color, 
+             style=label.style_label_down, 
+             size=size.tiny)
+
+// ===== MULTI-TIMEFRAME COUNTING (HTF plotted on LTF) =====
+// HTF 1
+var int htf1_count = 0
+var int htf1_last_time = 0
+
+if i_enable_htf1 and counting_started
+    htf1_time = request.security(syminfo.tickerid, i_htf1, time)
+    
+    if htf1_time != htf1_last_time
+        htf1_last_time := htf1_time
+        htf1_count := htf1_count + 1
+        
+        if f_in_sequence(htf1_count, htf1_sequence)
+            y_pos = low - atr_val * (i_vertical_offset + 0.5)
+            label.new(bar_index, y_pos, i_htf1 + ":" + str.tostring(htf1_count), 
+                     color=color.new(color.white, 100), 
+                     textcolor=i_htf1_color, 
+                     style=label.style_label_up, 
+                     size=label_size)
+
+// HTF 2
+var int htf2_count = 0
+var int htf2_last_time = 0
+
+if i_enable_htf2 and counting_started
+    htf2_time = request.security(syminfo.tickerid, i_htf2, time)
+    
+    if htf2_time != htf2_last_time
+        htf2_last_time := htf2_time
+        htf2_count := htf2_count + 1
+        
+        if f_in_sequence(htf2_count, htf2_sequence)
+            y_pos = low - atr_val * (i_vertical_offset + 1.0)
+            label.new(bar_index, y_pos, i_htf2 + ":" + str.tostring(htf2_count), 
+                     color=color.new(color.white, 100), 
+                     textcolor=i_htf2_color, 
+                     style=label.style_label_up, 
+                     size=label_size)
+
+// HTF 3
+var int htf3_count = 0
+var int htf3_last_time = 0
+
+if i_enable_htf3 and counting_started
+    htf3_time = request.security(syminfo.tickerid, i_htf3, time)
+    
+    if htf3_time != htf3_last_time
+        htf3_last_time := htf3_time
+        htf3_count := htf3_count + 1
+        
+        if f_in_sequence(htf3_count, htf3_sequence)
+            y_pos = low - atr_val * (i_vertical_offset + 1.5)
+            label.new(bar_index, y_pos, i_htf3 + ":" + str.tostring(htf3_count), 
+                     color=color.new(color.white, 100), 
+                     textcolor=i_htf3_color, 
+                     style=label.style_label_up, 
+                     size=label_size)
+
+// ===== THE LINE (FVG) LOGIC =====
+if i_enable_line
+    [is_fvg, fvg_level, is_bull] = f_detect_fvg()
+    
+    if i_line_current_tf and is_fvg and not na(fvg_level)
+        // Cleanup old lines
+        while array.size(active_lines) >= i_line_max
+            old_line = array.shift(active_lines)
+            line.delete(old_line.line_id)
+            if not na(old_line.label_id)
+                label.delete(old_line.label_id)
+        
+        // Create new line
+        new_line = line.new(bar_index, fvg_level, bar_index + 1, fvg_level, 
+                           extend=extend.right, 
+                           color=is_bull ? color.green : color.red, 
+                           width=1)
+        
+        new_label = label.new(bar_index, fvg_level, "FVG", 
+                             color=color.new(color.white, 100), 
+                             textcolor=is_bull ? color.green : color.red, 
+                             size=size.tiny, 
+                             style=is_bull ? label.style_label_up : label.style_label_down)
+        
+        array.push(active_lines, LineData.new(new_line, new_label, fvg_level, is_bull, false, "Current"))
+    
+    // Mitigation check
+    for i = 0 to array.size(active_lines) - 1
+        line_data = array.get(active_lines, i)
+        
+        if not line_data.is_mitigated
+            mitigated = line_data.is_bullish ? (low <= line_data.level) : (high >= line_data.level)
+            
+            if mitigated
+                line_data.is_mitigated := true
+                array.set(active_lines, i, line_data)
+                
+                line.set_extend(line_data.line_id, extend.none)
+                line.set_xy2(line_data.line_id, bar_index, line_data.level)
+                line.set_color(line_data.line_id, color.gray)
+
+// ===== EOB LOGIC =====
+if i_enable_eob
+    [is_eob, eob_high, eob_low, is_bull] = f_detect_eob()
+    
+    if i_eob_current_tf and is_eob and not na(eob_high)
+        // Cleanup old EOBs
+        while array.size(active_eobs) >= i_eob_max
+            old_eob = array.shift(active_eobs)
+            box.delete(old_eob.box_id)
+            if not na(old_eob.label_id)
+                label.delete(old_eob.label_id)
+        
+        // Create new EOB box
+        eob_color = is_bull ? color.new(color.green, 80) : color.new(color.red, 80)
+        new_box = box.new(bar_index, eob_high, bar_index + 1, eob_low, 
+                         extend=extend.right, 
+                         border_color=eob_color, 
+                         bgcolor=eob_color)
+        
+        eob_mid = (eob_high + eob_low) / 2
+        new_label = label.new(bar_index, eob_mid, "EOB", 
+                             color=color.new(color.white, 100), 
+                             textcolor=is_bull ? color.green : color.red, 
+                             size=size.tiny, 
+                             style=label.style_label_right)
+        
+        array.push(active_eobs, EOBData.new(new_box, new_label, eob_high, eob_low, is_bull, false, "Current"))
+    
+    // Mitigation check
+    for i = 0 to array.size(active_eobs) - 1
+        eob_data = array.get(active_eobs, i)
+        
+        if not eob_data.is_mitigated
+            mitigated = eob_data.is_bullish ? (close < eob_data.high_level) : (close > eob_data.low_level)
+            
+            if mitigated
+                eob_data.is_mitigated := true
+                array.set(active_eobs, i, eob_data)
+                
+                box.set_extend(eob_data.box_id, extend.none)
+                box.set_right(eob_data.box_id, bar_index)
+                box.set_bgcolor(eob_data.box_id, color.new(color.gray, 90))
+                box.set_border_color(eob_data.box_id, color.new(color.gray, 90))
+
+// ===== STATUS TABLE =====
+if barstate.islast
+    var table status = table.new(position.top_right, 2, 15, bgcolor=color.new(color.white, 85), border_width=1)
+    
+    table.cell(status, 0, 0, "TDT Status", bgcolor=color.new(color.blue, 80), text_color=color.white, text_size=size.small)
+    table.cell(status, 1, 0, "", bgcolor=color.new(color.blue, 80))
+    
+    table.cell(status, 0, 1, "Counting", text_size=size.tiny)
+    table.cell(status, 1, 1, counting_started ? "✓ YES" : "✗ NO", text_color=counting_started ? color.green : color.red, text_size=size.tiny)
+    
+    table.cell(status, 0, 2, "Active Cycles", text_size=size.tiny)
+    table.cell(status, 1, 2, str.tostring(array.size(active_cycles)), text_size=size.tiny)
+    
+    table.cell(status, 0, 3, "Time Distortion", text_size=size.tiny)
+    table.cell(status, 1, 3, is_td ? "⚠ TD" : "Normal", text_color=is_td ? color.orange : color.green, text_size=size.tiny)
+    
+    table.cell(status, 0, 4, "HTF 1 Count", text_size=size.tiny)
+    table.cell(status, 1, 4, i_enable_htf1 ? str.tostring(htf1_count) : "OFF", text_size=size.tiny)
+    
+    table.cell(status, 0, 5, "HTF 2 Count", text_size=size.tiny)
+    table.cell(status, 1, 5, i_enable_htf2 ? str.tostring(htf2_count) : "OFF", text_size=size.tiny)
+    
+    table.cell(status, 0, 6, "HTF 3 Count", text_size=size.tiny)
+    table.cell(status, 1, 6, i_enable_htf3 ? str.tostring(htf3_count) : "OFF", text_size=size.tiny)
+    
+    table.cell(status, 0, 7, "Active LINEs", text_size=size.tiny)
+    table.cell(status, 1, 7, str.tostring(array.size(active_lines)), text_size=size.tiny)
+    
+    table.cell(status, 0, 8, "Active EOBs", text_size=size.tiny)
+    table.cell(status, 1, 8, str.tostring(array.size(active_eobs)), text_size=size.tiny)
+    
+    // Show current cycle counts
+    if array.size(active_cycles) > 0
+        for i = 0 to math.min(array.size(active_cycles) - 1, 5)
+            cycle = array.get(active_cycles, i)
+            table.cell(status, 0, 9 + i, "Cycle " + str.tostring(i + 1), text_size=size.tiny)
+            table.cell(status, 1, 9 + i, str.tostring(cycle.count), text_color=f_get_cycle_color(i), text_size=size.tiny)
+
+// ===== ALERTS =====
+if counting_started and array.size(active_cycles) > 0
+    for cycle in active_cycles
+        if f_in_sequence(cycle.count, main_sequence)
+            alert("TDT Cycle " + str.tostring(cycle.cycle_id) + " hit sequence number: " + str.tostring(cycle.count), alert.freq_once_per_bar)
+
+if is_td and not is_td[1]
+    alert("Time Distortion Zone Entered", alert.freq_once_per_bar)
