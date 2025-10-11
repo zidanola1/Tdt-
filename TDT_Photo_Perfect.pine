@@ -79,26 +79,26 @@ f_get_size(string s) =>
 
 f_is_strong_pivot(float pivot_price, bool is_low) =>
     atr = ta.atr(14)
-    avg_range = ta.sma(high - low, 20)
     
+    strength = 0.0
     if is_low
-        pivot_strength = (ta.highest(high, 20) - pivot_price) / atr
+        strength := (ta.highest(high, 20) - pivot_price) / atr
     else
-        pivot_strength = (pivot_price - ta.lowest(low, 20)) / atr
+        strength := (pivot_price - ta.lowest(low, 20)) / atr
     
-    pivot_strength > i_min_pivot_strength
+    strength > i_min_pivot_strength
 
 f_is_td() =>
     if not i_show_td
         false
     else
-        range = high - low
+        candle_range = high - low
         body = math.abs(close - open)
         avg = ta.sma(high - low, 20)
         
         is_inside = high <= high[1] and low >= low[1]
-        is_small = range > 0 and (body / range) < 0.3
-        is_consol = range < avg * 0.5
+        is_small = candle_range > 0 and (body / candle_range) < 0.3
+        is_consol = candle_range < avg * 0.5
         
         is_inside or is_small or is_consol
 
