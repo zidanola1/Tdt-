@@ -159,6 +159,7 @@ var int ltf_anchor_bar = na
 var int ltf_last_seq_bar = na
 var float ltf_last_seq_price = na
 var line[] ltf_lines = array.new<line>()
+var bool ltf_is_bullish_wave = true
 
 // HTF1
 var bool htf1_counting = false
@@ -371,21 +372,17 @@ if waiting_for_expansion and not ltf_counting
 is_td = f_is_td()
 bgcolor(is_td and i_highlight_td ? color.new(color.yellow, 90) : na)
 
-// Track wave direction for structure analysis
-var bool ltf_is_bullish_wave = true
+// Check structure - but DON'T reset on retracements
 if ltf_counting and array.size(active_cycles) > 0
     main_cycle = array.get(active_cycles, 0)
     
-    // Check structure - but DON'T reset on retracements
     // Wave continues until 31 or major opposite pivot
     if ltf_is_bullish_wave
         if close < ta.lowest(low, 20) and close < open
-            // Major bearish structure noted
-            ltf_is_bullish_wave := ltf_is_bullish_wave  // Keep tracking
+            ltf_is_bullish_wave := ltf_is_bullish_wave
     else
         if close > ta.highest(high, 20) and close > open
-            // Major bullish structure noted
-            ltf_is_bullish_wave := ltf_is_bullish_wave  // Keep tracking
+            ltf_is_bullish_wave := ltf_is_bullish_wave
 
 if ltf_counting and bar_index >= ltf_anchor_bar and i_enable_multiple
     should_count = f_should_count()
