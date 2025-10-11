@@ -343,12 +343,12 @@ f_detect_market_cycle() =>
     if not i_enable_market_cycles
         "Unknown"
     else
-        range = high - low
+        price_range = high - low
         avg_range = ta.sma(high - low, 20)
         
-        if range < avg_range * 0.5
+        if price_range < avg_range * 0.5
             "Consolidation"
-        else if range > avg_range * 1.5
+        else if price_range > avg_range * 1.5
             "Expansion"
         else if close < close[1] and close[1] < close[2]
             "Retracement"
