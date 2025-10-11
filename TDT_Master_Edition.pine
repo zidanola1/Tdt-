@@ -914,29 +914,29 @@ if i_enable_line
 // ENHANCED ORDER BLOCKS
 // ========================================
 if i_enable_eob
-    [is_eob, eob_h, eob_l, is_bull] = f_detect_eob()
+    [is_eob_detected, eob_high, eob_low, is_bull_eob] = f_detect_eob()
     
-    if i_eob_current_tf and is_eob and not na(eob_h)
+    if i_eob_current_tf and is_eob_detected and not na(eob_high)
         while array.size(active_eobs) >= i_eob_max
             old = array.shift(active_eobs)
             box.delete(old.box_id)
             if not na(old.label_id)
                 label.delete(old.label_id)
         
-        eob_color = is_bull ? color.new(color.green, 80) : color.new(color.red, 80)
-        new_box = box.new(bar_index, eob_h, bar_index+1, eob_l, 
+        eob_color = is_bull_eob ? color.new(color.green, 80) : color.new(color.red, 80)
+        new_box = box.new(bar_index, eob_high, bar_index+1, eob_low, 
                          extend=extend.right, 
                          border_color=eob_color, 
                          bgcolor=eob_color)
         
-        eob_mid = (eob_h + eob_l) / 2
+        eob_mid = (eob_high + eob_low) / 2
         new_label = label.new(bar_index, eob_mid, "EOB", 
                              color=color.new(color.white, 100), 
-                             textcolor=is_bull ? color.green : color.red, 
+                             textcolor=is_bull_eob ? color.green : color.red, 
                              size=size.tiny, 
                              style=label.style_label_right)
         
-        array.push(active_eobs, EOBData.new(new_box, new_label, eob_h, eob_l, is_bull, false, "Current"))
+        array.push(active_eobs, EOBData.new(new_box, new_label, eob_high, eob_low, is_bull_eob, false, "Current"))
     
     // Mitigation
     for i = 0 to array.size(active_eobs) - 1
