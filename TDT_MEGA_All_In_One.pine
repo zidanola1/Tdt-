@@ -388,22 +388,21 @@ if array.size(active_cycles) > 0
 // HTF 1 COUNTING
 // ================================================
 htf1_time = request.security(syminfo.tickerid, i_htf1, time)
+htf1_pivot_l = request.security(syminfo.tickerid, i_htf1, ta.pivotlow(low, i_ltf_auto_pivot_left, i_ltf_auto_pivot_right))
+htf1_pivot_h = request.security(syminfo.tickerid, i_htf1, ta.pivothigh(high, i_ltf_auto_pivot_left, i_ltf_auto_pivot_right))
 
 if i_enable_htf1 and not htf1_counting
     if i_htf1_anchor_mode == "Manual"
         if time >= i_htf1_anchor_time
             htf1_counting := true
-            htf1_count := 1  // START AT 1
+            htf1_count := 1
             htf1_last_bar := bar_index
             htf1_last_price := low
-            // Label anchor as "1"
             label.new(bar_index, low - atr_val * 1.0, i_htf1 + ":1", color=color.new(color.white, 100), textcolor=i_htf1_color, style=label.style_label_up, size=size.small)
     else
-        htf1_pivot_l = request.security(syminfo.tickerid, i_htf1, ta.pivotlow(low, i_ltf_auto_pivot_left, i_ltf_auto_pivot_right))
-        htf1_pivot_h = request.security(syminfo.tickerid, i_htf1, ta.pivothigh(high, i_ltf_auto_pivot_left, i_ltf_auto_pivot_right))
         if not na(htf1_pivot_l) or not na(htf1_pivot_h)
             htf1_counting := true
-            htf1_count := 1  // START AT 1
+            htf1_count := 1
             htf1_last_bar := bar_index
             htf1_last_price := low
             label.new(bar_index, low - atr_val * 1.0, i_htf1 + ":1", color=color.new(color.white, 100), textcolor=i_htf1_color, style=label.style_label_up, size=size.small)
@@ -460,21 +459,21 @@ if i_enable_htf1 and htf1_counting and htf1_time != htf1_last_time
 // HTF 2 COUNTING
 // ================================================
 htf2_time = request.security(syminfo.tickerid, i_htf2, time)
+htf2_pivot_l = request.security(syminfo.tickerid, i_htf2, ta.pivotlow(low, i_ltf_auto_pivot_left, i_ltf_auto_pivot_right))
+htf2_pivot_h = request.security(syminfo.tickerid, i_htf2, ta.pivothigh(high, i_ltf_auto_pivot_left, i_ltf_auto_pivot_right))
 
 if i_enable_htf2 and not htf2_counting
     if i_htf2_anchor_mode == "Manual"
         if time >= i_htf2_anchor_time
             htf2_counting := true
-            htf2_count := 1  // START AT 1
+            htf2_count := 1
             htf2_last_bar := bar_index
             htf2_last_price := low
             label.new(bar_index, low - atr_val * 1.5, i_htf2 + ":1", color=color.new(color.white, 100), textcolor=i_htf2_color, style=label.style_label_up, size=size.small)
     else
-        htf2_pivot_l = request.security(syminfo.tickerid, i_htf2, ta.pivotlow(low, i_ltf_auto_pivot_left, i_ltf_auto_pivot_right))
-        htf2_pivot_h = request.security(syminfo.tickerid, i_htf2, ta.pivothigh(high, i_ltf_auto_pivot_left, i_ltf_auto_pivot_right))
         if not na(htf2_pivot_l) or not na(htf2_pivot_h)
             htf2_counting := true
-            htf2_count := 1  // START AT 1
+            htf2_count := 1
             htf2_last_bar := bar_index
             htf2_last_price := low
             label.new(bar_index, low - atr_val * 1.5, i_htf2 + ":1", color=color.new(color.white, 100), textcolor=i_htf2_color, style=label.style_label_up, size=size.small)
