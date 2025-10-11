@@ -233,6 +233,7 @@ var array<LineData> active_lines = array.new<LineData>()
 var array<EOBData> active_eobs = array.new<EOBData>()
 var bool counting_started = false
 var int anchor_bar = int(na)
+var int anchor_time = int(na)
 var int next_cycle_id = 0
 var line anchor_line = line(na)
 
@@ -575,6 +576,7 @@ if i_enable_auto_anchor and na(anchor_bar)
     
     if not na(best_bar)
         anchor_bar := best_bar
+        anchor_time := int(time)
         counting_started := true
         
         if i_enable_multiple_cycles
@@ -586,6 +588,7 @@ if i_enable_auto_anchor and na(anchor_bar)
 if not i_enable_auto_anchor and na(anchor_bar) and time >= i_manual_anchor_time
     if i_anchor_type == "Time"
         anchor_bar := bar_index
+        anchor_time := int(time)
         counting_started := true
     else
         pivot_l = ta.pivotlow(low, i_pivot_left, i_pivot_right)
@@ -593,6 +596,7 @@ if not i_enable_auto_anchor and na(anchor_bar) and time >= i_manual_anchor_time
         
         if (i_anchor_type == "Pivot Low" and not na(pivot_l)) or (i_anchor_type == "Pivot High" and not na(pivot_h))
             anchor_bar := bar_index
+            anchor_time := int(time)
             counting_started := true
     
     if counting_started and i_enable_multiple_cycles
@@ -603,15 +607,9 @@ if not i_enable_auto_anchor and na(anchor_bar) and time >= i_manual_anchor_time
 // ========================================
 // ANCHOR LINE
 // ========================================
-if i_show_anchor_line and not na(anchor_bar) and counting_started
+if i_show_anchor_line and not na(anchor_bar) and not na(anchor_time) and counting_started
     if na(anchor_line)
-        anchor_time = time[bar_index - anchor_bar]
         anchor_line := line.new(anchor_time, low, anchor_time, high, xloc=xloc.bar_time, color=i_anchor_line_color, width=2, style=line.style_dashed, extend=extend.both)
-    else if barstate.islast
-        // Update only on last bar to avoid performance issues
-        anchor_time = time[bar_index - anchor_bar]
-        line.set_x1(anchor_line, anchor_time)
-        line.set_x2(anchor_line, anchor_time)
 
 // ========================================
 // TIME DISTORTION
