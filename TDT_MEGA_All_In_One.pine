@@ -615,21 +615,41 @@ if i_enable_htf3 and htf3_counting and htf3_time != htf3_last_time
         htf3_count := 0
 
 // ================================================
-// TRADING SIGNALS (From Photo 4 - Pyramid Entries)
+// TRADING SIGNALS - ONLY WHEN HTF+LTF BOTH ON SEQUENCE
 // ================================================
 if i_enable_signals and ltf_counting and current_ltf_count > 0
-    is_entry = f_in_seq(current_ltf_count, entry_seq)
-    is_pyramid = f_in_seq(current_ltf_count, pyramid_seq)
+    // Check if LTF is on sequence
+    ltf_on_sequence = f_in_seq(current_ltf_count, entry_seq)
     
-    if is_entry
-        label.new(bar_index, low - atr_val * 0.5, "ENTRY\n" + str.tostring(current_ltf_count), color=i_entry_color, textcolor=color.black, style=label.style_triangleup, size=size.normal)
+    // Check if ANY HTF is on sequence
+    htf1_on_sequence = htf1_counting and f_in_seq(htf1_count, htf1_seq)
+    htf2_on_sequence = htf2_counting and f_in_seq(htf2_count, htf2_seq)
+    htf3_on_sequence = htf3_counting and f_in_seq(htf3_count, htf3_seq)
+    
+    any_htf_on_sequence = htf1_on_sequence or htf2_on_sequence or htf3_on_sequence
+    
+    // ONLY show entry if BOTH LTF and HTF are on sequence (any numbers)
+    if ltf_on_sequence and any_htf_on_sequence
+        // Determine which HTFs are aligned
+        htf_text = ""
+        if htf1_on_sequence
+            htf_text := htf_text + i_htf1 + ":" + str.tostring(htf1_count) + " "
+        if htf2_on_sequence
+            htf_text := htf_text + i_htf2 + ":" + str.tostring(htf2_count) + " "
+        if htf3_on_sequence
+            htf_text := htf_text + i_htf3 + ":" + str.tostring(htf3_count)
+        
+        entry_text = "ENTRY\nLTF:" + str.tostring(current_ltf_count) + "\n" + htf_text
+        label.new(bar_index, low - atr_val * 0.5, entry_text, color=i_entry_color, textcolor=color.black, style=label.style_triangleup, size=size.normal)
         
         // Draw entry zone
         if i_show_entry_zones
             box.new(bar_index, high, bar_index + 5, low, border_color=i_entry_color, bgcolor=color.new(i_entry_color, 90), extend=extend.right)
     
-    if is_pyramid and i_show_pyramid
-        label.new(bar_index, low - atr_val * 0.8, "PYRAMID\n" + str.tostring(current_ltf_count), color=i_pyramid_color, textcolor=color.black, style=label.style_triangleup, size=size.small)
+    // Pyramid entries - also require HTF+LTF alignment
+    is_pyramid = f_in_seq(current_ltf_count, pyramid_seq)
+    if is_pyramid and i_show_pyramid and any_htf_on_sequence
+        label.new(bar_index, low - atr_val * 0.8, "ADD\n" + str.tostring(current_ltf_count), color=i_pyramid_color, textcolor=color.black, style=label.style_triangleup, size=size.small)
 
 // ================================================
 // THE LINE (FVG)
@@ -726,10 +746,19 @@ if barstate.islast
 // ALERTS
 // ================================================
 if ltf_counting and f_in_seq(current_ltf_count, main_seq)
-    alert("TDT: Sequence " + str.tostring(current_ltf_count), alert.freq_once_per_bar)
+    alert("TDT: LTF Sequence " + str.tostring(current_ltf_count), alert.freq_once_per_bar)
 
+// Golden alignment - same number
 if ltf_counting and ((current_ltf_count == htf1_count) or (current_ltf_count == htf2_count))
     alert("★★★ GOLDEN ALIGNMENT at " + str.tostring(current_ltf_count), alert.freq_once_per_bar)
 
-if i_enable_signals and f_in_seq(current_ltf_count, entry_seq)
-    alert("🎯 ENTRY SIGNAL at " + str.tostring(current_ltf_count), alert.freq_once_per_bar)
+// Entry signal - ONLY when both HTF and LTF on sequence
+if i_enable_signals and ltf_counting
+    ltf_on_seq = f_in_seq(current_ltf_count, entry_seq)
+    htf1_on_seq = htf1_counting and f_in_seq(htf1_count, htf1_seq)
+    htf2_on_seq = htf2_counting and f_in_seq(htf2_count, htf2_seq)
+    htf3_on_seq = htf3_counting and f_in_seq(htf3_count, htf3_seq)
+    any_htf_on_seq = htf1_on_seq or htf2_on_seq or htf3_on_seq
+    
+    if ltf_on_seq and any_htf_on_seq
+        alert("🎯 ENTRY: LTF=" + str.tostring(current_ltf_count) + " + HTF aligned", alert.freq_once_per_bar)
