@@ -286,57 +286,84 @@ atr_val = ta.atr(14)
 label_size = f_get_size(i_label_size)
 
 // ================================================
-// LTF ANCHOR DETECTION (SMART)
+// LTF ANCHOR DETECTION (SMART) - FIXED
 // ================================================
-// Only detect SIGNIFICANT pivots, not every small one
+// Detect pivot, then wait for EXPANSION candle to start counting
 pivot_l = ta.pivotlow(low, i_ltf_auto_pivot_left, i_ltf_auto_pivot_right)
 pivot_h = ta.pivothigh(high, i_ltf_auto_pivot_left, i_ltf_auto_pivot_right)
 
-// Check if pivot is SIGNIFICANT (not just any pivot)
+// State: waiting for pivot, or waiting for expansion after pivot
+var bool waiting_for_expansion = false
+var bool expansion_should_be_bullish = false
+var int pivot_detected_bar = na
+
+// Check for significant pivot
 is_significant_pivot = false
 pivot_is_bullish = false
 
 if not na(pivot_l)
-    // Bullish pivot - check if it's a major low
     recent_low = ta.lowest(low, 50)
     pivot_strength = (high - low[i_ltf_auto_pivot_right]) / atr_val
-    // Use user-defined significance threshold
     if low[i_ltf_auto_pivot_right] <= recent_low * 1.005 and pivot_strength > 1.5
         is_significant_pivot := true
         pivot_is_bullish := true
 
 if not na(pivot_h)
-    // Bearish pivot - check if it's a major high
     recent_high = ta.highest(high, 50)
     pivot_strength = (high[i_ltf_auto_pivot_right] - low) / atr_val
-    // Use user-defined significance threshold
     if high[i_ltf_auto_pivot_right] >= recent_high * 0.995 and pivot_strength > 1.5
         is_significant_pivot := true
         pivot_is_bullish := false
 
-if not ltf_counting
+// Manual anchor
+if not ltf_counting and not waiting_for_expansion
     if i_ltf_anchor_mode == "Manual"
         if time >= i_ltf_anchor_time
             ltf_anchor_bar := bar_index
             ltf_counting := true
+            ltf_is_bullish_wave := true
             if i_enable_multiple
                 array.push(active_cycles, CycleData.new(ltf_anchor_bar, 1, true, 0))
             label.new(ltf_anchor_bar, low - atr_val * 0.3, "1", color=color.new(color.white, 100), textcolor=i_ltf_color, style=label.style_label_up, size=label_size)
             ltf_last_seq_bar := ltf_anchor_bar
             ltf_last_seq_price := low
     else
-        // Auto mode - only start on SIGNIFICANT pivots
+        // Auto mode - detect pivot, then wait for expansion
         if is_significant_pivot
-            ltf_anchor_bar := bar_index - i_ltf_auto_pivot_right
-            ltf_counting := true
-            if i_enable_multiple
-                array.push(active_cycles, CycleData.new(ltf_anchor_bar, 1, true, 0))
-            
-            pivot_price = pivot_is_bullish ? low[i_ltf_auto_pivot_right] : high[i_ltf_auto_pivot_right]
-            pivot_style = pivot_is_bullish ? label.style_label_up : label.style_label_down
-            label.new(ltf_anchor_bar, pivot_is_bullish ? pivot_price - atr_val * 0.3 : pivot_price + atr_val * 0.3, "1", color=color.new(color.white, 100), textcolor=i_ltf_color, style=pivot_style, size=label_size)
-            ltf_last_seq_bar := ltf_anchor_bar
-            ltf_last_seq_price := pivot_price
+            waiting_for_expansion := true
+            expansion_should_be_bullish := pivot_is_bullish
+            pivot_detected_bar := bar_index
+
+// Waiting for expansion candle after pivot
+if waiting_for_expansion and not ltf_counting
+    // Check if current candle is the expansion candle
+    is_expansion_candle = false
+    
+    if expansion_should_be_bullish
+        // Need bullish candle after low pivot
+        if close > open and (high - low) > atr_val * 0.5
+            is_expansion_candle := true
+            ltf_is_bullish_wave := true
+    else
+        // Need bearish candle after high pivot
+        if close < open and (high - low) > atr_val * 0.5
+            is_expansion_candle := true
+            ltf_is_bullish_wave := false
+    
+    if is_expansion_candle
+        // THIS is where we start counting from "1"
+        ltf_anchor_bar := bar_index
+        ltf_counting := true
+        waiting_for_expansion := false
+        
+        if i_enable_multiple
+            array.push(active_cycles, CycleData.new(ltf_anchor_bar, 1, true, 0))
+        
+        pivot_style = expansion_should_be_bullish ? label.style_label_up : label.style_label_down
+        label_y = expansion_should_be_bullish ? low - atr_val * 0.3 : high + atr_val * 0.3
+        label.new(ltf_anchor_bar, label_y, "1", color=color.new(color.white, 100), textcolor=i_ltf_color, style=pivot_style, size=label_size)
+        ltf_last_seq_bar := ltf_anchor_bar
+        ltf_last_seq_price := expansion_should_be_bullish ? low : high
 
 // ================================================
 // LTF COUNTING & MULTIPLE CYCLES
