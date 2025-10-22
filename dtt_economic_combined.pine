@@ -1,0 +1,269 @@
+//@version=6
+indicator("DTT Sessions + Economic Calendar", "DTT+NEWS", overlay=true, max_lines_count=500, max_labels_count=500)
+
+// ——————————————————————————————————————
+// DTT SESSION MODEL INPUTS
+// ——————————————————————————————————————
+group_general = "DTT Label Settings"
+label_color = input.color(color.rgb(0, 0, 0), "Text Color", group=group_general)
+label_size_str = input.string("Tiny", "Font Size", options=["Tiny", "Small", "Normal", "Large", "Huge"], group=group_general)
+
+group_lines = "DTT Line Settings"
+// Root Candle Inputs
+root_color = input.color(color.new(#3504c9, 6), "Root Candle ▸ Color", group=group_lines, inline="root")
+root_style_str = input.string("Dashed", "Style", options=["Solid", "Dotted", "Dashed"], group=group_lines, inline="root")
+root_width = input.int(1, "Width", group=group_lines, inline="root", minval=1)
+// Inner Interval Inputs
+inner_color = input.color(color.new(color.white, 70), "Inner Interval ▸ Color", group=group_lines, inline="inner")
+inner_style_str = input.string("Dotted", "Style", options=["Solid", "Dotted", "Dashed"], group=group_lines, inline="inner")
+inner_width = input.int(1, "Width", group=group_lines, inline="inner", minval=1)
+
+group_asia = "Asia Session"
+show_asia = input.bool(true, "Show Asia Session", group=group_asia, inline="asia1")
+color_damasu = input.color(color.new(color.gray, 95), "Damasu", group=group_asia, inline="asia1")
+color_osaka = input.color(color.new(color.purple, 95), "Osaka", group=group_asia, inline="asia1")
+color_kyoto = input.color(color.new(color.orange, 95), "Kyoto", group=group_asia, inline="asia2")
+color_nagasaki = input.color(color.new(color.red, 95), "Nagasaki", group=group_asia, inline="asia2")
+
+group_london = "London Session"
+show_london = input.bool(true, "Show London Session", group=group_london, inline="london1")
+color_turncoat = input.color(color.new(color.teal, 95), "Turncoat", group=group_london, inline="london1")
+color_bishop = input.color(color.new(color.aqua, 95), "Bishop", group=group_london, inline="london1")
+color_knight = input.color(color.new(color.silver, 95), "Knight", group=group_london, inline="london2")
+color_bigben = input.color(color.new(color.fuchsia, 95), "Big Ben", group=group_london, inline="london2")
+
+group_ny = "New York Session"
+show_ny = input.bool(true, "Show New York Session", group=group_ny, inline="ny1")
+color_judas = input.color(color.new(color.yellow, 95), "Judas", group=group_ny, inline="ny1")
+color_m11 = input.color(color.new(color.lime, 95), "Model 11", group=group_ny, inline="ny1")
+color_m110 = input.color(color.new(color.green, 95), "Model 110", group=group_ny, inline="ny2")
+color_jdlunch = input.color(color.new(color.red, 95), "JD Lunch", group=group_ny, inline="ny2")
+color_m1001 = input.color(color.new(color.maroon, 95), "Model 1001", group=group_ny, inline="ny3")
+color_m111 = input.color(color.new(color.blue, 95), "Model 111", group=group_ny, inline="ny3")
+
+// ——————————————————————————————————————
+// ECONOMIC CALENDAR INPUTS
+// ——————————————————————————————————————
+group_news = "Economic Calendar"
+show_economic_calendar = input.bool(true, "Show Economic Calendar", group=group_news)
+
+// Custom Timezone
+custom_timezone = input.bool(false, title="Custom Timezone?", group=group_news, inline="tz1")
+timezone_h = input.int(1, title="UTC", group=group_news, inline="tz1", minval=-10, maxval=13)
+timezone_m = input.int(0, title=":", group=group_news, inline="tz1", minval=0, maxval=59, step=15)
+
+// Expected Impact
+var high_impact = input.bool(true, title="🔴 High", group=group_news, inline="impact1")
+var med_impact = input.bool(true, title="🟠 Medium", group=group_news, inline="impact1")
+var low_impact = input.bool(true, title="🟡 Low", group=group_news, inline="impact2")
+var holiday = input.bool(true, title="⚪ Holiday", group=group_news, inline="impact2")
+
+// Currencies
+var AUTO = input.bool(true, title="Auto Currency?", group=group_news)
+var USD = input.bool(false, title="USD", group=group_news, inline="curr1")
+var EUR = input.bool(false, title="EUR", group=group_news, inline="curr1")
+var GBP = input.bool(false, title="GBP", group=group_news, inline="curr1")
+var JPY = input.bool(false, title="JPY", group=group_news, inline="curr2")
+var AUD = input.bool(false, title="AUD", group=group_news, inline="curr2")
+var CAD = input.bool(false, title="CAD", group=group_news, inline="curr2")
+
+// News Display
+var showNewsLabels = input.bool(true, title="Show News Labels?", group=group_news, inline="disp1")
+var showNewsLines = input.bool(true, title="Show News Lines?", group=group_news, inline="disp1")
+var newsLabelSize = input.string("Small", title="News Label Size", group=group_news, options=["Tiny", "Small", "Normal", "Large"])
+
+// ——————————————————————————————————————
+// DTT SESSION MODEL CONSTANTS & FUNCTIONS
+// ——————————————————————————————————————
+var string TIMEZONE = "America/New_York"
+var int ONE_DAY_MS = 86400000 
+var array<int> EMPTY_ARRAY = array.new_int(0)
+
+f_get_font_size(size_str) =>
+    size_str == "Tiny" ? size.tiny : size_str == "Small" ? size.small : size_str == "Normal" ? size.normal : size_str == "Large" ? size.large : size.huge
+
+f_get_line_style(style_str) =>
+    style_str == "Solid" ? line.style_solid : style_str == "Dotted" ? line.style_dotted : line.style_dashed
+
+label_size = f_get_font_size(label_size_str)
+root_style = f_get_line_style(root_style_str)
+inner_style = f_get_line_style(inner_style_str)
+news_label_size = f_get_font_size(newsLabelSize)
+
+f_draw_lines(session_day_start_ts, i_startH, i_endH, i_intervals_flat, line_color, line_style, line_width, sessionLow, sessionHigh) =>
+    if array.size(i_intervals_flat) > 0
+        for i = 0 to array.size(i_intervals_flat) - 1 by 2
+            int h = array.get(i_intervals_flat, i)
+            int m = array.get(i_intervals_flat, i + 1)
+            
+            int day_offset = (i_startH > i_endH and h < i_startH) ? ONE_DAY_MS : 0
+            int target_ts = session_day_start_ts + day_offset + (h * 3600000) + (m * 60000)
+            
+            if target_ts >= time and target_ts < time_close
+                line.new(bar_index, sessionLow, bar_index, sessionHigh, color=line_color, style=line_style, width=line_width)
+
+f_draw_model(i_name, i_startH, i_startM, i_endH, i_endM, i_boxColor, i_root_candles_flat, i_inner_intervals_flat) =>
+    string sessionStr = str.format("{0,number,00}{1,number,00}-{2,number,00}{3,number,00}", i_startH, i_startM, i_endH, i_endM)
+    bool inSession = not na(time(timeframe.period, sessionStr, TIMEZONE))
+    
+    bool isFirstBar = inSession and not inSession[1]
+
+    var box sessionBox = na
+    var label sessionLabel = na
+    var float sessionHigh = na
+    var float sessionLow = na
+    var int session_day_start_ts = na
+    var int session_start_bar_index = na
+    var int session_end_bar_index = na
+
+    if isFirstBar
+        sessionHigh := high
+        sessionLow := low
+        session_start_bar_index := bar_index
+        session_day_start_ts := timestamp(TIMEZONE, year(time, TIMEZONE), month(time, TIMEZONE), dayofmonth(time, TIMEZONE), 0, 0)
+        
+        int day_offset_end = (i_startH > i_endH) ? ONE_DAY_MS : 0
+        int session_end_ts = session_day_start_ts + day_offset_end + (i_endH * 3600000) + (i_endM * 60000)
+        
+        int chartBarDurationInMs = timeframe.in_seconds() * 1000
+        int bars_to_end = math.max(1, math.round((session_end_ts - time) / chartBarDurationInMs))
+        
+        session_end_bar_index := bar_index + bars_to_end
+
+        sessionBox := box.new(left=session_start_bar_index, top=sessionHigh, right=session_end_bar_index, bottom=sessionLow, border_color=color.new(i_boxColor, 40), border_width=1, bgcolor=i_boxColor,extend=extend.none)
+        
+        int label_x_position = math.round((session_start_bar_index + session_end_bar_index) / 2)
+        sessionLabel := label.new(x=label_x_position, y=sessionHigh, text=i_name, xloc=xloc.bar_index, yloc=yloc.price, color=color.new(color.white, 100), style=label.style_label_down, textcolor=label_color, size=label_size, textalign=text.align_center)
+
+    if inSession
+        sessionHigh := math.max(high, sessionHigh)
+        sessionLow := math.min(low, sessionLow)
+
+        if not na(sessionBox)
+            box.set_top(sessionBox, sessionHigh)
+            box.set_bottom(sessionBox, sessionLow)
+        
+        if not na(sessionLabel)
+            label.set_y(sessionLabel, sessionHigh)
+
+        f_draw_lines(session_day_start_ts, i_startH, i_endH, i_root_candles_flat, root_color, root_style, root_width, sessionLow, sessionHigh)
+        f_draw_lines(session_day_start_ts, i_startH, i_endH, i_inner_intervals_flat, inner_color, inner_style, inner_width, sessionLow, sessionHigh)
+
+    if inSession[1] and not inSession
+        sessionBox := na
+        sessionLabel := na
+        sessionHigh := na
+        sessionLow := na
+        session_day_start_ts := na
+        session_start_bar_index := na
+        session_end_bar_index := na
+
+// ——————————————————————————————————————
+// ECONOMIC CALENDAR FUNCTIONS (Simplified)
+// ——————————————————————————————————————
+
+// Simplified news structure without external dependencies
+type SimpleNews
+    float timestamp
+    string title
+    string currency
+    string impact
+    bool is_future
+
+var array<SimpleNews> news_events = array.new<SimpleNews>()
+
+// Sample news events (in real implementation, this would be fetched from external source)
+init_sample_news() =>
+    if array.size(news_events) == 0
+        // Add some sample news events for demonstration
+        array.push(news_events, SimpleNews.new(timestamp("2025-01-17 08:30"), "NFP", "USD", "HIGH", true))
+        array.push(news_events, SimpleNews.new(timestamp("2025-01-17 10:00"), "CPI", "USD", "HIGH", true))
+        array.push(news_events, SimpleNews.new(timestamp("2025-01-17 14:00"), "FOMC", "USD", "HIGH", true))
+
+get_currency_from_symbol() =>
+    symbol_str = str.upper(syminfo.basecurrency + syminfo.currency)
+    if str.contains(symbol_str, "USD")
+        "USD"
+    else if str.contains(symbol_str, "EUR")
+        "EUR"
+    else if str.contains(symbol_str, "GBP")
+        "GBP"
+    else if str.contains(symbol_str, "JPY")
+        "JPY"
+    else if str.contains(symbol_str, "AUD")
+        "AUD"
+    else if str.contains(symbol_str, "CAD")
+        "CAD"
+    else
+        "USD"
+
+get_impact_color(impact_str) =>
+    switch impact_str
+        "HIGH" => color.red
+        "MEDIUM" => color.orange
+        "LOW" => color.yellow
+        => color.gray
+
+draw_news_events() =>
+    if show_economic_calendar and showNewsLines
+        current_currency = AUTO ? get_currency_from_symbol() : "USD"
+        
+        for i = 0 to array.size(news_events) - 1
+            news_item = array.get(news_events, i)
+            
+            // Filter by currency and impact
+            show_this_news = false
+            if AUTO and news_item.currency == current_currency
+                show_this_news := true
+            else if not AUTO
+                show_this_news := (news_item.currency == "USD" and USD) or 
+                                 (news_item.currency == "EUR" and EUR) or 
+                                 (news_item.currency == "GBP" and GBP) or 
+                                 (news_item.currency == "JPY" and JPY) or 
+                                 (news_item.currency == "AUD" and AUD) or 
+                                 (news_item.currency == "CAD" and CAD)
+            
+            // Filter by impact
+            impact_ok = (news_item.impact == "HIGH" and high_impact) or
+                       (news_item.impact == "MEDIUM" and med_impact) or
+                       (news_item.impact == "LOW" and low_impact)
+            
+            if show_this_news and impact_ok and math.abs(news_item.timestamp - time) < 86400000 * 7
+                line_color = get_impact_color(news_item.impact)
+                line.new(bar_index, low, bar_index, high, color=color.new(line_color, 50), style=line.style_dashed, width=1)
+                
+                if showNewsLabels
+                    label.new(bar_index, high, news_item.currency + "\n" + news_item.title, 
+                             color=color.new(color.white, 100), textcolor=line_color, 
+                             size=news_label_size, style=label.style_label_down)
+
+// ——————————————————————————————————————
+// MAIN EXECUTION
+// ——————————————————————————————————————
+
+// Initialize sample news
+init_sample_news()
+
+// Draw DTT Sessions
+if show_asia
+    f_draw_model("Damasu", 18, 00, 19, 00, color_damasu, array.from(18, 07), array.from(18, 22, 18, 34))
+    f_draw_model("Osaka", 19, 01, 21, 13, color_osaka, array.from(19, 37), array.from(19, 16, 19, 49, 20, 16))
+    f_draw_model("Kyoto", 21, 14, 23, 03, color_kyoto, array.from(21, 44), array.from(21, 26, 21, 54, 22, 16))
+    f_draw_model("Nagasaki", 23, 04, 02, 59, color_nagasaki, array.from(00, 08), array.from(23, 21, 00, 29, 01, 17))
+
+if show_london
+    f_draw_model("Turncoat", 03, 00, 03, 43, color_turncoat, array.from(03, 12), array.from(03, 05, 03, 16, 03, 25))
+    f_draw_model("Bishop", 03, 44, 05, 19, color_bishop, array.from(04, 10), array.from(03, 55, 04, 19, 04, 38))
+    f_draw_model("Knight", 05, 20, 06, 38, color_knight, array.from(05, 29), array.from(05, 48, 06, 04))
+    f_draw_model("Big Ben", 06, 39, 09, 30, color_bigben, array.from(06, 58), array.from(07, 41, 08, 15))
+
+if show_ny
+    f_draw_model("Judas", 09, 55, 10, 19, color_judas, EMPTY_ARRAY, array.from(10, 02, 10, 07, 10, 12))
+    f_draw_model("Model 11", 10, 20, 11, 09, color_m11, array.from(10, 34), array.from(10, 44, 10, 55))
+    f_draw_model("Model 110", 11, 10, 11, 49, color_m110, array.from(11, 10, 11, 21), array.from(11, 29, 11, 37))
+    f_draw_model("JD Lunch Raid", 12, 08, 12, 23, color_jdlunch, EMPTY_ARRAY, array.from(12, 12, 12, 15, 12, 18))
+    f_draw_model("Model 1001", 12, 35, 14, 08, color_m1001, array.from(12, 35), array.from(13, 00, 13, 20, 13, 40))
+    f_draw_model("Model 111", 14, 09, 17, 00, color_m111, EMPTY_ARRAY, array.from(14, 47, 15, 14, 15, 45))
+
+// Draw Economic Calendar
+draw_news_events()
